@@ -1,2 +1,3 @@
 # DataStage
-Public facing artifacts for IBM DataStage.
+
+IBM DataStage scripts and samples.
