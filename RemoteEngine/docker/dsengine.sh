@@ -693,7 +693,7 @@ get_cr_iam_token() {
                 -H 'Content-Type: application/x-www-form-urlencoded' \
                 -H 'Accept: application/json' \
                 --data-urlencode 'grant_type=urn:ibm:params:oauth:grant-type:apikey' \
-                --data-urlencode "apikey=${IAM_APIKEY}" \
+                --data-urlencode "apikey=${IAM_APIKEY_PROD}" \
                 'https://iam.cloud.ibm.com/identity/token')
     CR_IAM_TOKEN=$(printf "%s" ${_iam_response} | jq -r .access_token | tr -d '"')
 
@@ -702,7 +702,7 @@ get_cr_iam_token() {
         if [[ "$_iam_response" ]]; then
             echo "Response = ${_iam_response}"
         fi
-        echo_error_and_exit "Failed to get IAM Token, please try again ..."
+        echo_error_and_exit "Failed to get IAM Token for CR, please try again ..."
     fi
 }
 
@@ -904,7 +904,6 @@ function validate_action_arguments() {
     # print in the console
     echo "DATASTAGE_HOME=${DATASTAGE_HOME}"
     echo "GATEWAY_URL=${GATEWAY_URL}"
-    echo "PLATFORM=${PLATFORM}"
     echo "PROJECT_ID=${PROJECT_ID}"
     echo "REMOTE_ENGINE_PREFIX=${REMOTE_ENGINE_NAME}"
     echo ""
