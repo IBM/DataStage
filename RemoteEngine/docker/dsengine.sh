@@ -43,7 +43,7 @@ GATEWAY_DOMAIN_FRPROD='eu-de.dataplatform.cloud.ibm.com'
 # Defaults
 DATASTAGE_HOME="https://${GATEWAY_DOMAIN_YPPROD}"
 IAM_URL='https://iam.cloud.ibm.com'
-PLATFORM='cloud'
+PLATFORM='icp4d'
 COMPUTE_COUNT=0
 
 bold=$(tput bold)
