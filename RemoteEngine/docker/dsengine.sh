@@ -32,6 +32,7 @@ DOCKER_CMD='docker'
 if ! [ -x "$(command -v docker)" ] && [ -x "$(command -v podman)" ]; then
     DOCKER_CMD='podman'
 fi
+DOCKER_VOLUMES_DIR='/tmp/docker/volumes'
 
 # env constnats
 GATEWAY_DOMAIN_YS1DEV='dataplatform.dev.cloud.ibm.com'
@@ -353,6 +354,12 @@ print_tool_name_version() {
 # docker functions
 #######################################################################
 
+check_docker_daemon() {
+    if ! $DOCKER_CMD info > /dev/null 2>&1; then
+        echo_error_and_exit "Docker daemon is not running, please start Docker before executing this script."
+    fi
+}
+
 # docker login
 docker_login() {
     echo ""
@@ -369,7 +376,7 @@ docker_login() {
 }
 
 retrieve_latest_px_version() {
-    echo "Getting IAM token for container registry"
+    echo "Getting IAM token to access Container Registry"
     get_cr_iam_token
     icr_response=$(curl -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $CR_IAM_TOKEN" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${PXRUNTIME_IMAGE_NAME}")
     PX_VERSION=$(echo "${icr_response}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"')
@@ -739,6 +746,7 @@ get_remote_engine_id() {
         echo "Response: ${_engine_register_response}"
         echo_error_and_exit "Could not get remote engine registration id."
     fi
+    sleep 10
 }
 
 remove_remote_engine () {
@@ -901,6 +909,9 @@ function validate_action_arguments() {
     check_datastage_home
     check_platform
 
+    # If everything is available, make sure docker daemon is running before proceeding
+    check_docker_daemon
+
     # print in the console
     echo "DATASTAGE_HOME=${DATASTAGE_HOME}"
     echo "GATEWAY_URL=${GATEWAY_URL}"
@@ -913,8 +924,8 @@ function validate_action_arguments() {
     PXCOMPUTE_CONTAINER_NAME="${REMOTE_ENGINE_NAME//[ ]/_}_compute"
 
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
-        DS_STORAGE_HOST_DIR='/tmp/docker/volumes/ds-storage'
-        PX_STORAGE_HOST_DIR="/tmp/docker/volumes/${PXRUNTIME_CONTAINER_NAME}/px-storage"
+        DS_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/ds-storage"
+        PX_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}/px-storage"
         echo "${PX_STORAGE_HOST_DIR}"
 
         if [[ "${ACTION}" == 'start' ]]; then
@@ -1013,9 +1024,20 @@ if [[ ${ACTION} == "start" ]]; then
     else
         echo "Found existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} with id: ${PROJECT_ENV_ASSET_ID}"
     fi
+    echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is registered."
 
+    PROJECTS_LINK="${DATASTAGE_HOME}/projects/${PROJECT_ID}"
     echo ""
-    echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is available, and can be used to run DataStage flows"
+    echo "Remote Engine setup is complete."
+    echo ""
+    echo "Project environments:"
+    echo "* ${PROJECTS_LINK}/manage/environments/templates?context=cpdaas"
+    echo ""
+    echo "Project settings:"
+    echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=cpdaas"
+    echo ""
+    echo "Project assets:"
+    echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
 
     # echo ""
     # echo "${bold}Starting ${TOOL_SHORTNAME} Compute ...${normal}"
@@ -1083,8 +1105,12 @@ elif [[ ${ACTION} == "cleanup" ]]; then
     echo "Removing Runtime associated with the remote Engine ..."
     remove_environment
 
-    echo "Removing ${PX_STORAGE_HOST_DIR}"
-    rm -rf "${PX_STORAGE_HOST_DIR}"
+    if [[ "${PLATFORM}" == 'icp4d' ]]; then
+        if [ -d "$directory" ]; then
+            echo "Removing ${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}"
+            rm -rf "${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}"
+        fi
+    fi
 fi
 
 echo ""
