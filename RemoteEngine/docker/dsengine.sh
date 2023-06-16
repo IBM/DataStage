@@ -934,10 +934,12 @@ function validate_action_arguments() {
             if [ ! -d "${DS_STORAGE_HOST_DIR}" ]; then
               echo "${DS_STORAGE_HOST_DIR} does not exist, creating ..."
               mkdir -p "${DS_STORAGE_HOST_DIR}"
+              chmod 777 "${DS_STORAGE_HOST_DIR}"
             fi
             if [ ! -d "${PX_STORAGE_HOST_DIR}" ]; then
               echo "${PX_STORAGE_HOST_DIR} does not exist, creating ..."
               mkdir -p "${PX_STORAGE_HOST_DIR}"
+              chmod 777 "${PX_STORAGE_HOST_DIR}"
             fi
         fi
     fi
