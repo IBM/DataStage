@@ -811,8 +811,8 @@ if [[ ! -z $dsdisplayHelp ]]; then
 fi
 
 determine_cli
-determine_k8s
 if [ -z $inputFile ]; then
+  determine_k8s
   validate_common_args
 fi
 
@@ -836,6 +836,7 @@ esac
 
 if [ ! -z $inputFile ]; then
   source $inputFile
+  determine_k8s
   validate_common_args
   retrieve_latest_image_digests
 	if [[ ! -z $nfs_server ]]; then
