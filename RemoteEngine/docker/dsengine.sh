@@ -1076,6 +1076,9 @@ if [[ ${ACTION} == "start" ]]; then
     fi
     echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is registered."
 
+    echo "Updating the project to use ${REMOTE_ENGINE_NAME} as the default environment"
+    update_datastage_settings
+
     PROJECTS_LINK="${DATASTAGE_HOME}/projects/${PROJECT_ID}"
     echo ""
     echo "Remote Engine setup is complete."
