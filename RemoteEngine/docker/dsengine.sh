@@ -757,6 +757,55 @@ remove_remote_engine () {
 }
 
 # -----------------------------
+# Assets
+# -----------------------------
+
+update_datastage_settings() {
+    _datastage_settings_get_response=$(curl -sS -X 'GET' "${GATEWAY_URL}/data_intg/v3/assets/datastage_settings?project_id=${PROJECT_ID}" \
+        -H 'accept: application/json' \
+        -H "Authorization: Bearer $IAM_TOKEN")
+
+    if [[ -z "${_datastage_settings_get_response}" || "${_datastage_settings_get_response}" == "null" ]]; then
+        echo ""
+        echo "Response: ${_datastage_settings_get_response}"
+        echo_error_and_exit "Failed to get DataStage Settings, please try again"
+    fi
+
+    # is there any project env already present with this remote engine. There could be multiple envs with the same remote engine id, so select the first one
+    DATASTAGE_SETTINGS_ASSET_ID=$(printf "%s" "${_datastage_settings_get_response}" | jq -r .metadata.asset_id | tr -d '"')
+    if [[ ${DATASTAGE_SETTINGS_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
+        echo "DataStage Settings asset id: ${DATASTAGE_SETTINGS_ASSET_ID}"
+        echo ""
+    fi
+
+    _datastage_settings_put_response=$(curl -s --location --request PUT "${API_URL}/data_intg/v3/assets/datastage_settings/${ASSET_ID}?project_id=${PROJECT_ID}" \
+    --header "Authorization: Bearer $TOKEN" \
+    --header 'Content-Type: application/json' \
+    --data-raw "{
+      \"project\": {
+          \"runEnvironmentIds\": [\"${PROJECT_ENV_ASSET_ID}\"],
+          \"runRemoteEngineEnforcement\": true,
+          \"runPriorityQueue\": \"Low\",
+          \"runArtifactRetention\": {},
+          \"runMessageHandlerId\": \"\",
+          \"nlsMap\": \"\",
+          \"formatDateString\": \"\",
+          \"formatTimestampString\": \"\",
+          \"formatTimeString\": \"\",
+          \"formatDecimalSeparator\": \"\"
+       }
+    }" | jq -r .entity.project.runEnvironmentIds[])
+
+    if [[ -z "${_datastage_settings_put_response}" || "${_datastage_settings_put_response}" == "null" ]]; then
+        echo ""
+        echo "Response: ${_datastage_settings_put_response}"
+        echo_error_and_exit "Failed to put DataStage Settings, please try again"
+    fi
+
+    echo "DataStage Settings updated to use runEnvironmentIds: ${PROJECT_ENV_ASSET_ID}"
+}
+
+# -----------------------------
 # Environments
 # -----------------------------
 
