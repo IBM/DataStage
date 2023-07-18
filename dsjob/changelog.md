@@ -5,10 +5,95 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[4.7.0](#470)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.7.0.md)
 
-[4.6.4](4.6.4)
+[4.6.6](#466)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.6.md)
 
-[4.6.2](4.6.2)
+[4.6.4](#464)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.4.md)
+
+[4.6.2](#462)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+
+## 4.7.0
+
+### New commands
+
+`list-message-handlers` List all Message Handlers.
+
+`get-message-handler` Get a Message Handler.
+
+`create-message-handler` Create a Message Handler.
+
+`delete-message-handler` Delete a Message Handler.
+
+`list-job-status` List Jobs with their run status.
+
+`export-paramset` Export Parameter Set(s).
+
+`list-usage` List dependencies between DataStage components.
+
+`update-function-lib` Update User Defined Function.
+
+`export-function-lib` Export User Defined Function(s).
+
+### Command changes
+The following function library commands are renamed, adding `-lib`.
+
+`list-function-libs` List function libraries.
+
+`get-function-lib` Get function libraries.
+
+`create-function-lib` Create function libraries.
+
+`delete-function-lib` Delete function libraries.
+
+`migrate` and `import-zip` commands now take a new parameter `hard-replace`. This allows for reconciliation when importing parameter sets that conflict with existing parameter sets.
+
+`list-job-runs` now can sort using `sort-by-runid` to sort job runs using their `run-name` or `invocation-id`.
+
+`list-job`s modified to allow users to `sort-by-time` to list jobs chronologically based on job update timestamp. Also `list jobs` takes a new flag `sched-info` to print schedule information if the job has scheduled runs.
+
+### Fixes
+
+All the list commands that have `sort-by-time` option will now use `updatedAt` timestamp of the object to sort the list.
+
+Following commands will now produce a nonzero exit command upon failure, that can be checked on parent shell using $?
+`compile`, `run`, `log detail`, `import`, `export`, `import-zip`, `export-project` and all delete commands.
+
+Fixed `create-function-lib` command to take additional arguments to configure return types and aliases.
+
+Changed output format to table format for `jobrunstat` and `list-jobruns`.
+
+## 4.6.6
+
+### New commands
+`validate-connection` Validate connections.
+
+`validate-flow` Validate flow references.
+
+`validate-subflow`  Validate subflow references.
+
+`validate-job`  Validate job references.
+
+`validate-pipeline` Validate pipelines.
+
+`waitforjob`  Wait for Job.
+
+`list-dependencies` List dependencies between DataStage components.
+
+`create-dsparams` Create DSParams as environment variables.
+
+### Commmand changes
+`update-connection` allows user to rename a connection using the new flag `to-name`.
+
+### Fixes
+Fixed `logdetail`, `logsum` and `lognewest` to use raw logs to parse logs to generate output. 
+
+Allow `export` command to export assets specified, fix validates export types specified at command line correctly to the name of the asset.
 
 ## 4.6.4
 
@@ -17,7 +102,7 @@ interface.
 
 `validate-pipeline` is added to validate flows or pipelines referenced in a pipeline
 
-## Command changes
+### Command changes
 
 `migrate` adds `--create-connection-paramsets` option to create parameter sets for missing properties in connections
 
@@ -65,17 +150,12 @@ Fixed `run-pipeline` to accept parameter sets, previously `--paramset` are ignor
 - `cleanup-jobs`
 
 
-
-
 ### New Java Library commands
-
 
 - `list-java-libraries`
 - `get-java-library`
 - `create-java-library`
 - `delete-java-library`
-
-
 
 
 ### New User-defined function commands
@@ -84,10 +164,7 @@ Fixed `run-pipeline` to accept parameter sets, previously `--paramset` are ignor
 - `list-functions`
 - `get-function`
 - `create-function`
-
 - `delete-function `
-
-
 
 
 ### New Data Quality Rule and Data Quality Definition commands
