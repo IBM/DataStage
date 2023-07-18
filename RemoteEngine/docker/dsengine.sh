@@ -788,7 +788,7 @@ update_datastage_settings() {
     if [[ ${ACTION} == "cleanup" ]]; then
         payload="{
           \"project\": {
-              \"runEnvironmentIds\": \"${PROJECT_ENV_ASSET_ID}\",
+              \"runEnvironmentIds\": [],
               \"runRemoteEngineEnforcement\": false
            }
         }"
@@ -805,18 +805,19 @@ update_datastage_settings() {
         echo_error_and_exit "Failed to update DataStage settings, please try again"
     fi
 
-    DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS=$(printf "%s" "${_datastage_settings_put_response}" | jq -r .entity.project.runEnvironmentIds[])
-    if [[ -z "${DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS}" || "${DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS}" == "null" ]]; then
-        echo ""
-        echo "Response: ${_datastage_settings_put_response}"
-        echo "WARNING: could not find the Runtime Environment ID in DataStage Settings, please check in the UI"
+    if [[ ${ACTION} == "start" ]]; then
+        DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS=$(printf "%s" "${_datastage_settings_put_response}" | jq -r .entity.project.runEnvironmentIds[])
+        if [[ -z "${DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS}" || "${DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS}" == "null" ]]; then
+            echo ""
+            echo "Response: ${_datastage_settings_put_response}"
+            echo "WARNING: could not find the Runtime Environment ID in DataStage Settings, please check in the UI"
+        else
+            echo "DataStage Settings updated to use runEnvironmentIds: ${PROJECT_ENV_ASSET_ID}"
+        fi
     fi
-
-    echo "DataStage Settings updated to use runEnvironmentIds: ${PROJECT_ENV_ASSET_ID}"
 }
 
 reset_datastage_settings() {
-    PROJECT_ENV_ASSET_ID=""
     update_datastage_settings
 }
 
