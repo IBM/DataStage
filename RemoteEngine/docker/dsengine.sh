@@ -778,31 +778,46 @@ update_datastage_settings() {
         echo ""
     fi
 
-    _datastage_settings_put_response=$(curl -s --location --request PUT "${API_URL}/data_intg/v3/assets/datastage_settings/${ASSET_ID}?project_id=${PROJECT_ID}" \
-    --header "Authorization: Bearer $TOKEN" \
-    --header 'Content-Type: application/json' \
-    --data-raw "{
+    payload="{
       \"project\": {
           \"runEnvironmentIds\": [\"${PROJECT_ENV_ASSET_ID}\"],
-          \"runRemoteEngineEnforcement\": true,
-          \"runPriorityQueue\": \"Low\",
-          \"runArtifactRetention\": {},
-          \"runMessageHandlerId\": \"\",
-          \"nlsMap\": \"\",
-          \"formatDateString\": \"\",
-          \"formatTimestampString\": \"\",
-          \"formatTimeString\": \"\",
-          \"formatDecimalSeparator\": \"\"
+          \"runRemoteEngineEnforcement\": true
        }
-    }" | jq -r .entity.project.runEnvironmentIds[])
+    }"
+
+    if [[ ${ACTION} == "cleanup" ]]; then
+        payload="{
+          \"project\": {
+              \"runEnvironmentIds\": \"${PROJECT_ENV_ASSET_ID}\",
+              \"runRemoteEngineEnforcement\": false
+           }
+        }"
+    fi
+
+    _datastage_settings_put_response=$(curl -s -X PUT "${GATEWAY_URL}/data_intg/v3/assets/datastage_settings/${DATASTAGE_SETTINGS_ASSET_ID}?project_id=${PROJECT_ID}" \
+    --header "Authorization: Bearer $IAM_TOKEN" \
+    --header 'Content-Type: application/json' \
+    --data-raw "$payload")
 
     if [[ -z "${_datastage_settings_put_response}" || "${_datastage_settings_put_response}" == "null" ]]; then
         echo ""
         echo "Response: ${_datastage_settings_put_response}"
-        echo_error_and_exit "Failed to put DataStage Settings, please try again"
+        echo_error_and_exit "Failed to update DataStage settings, please try again"
+    fi
+
+    DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS=$(printf "%s" "${_datastage_settings_put_response}" | jq -r .entity.project.runEnvironmentIds[])
+    if [[ -z "${DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS}" || "${DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS}" == "null" ]]; then
+        echo ""
+        echo "Response: ${_datastage_settings_put_response}"
+        echo "WARNING: could not find the Runtime Environment ID in DataStage Settings, please check in the UI"
     fi
 
     echo "DataStage Settings updated to use runEnvironmentIds: ${PROJECT_ENV_ASSET_ID}"
+}
+
+reset_datastage_settings() {
+    PROJECT_ENV_ASSET_ID=""
+    update_datastage_settings
 }
 
 # -----------------------------
@@ -888,7 +903,7 @@ create_environment() {
 
     if [[ ${PROJECT_ENV_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
         # echo "Got project environment with id: ${PROJECT_ENV_ASSET_ID}"
-        echo ""
+        true
     else
         echo ""
         echo "Response: ${_project_env_get_response}"
@@ -940,7 +955,7 @@ check_platform() {
     fi
 }
 
-function validate_action_arguments() {
+validate_action_arguments() {
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'cleanup' ]]; then
         [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify an IBM Cloud IAM APIKey (-a | --apikey) for the respective environment. Aborting."
     fi
@@ -971,14 +986,18 @@ function validate_action_arguments() {
     # finalize constants if all arguments are valid
     PXRUNTIME_CONTAINER_NAME="${REMOTE_ENGINE_NAME//[ ]/_}_runtime"
     PXCOMPUTE_CONTAINER_NAME="${REMOTE_ENGINE_NAME//[ ]/_}_compute"
+    echo "REMOTE_ENGINE_VERSION=${PX_VERSION}"
+
+    update_docker_volume_permissions
+}
+
+update_docker_volume_permissions() {
 
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         DS_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/ds-storage"
         PX_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}/px-storage"
-        echo "${PX_STORAGE_HOST_DIR}"
 
         if [[ "${ACTION}" == 'start' ]]; then
-            echo "REMOTE_ENGINE_VERSION=${PX_VERSION}"
             echo "Setting ICP4D specific variables ..."
             if [ ! -d "${DS_STORAGE_HOST_DIR}" ]; then
               echo "${DS_STORAGE_HOST_DIR} does not exist, creating ..."
@@ -991,6 +1010,7 @@ function validate_action_arguments() {
             chmod -R 777 "${DOCKER_VOLUMES_DIR}"
         fi
     fi
+
 }
 
 #######################################################################
@@ -1077,7 +1097,9 @@ if [[ ${ACTION} == "start" ]]; then
     echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is registered."
 
     echo "Updating the project to use ${REMOTE_ENGINE_NAME} as the default environment"
+    update_docker_volume_permissions
     update_datastage_settings
+    echo "Remote Engine docker setup is complete"
 
     PROJECTS_LINK="${DATASTAGE_HOME}/projects/${PROJECT_ID}"
     echo ""
@@ -1157,6 +1179,9 @@ elif [[ ${ACTION} == "cleanup" ]]; then
 
     echo "Removing Runtime associated with the remote Engine ..."
     remove_environment
+
+    echo "Resetting DataStage settings"
+    reset_datastage_settings
 
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         if [ -d "$directory" ]; then
