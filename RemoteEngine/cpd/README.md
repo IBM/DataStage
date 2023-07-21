@@ -1,6 +1,6 @@
 # DataStage CPD Remote Engine
 
-## Pre-Requisites
+## Requirements
 DataStage Remote Engine supports deployment on the following platforms:
 * IBM Cloud Pak For Data (CP4D 4.7 and above)
     * Details on setting up a CP4D cluster: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.7.x?topic=planning-system-requirements
@@ -8,9 +8,13 @@ DataStage Remote Engine supports deployment on the following platforms:
     * Details on setting up an OpenShift cluster: https://docs.openshift.com/container-platform/4.12/welcome/index.html
 * IBM Cloud Kubernetes Service (IKS)
     * Details on setting up an IKS cluster: https://cloud.ibm.com/docs/containers?topic=containers-getting-started&interface=ui
+    * Setting up file Storage: https://cloud.ibm.com/docs/containers?topic=containers-file_storage
 * Amazon Elastic Kubernetes Service (EKS)
     * Details on setting up an EKS cluster: https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html
+    * Setting up and Elastic file system: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.6.x?topic=storage-setting-up-amazon-elastic-file-system (see details below)
 
+
+## Pre-Requisites
 * The following software are required to be installed on the client from where you will be executing this script:
     - `kubectl` or `oc`
     - `jq`
