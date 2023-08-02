@@ -481,8 +481,6 @@ run_px_runtime_docker() {
         -p ${PXRUNTIME_PORT}:9443
         --name ${PXRUNTIME_CONTAINER_NAME}
         --hostname="$(hostname)"
-        --memory='2g'
-        --cpus='0.5'
         --network=${PXRUNTIME_CONTAINER_NAME}
         --env COMPONENT_ID=ds-px-runtime
         --env ENVIRONMENT_TYPE=CLOUD
@@ -508,6 +506,7 @@ run_px_runtime_docker() {
             --env WLM_QUEUE_WAIT_TIMEOUT=0
             -v "${DS_STORAGE_HOST_DIR}":/ds-storage
             -v "${PX_STORAGE_HOST_DIR}":/px-storage
+            -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch
         )
     fi
 
@@ -997,6 +996,7 @@ update_docker_volume_permissions() {
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         DS_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/ds-storage"
         PX_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}/px-storage"
+        SCRATCH_DIR="${DOCKER_VOLUMES_DIR}/scratch"
 
         if [[ "${ACTION}" == 'start' ]]; then
             echo "Setting ICP4D specific variables ..."
