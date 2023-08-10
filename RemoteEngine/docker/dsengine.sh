@@ -482,6 +482,7 @@ run_px_runtime_docker() {
         --name ${PXRUNTIME_CONTAINER_NAME}
         --hostname="$(hostname)"
         --network=${PXRUNTIME_CONTAINER_NAME}
+        --memory='4g'
         --env COMPONENT_ID=ds-px-runtime
         --env ENVIRONMENT_TYPE=CLOUD
         --env ENVIRONMENT_NAME=${PLATFORM}
