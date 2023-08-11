@@ -488,7 +488,6 @@ run_px_runtime_docker() {
         --env ENVIRONMENT_NAME=${PLATFORM}
         --env ICP4D_URL=""
         --env REMOTE_ENGINE=yes
-        --env TRUST_ALL_SSL_CERT=true
         --env USE_EXTERNAL_SERVICE=true
         --env WLP_SKIP_MAXPERMSIZE=true
         --env GATEWAY_URL=${GATEWAY_URL}
