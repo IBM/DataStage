@@ -5,6 +5,9 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[4.7.1](#471)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.7.1.md)
+
 [4.7.0](#470)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.7.0.md)
 
@@ -17,6 +20,74 @@ interface.
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
 
+## 4.7.1
+
+### New commands
+The following export commands are added to allow export of individual assets into a .zip file. The output .zip file is compatible with migration using the `import-zip` command.
+
+`export-build-stage`          Export Build Stage(s).
+
+`export-connection`            Export Connection(s).
+
+`export-custom-stage`        Export Custom Stage(s).
+
+`export-dataset`                  Export Data Sets(s).  
+
+`export-fileset`                  Export File Sets(s).  
+
+`export-java-library`        Export Java Library(s).
+
+`export-library`                 Export XML Library(s).
+
+`export-message-handler`  Export Message Handler(s).
+
+`export-operational-dm`    Export Operational Decision Manager(s).
+
+`export-subflow`                  Export Subflow(s).
+
+`export-tabledef`                Export Table Definition(s).
+
+`export-wrapped-stage`      Export Wrapped Stage(s).
+
+`export-quality-definition`   Export Data Quality Definition.
+
+`export-quality-rule`       Export Data Quality Rule.
+
+`download-dataset`             Download a DataSet asset with dataset backend files.
+
+`download-fileset`             Download a FileSet asset with dataset backend files.
+
+`upload-dataset`                 Upload a DataSet asset with dataset backend files.
+
+`upload-fileset`                 Upload a FileSet asset with dataset backend files.
+
+### Command changes
+
+The following commands have had semantic changes to make them compatible with other export commands. They now produce a .zip file that is compatible with the `import-zip` command.
+
+`export-match-spec`            Export Match Specification(s).
+
+`export-rule`                  Export Standardization Rule by name.
+
+`update-job` now takes `--paramset` to update parameter set definitions for the job.
+
+`list-env-vars` takes `--sort` to sort the list alphabetically.
+
+`migrate` takes additional flag `--enable-platform-connection` to migrate optimized connectors. 
+
+`run` has new default value for `--run-name`: "Job Run" instead of "job_run". Changed for UI compatibility. 
+
+### Fixes
+
+DSJob plugin commands are now organized alphabetically for easier browsing. 
+
+`list-dependencies` and `list-usage` are enhanced to show relationships to DataStage components such as Data sets, File sets, Operational Decision Managers, Schema libraries, Standardization rules and Match specifications.
+
+`run` and `run-pipeline` are enhanced to handle parameter sets natively in the job definitions. Also, these commands now have retry logic to wait and run jobs again if any temporary issues occur with job service. The retry waits up to 10 minutes if a job run fails and attempts to run the job periodically until it succeeds.
+
+`migrate` command ignores `--create-connection-paramsets` when `--enable-local-connection` is set.
+
+`get-paramset`  prints out a detailed parameter set definition by default using table format.
 
 ## 4.7.0
 
