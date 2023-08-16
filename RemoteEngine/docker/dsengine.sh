@@ -44,6 +44,7 @@ GATEWAY_DOMAIN_FRPROD='eu-de.dataplatform.cloud.ibm.com'
 DATASTAGE_HOME="https://${GATEWAY_DOMAIN_YPPROD}"
 IAM_URL='https://iam.cloud.ibm.com'
 PLATFORM='icp4d'
+PX_MEMORY='4g'
 COMPUTE_COUNT=0
 
 bold=$(tput bold)
@@ -56,8 +57,10 @@ STR_DSNEXT_SEC_KEY='  -e, --encryption key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            DataPlatform Project ID'
 STR_DSTAGE_HOME='  --home                      IBM DataStage enviroment: [ys1dev, ypqa, ypprod (default), frprod]'
-STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
-STR_VERSION='  --version                   Version of the remote engine to use'
+STR_VOLUMES='  --volume-dir                      Directory for persistent storage. Default location is ${DOCKER_VOLUMES_DIR}'
+# STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
+# STR_VERSION='  --version                   Version of the remote engine to use'
+STR_MEMORY='  --memory                    Memory allocated to the docker container. Default is 4Gb'
 STR_HELP='  --help                      Print usage information'
 
 #######################################################################
@@ -111,7 +114,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] [-i | --ivspec] [-d | --project-id] [--home] [--platform]"
+        echo "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] [-i | --ivspec] [-d | --project-id] [--home] [--memory]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'restart' ]]; then
@@ -140,8 +143,10 @@ print_usage() {
     fi
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo "${STR_PLATFORM}"
-        echo "${STR_VERSION}"
+        echo "${STR_MEMORY}"
+        echo "${STR_VOLUMES}"
+        # echo "${STR_PLATFORM}"
+        # echo "${STR_VERSION}"
     fi
 
     echo "${STR_HELP}"
@@ -190,14 +195,22 @@ function start() {
             shift
             DATASTAGE_HOME="$1"
             ;;
-        --platform)
+        --memory)
             shift
-            PLATFORM="$1"
+            PX_MEMORY="$1"
             ;;
-        --version)
+        --volume-dir)
             shift
-            PX_VERSION="$1"
+            DOCKER_VOLUMES_DIR="$1"
             ;;
+        # --platform)
+        #     shift
+        #     PLATFORM="$1"
+        #     ;;
+        # --version)
+        #     shift
+        #     PX_VERSION="$1"
+        #     ;;
         -h | --help)
             print_usage
             exit 1
@@ -481,8 +494,7 @@ run_px_runtime_docker() {
         -p ${PXRUNTIME_PORT}:9443
         --name ${PXRUNTIME_CONTAINER_NAME}
         --hostname="$(hostname)"
-        --network=${PXRUNTIME_CONTAINER_NAME}
-        --memory='4g'
+        --memory=${PX_MEMORY}
         --env COMPONENT_ID=ds-px-runtime
         --env ENVIRONMENT_TYPE=CLOUD
         --env ENVIRONMENT_NAME=${PLATFORM}
@@ -496,6 +508,7 @@ run_px_runtime_docker() {
         --env REMOTE_ENGINE_NAME=${REMOTE_ENGINE_NAME}
         --env DSNEXT_SEC_KEY=${DSNEXT_SEC_KEY}
         --env IVSPEC=${IVSPEC}
+        # --network=${PXRUNTIME_CONTAINER_NAME}
     )
 
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
@@ -602,7 +615,6 @@ run_px_compute() {
         -p ${PORT1}:13502 \
         --hostname=`hostname` \
         --name ${CONTAINER_NAME}
-        --network=${PXRUNTIME_CONTAINER_NAME}
         --env APT_ORCHHOME=/opt/ibm/PXService/Server/PXEngine
         --env DSHOME=/opt/ibm/PXService/Server/DSEngine
         --env ENVIRONMENT_NAME=${PLATFORM}
@@ -615,6 +627,7 @@ run_px_compute() {
         --env PATH=/opt/ibm/PXService/Server/PXEngine/bin:/opt/java/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         --env USER_HOME=/user-home
         --env HOSTNAME=ds-px-compute-$i
+        # --network=${PXRUNTIME_CONTAINER_NAME}
     )
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         compute_docker_opts+=(
@@ -981,6 +994,8 @@ validate_action_arguments() {
     echo "GATEWAY_URL=${GATEWAY_URL}"
     echo "PROJECT_ID=${PROJECT_ID}"
     echo "REMOTE_ENGINE_PREFIX=${REMOTE_ENGINE_NAME}"
+    echo "CONTAINER_MEMORY=${PX_MEMORY}"
+    echo "DOCKER_VOLUMES_DIR=${DOCKER_VOLUMES_DIR}"
     echo ""
 
     # finalize constants if all arguments are valid
@@ -1065,7 +1080,7 @@ if [[ ${ACTION} == "start" ]]; then
     echo "Setting up docker environment"
     check_unused_port_forpxruntime
 
-    initialize_docker_network
+    # initialize_docker_network
 
     # docker run
     # ---------------------
