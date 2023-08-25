@@ -57,7 +57,7 @@ STR_DSNEXT_SEC_KEY='  -e, --encryption key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            DataPlatform Project ID'
 STR_DSTAGE_HOME='  --home                      IBM DataStage enviroment: [ys1dev, ypqa, ypprod (default), frprod]'
-STR_VOLUMES='  --volume-dir                      Directory for persistent storage. Default location is ${DOCKER_VOLUMES_DIR}'
+STR_VOLUMES="  --volume-dir                Directory for persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
 # STR_VERSION='  --version                   Version of the remote engine to use'
 STR_MEMORY='  --memory                    Memory allocated to the docker container. Default is 4Gb'
@@ -937,17 +937,17 @@ remove_environment() {
 #######################################################################
 
 check_datastage_home() {
-    if [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YS1DEV}" ]]; then
+    if [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YS1DEV}" || "$DATASTAGE_HOME" == "ys1dev" ]]; then
         GATEWAY_URL='https://api.dataplatform.dev.cloud.ibm.com'
         IAM_URL='https://iam.test.cloud.ibm.com'
 
-    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YPQA}" ]]; then
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YPQA}"  || "$DATASTAGE_HOME" == "ypqa" ]]; then
         GATEWAY_URL='https://api.dataplatform.test.cloud.ibm.com'
 
-    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YPPROD}" ]]; then
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YPPROD}" || "$DATASTAGE_HOME" == "ypprod" ]]; then
         GATEWAY_URL='https://api.dataplatform.cloud.ibm.com'
 
-    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_FRPROD}" ]]; then
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_FRPROD}" || "$DATASTAGE_HOME" == "frprod" ]]; then
         GATEWAY_URL='https://${GATEWAY_DOMAIN_FRPROD}'
 
     else
