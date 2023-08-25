@@ -1023,6 +1023,10 @@ update_docker_volume_permissions() {
               echo "${PX_STORAGE_HOST_DIR} does not exist, creating ..."
               mkdir -p "${PX_STORAGE_HOST_DIR}"
             fi
+            if [ ! -d "${SCRATCH_DIR}" ]; then
+              echo "${SCRATCH_DIR} does not exist, creating ..."
+              mkdir -p "${SCRATCH_DIR}"
+            fi
             chmod -R 777 "${DOCKER_VOLUMES_DIR}"
         fi
     fi
