@@ -1125,7 +1125,7 @@ if [[ ${ACTION} == "start" ]]; then
     update_datastage_settings
     echo "Remote Engine docker setup is complete"
 
-    PROJECTS_LINK="${GATEWAY_URL}/projects/${PROJECT_ID}"
+    PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
     echo ""
     echo "Remote Engine setup is complete."
     echo ""
