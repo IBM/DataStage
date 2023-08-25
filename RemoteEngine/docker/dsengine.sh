@@ -938,24 +938,28 @@ remove_environment() {
 
 check_datastage_home() {
     if [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YS1DEV}" || "$DATASTAGE_HOME" == "ys1dev" ]]; then
-        GATEWAY_URL='https://api.dataplatform.dev.cloud.ibm.com'
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_YS1DEV}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_YS1DEV}"
         IAM_URL='https://iam.test.cloud.ibm.com'
 
     elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YPQA}"  || "$DATASTAGE_HOME" == "ypqa" ]]; then
-        GATEWAY_URL='https://api.dataplatform.test.cloud.ibm.com'
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_YPQA}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_YPQA}"
 
     elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YPPROD}" || "$DATASTAGE_HOME" == "ypprod" ]]; then
-        GATEWAY_URL='https://api.dataplatform.cloud.ibm.com'
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_YPPROD}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_YPPROD}"
 
     elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_FRPROD}" || "$DATASTAGE_HOME" == "frprod" ]]; then
-        GATEWAY_URL='https://${GATEWAY_DOMAIN_FRPROD}'
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_FRPROD}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_FRPROD}"
 
     else
         echo_error_and_exit "Incorrect value specified: '--home ${DATASTAGE_HOME}', aborting. Use one of the allowed values:
-        - https://api.dataplatform.dev.cloud.ibm.com
-        - https://api.dataplatform.test.cloud.ibm.com
-        - https://api.dataplatform.cloud.ibm.com (default)
-        - https://api.eu-de.dataplatform.cloud.ibm.com"
+        - https://api.${GATEWAY_DOMAIN_YS1DEV}
+        - https://api.${GATEWAY_DOMAIN_YPQA}
+        - https://api.${GATEWAY_DOMAIN_YPPROD} (default)
+        - https://api.${GATEWAY_DOMAIN_FRPROD}"
     fi
 
 }
@@ -1121,7 +1125,7 @@ if [[ ${ACTION} == "start" ]]; then
     update_datastage_settings
     echo "Remote Engine docker setup is complete"
 
-    PROJECTS_LINK="${DATASTAGE_HOME}/projects/${PROJECT_ID}"
+    PROJECTS_LINK="${GATEWAY_URL}/projects/${PROJECT_ID}"
     echo ""
     echo "Remote Engine setup is complete."
     echo ""
