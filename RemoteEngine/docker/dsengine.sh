@@ -57,7 +57,7 @@ STR_DSNEXT_SEC_KEY='  -e, --encryption key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            DataPlatform Project ID'
 STR_DSTAGE_HOME='  --home                      IBM DataStage enviroment: [ys1dev, ypqa, ypprod (default), frprod]'
-STR_VOLUMES='  --volume-dir                      Directory for persistent storage. Default location is ${DOCKER_VOLUMES_DIR}'
+STR_VOLUMES="  --volume-dir                Directory for persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
 # STR_VERSION='  --version                   Version of the remote engine to use'
 STR_MEMORY='  --memory                    Memory allocated to the docker container. Default is 4Gb'
@@ -937,25 +937,29 @@ remove_environment() {
 #######################################################################
 
 check_datastage_home() {
-    if [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YS1DEV}" ]]; then
-        GATEWAY_URL='https://api.dataplatform.dev.cloud.ibm.com'
+    if [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YS1DEV}" || "$DATASTAGE_HOME" == "ys1dev" ]]; then
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_YS1DEV}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_YS1DEV}"
         IAM_URL='https://iam.test.cloud.ibm.com'
 
-    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YPQA}" ]]; then
-        GATEWAY_URL='https://api.dataplatform.test.cloud.ibm.com'
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YPQA}"  || "$DATASTAGE_HOME" == "ypqa" ]]; then
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_YPQA}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_YPQA}"
 
-    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YPPROD}" ]]; then
-        GATEWAY_URL='https://api.dataplatform.cloud.ibm.com'
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_YPPROD}" || "$DATASTAGE_HOME" == "ypprod" ]]; then
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_YPPROD}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_YPPROD}"
 
-    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_FRPROD}" ]]; then
-        GATEWAY_URL='https://${GATEWAY_DOMAIN_FRPROD}'
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_FRPROD}" || "$DATASTAGE_HOME" == "frprod" ]]; then
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_FRPROD}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_FRPROD}"
 
     else
         echo_error_and_exit "Incorrect value specified: '--home ${DATASTAGE_HOME}', aborting. Use one of the allowed values:
-        - https://api.dataplatform.dev.cloud.ibm.com
-        - https://api.dataplatform.test.cloud.ibm.com
-        - https://api.dataplatform.cloud.ibm.com (default)
-        - https://api.eu-de.dataplatform.cloud.ibm.com"
+        - https://api.${GATEWAY_DOMAIN_YS1DEV}
+        - https://api.${GATEWAY_DOMAIN_YPQA}
+        - https://api.${GATEWAY_DOMAIN_YPPROD} (default)
+        - https://api.${GATEWAY_DOMAIN_FRPROD}"
     fi
 
 }
@@ -1022,6 +1026,10 @@ update_docker_volume_permissions() {
             if [ ! -d "${PX_STORAGE_HOST_DIR}" ]; then
               echo "${PX_STORAGE_HOST_DIR} does not exist, creating ..."
               mkdir -p "${PX_STORAGE_HOST_DIR}"
+            fi
+            if [ ! -d "${SCRATCH_DIR}" ]; then
+              echo "${SCRATCH_DIR} does not exist, creating ..."
+              mkdir -p "${SCRATCH_DIR}"
             fi
             chmod -R 777 "${DOCKER_VOLUMES_DIR}"
         fi
@@ -1117,7 +1125,7 @@ if [[ ${ACTION} == "start" ]]; then
     update_datastage_settings
     echo "Remote Engine docker setup is complete"
 
-    PROJECTS_LINK="${DATASTAGE_HOME}/projects/${PROJECT_ID}"
+    PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
     echo ""
     echo "Remote Engine setup is complete."
     echo ""
