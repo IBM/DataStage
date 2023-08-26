@@ -475,9 +475,9 @@ remove_px_runtime_docker() {
     echo "Removing container '${PXRUNTIME_CONTAINER_NAME}' ..."
     $DOCKER_CMD rm ${PXRUNTIME_CONTAINER_NAME}
 
-    # wait until docker is stopped
+    # wait until container is removed
     until [[ $( $DOCKER_CMD ps -a | grep $PXRUNTIME_CONTAINER_NAME | wc -l ) -eq 0 ]]; do
-        echo '  - Waiting for the container to stop'
+        echo '  - Waiting for the container to be removed'
         sleep 1
     done
 }
@@ -508,7 +508,7 @@ run_px_runtime_docker() {
         --env REMOTE_ENGINE_NAME=${REMOTE_ENGINE_NAME}
         --env DSNEXT_SEC_KEY=${DSNEXT_SEC_KEY}
         --env IVSPEC=${IVSPEC}
-        # --network=${PXRUNTIME_CONTAINER_NAME}
+        --network=${PXRUNTIME_CONTAINER_NAME}
     )
 
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
@@ -679,6 +679,11 @@ wait_readiness_px_compute() {
 initialize_docker_network() {
     echo "Setting up docker network"
     $DOCKER_CMD network inspect ${PXRUNTIME_CONTAINER_NAME} >/dev/null 2>&1 || $DOCKER_CMD network create -d bridge ${PXRUNTIME_CONTAINER_NAME}
+}
+
+cleanup_docker_network() {
+    echo "Cleaning docker network"
+    $DOCKER_CMD network rm ${PXRUNTIME_CONTAINER_NAME} >/dev/null 2>&1 || true
 }
 
 #######################################################################
@@ -1088,7 +1093,7 @@ if [[ ${ACTION} == "start" ]]; then
     echo "Setting up docker environment"
     check_unused_port_forpxruntime
 
-    # initialize_docker_network
+    initialize_docker_network
 
     # docker run
     # ---------------------
@@ -1188,6 +1193,7 @@ elif [[ ${ACTION} == "cleanup" ]]; then
     stop_px_runtime_docker
     remove_px_runtime_docker
     # stop_px_compute_docker
+    cleanup_docker_network
 
     print_header "Cleaning Remote Engine '${REMOTE_ENGINE_NAME}'..."
 
