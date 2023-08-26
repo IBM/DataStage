@@ -508,7 +508,7 @@ run_px_runtime_docker() {
         --env REMOTE_ENGINE_NAME=${REMOTE_ENGINE_NAME}
         --env DSNEXT_SEC_KEY=${DSNEXT_SEC_KEY}
         --env IVSPEC=${IVSPEC}
-        # --network=${PXRUNTIME_CONTAINER_NAME}
+        --network=${PXRUNTIME_CONTAINER_NAME}
     )
 
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
@@ -1088,7 +1088,7 @@ if [[ ${ACTION} == "start" ]]; then
     echo "Setting up docker environment"
     check_unused_port_forpxruntime
 
-    # initialize_docker_network
+    initialize_docker_network
 
     # docker run
     # ---------------------
