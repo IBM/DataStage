@@ -681,6 +681,11 @@ initialize_docker_network() {
     $DOCKER_CMD network inspect ${PXRUNTIME_CONTAINER_NAME} >/dev/null 2>&1 || $DOCKER_CMD network create -d bridge ${PXRUNTIME_CONTAINER_NAME}
 }
 
+cleanup_docker_network() {
+    echo "Setting up docker network"
+    $DOCKER_CMD network rm ${PXRUNTIME_CONTAINER_NAME} >/dev/null 2>&1 || true
+}
+
 #######################################################################
 # IBM Cloud functions
 #######################################################################
@@ -1188,6 +1193,7 @@ elif [[ ${ACTION} == "cleanup" ]]; then
     stop_px_runtime_docker
     remove_px_runtime_docker
     # stop_px_compute_docker
+    cleanup_docker_network
 
     print_header "Cleaning Remote Engine '${REMOTE_ENGINE_NAME}'..."
 
