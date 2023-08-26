@@ -475,9 +475,9 @@ remove_px_runtime_docker() {
     echo "Removing container '${PXRUNTIME_CONTAINER_NAME}' ..."
     $DOCKER_CMD rm ${PXRUNTIME_CONTAINER_NAME}
 
-    # wait until docker is stopped
+    # wait until container is removed
     until [[ $( $DOCKER_CMD ps -a | grep $PXRUNTIME_CONTAINER_NAME | wc -l ) -eq 0 ]]; do
-        echo '  - Waiting for the container to stop'
+        echo '  - Waiting for the container to be removed'
         sleep 1
     done
 }
@@ -682,7 +682,7 @@ initialize_docker_network() {
 }
 
 cleanup_docker_network() {
-    echo "Setting up docker network"
+    echo "Cleaning docker network"
     $DOCKER_CMD network rm ${PXRUNTIME_CONTAINER_NAME} >/dev/null 2>&1 || true
 }
 
