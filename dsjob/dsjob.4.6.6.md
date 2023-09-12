@@ -263,7 +263,7 @@ cpdctl dsjob update-job {--project PROJECT | --project-id PROJID} {--job NAME | 
 format `name=value`, where name is the parameter name and value is the value to be
 set. This flag can be repeated, ex: `--param k1=v1 --param k2=v2`
 - `paramfile` specifies a file that contains the parameter values to pass to the
-job. This field is currently not implemented. 
+job.
 - `env` specifies the environment in which the job is run. `env` is
 specified as a key=value pair. Key `env` or `env-id` can be used to choose a runtime environment.
 Example: `--env $APT_DUMP_SCORE=true --env env=ds-px-default`
@@ -335,7 +335,7 @@ cpdctl dsjob run {--project PROJECT | --project-id PROJID} {--job NAME | --job-i
 format `name=value`, where name is the parameter name and value is the value to be
 set. This flag can be repeated, ex: `--param k1=v1 --param k2=v2`
 - `paramfile` specifies a file that contains the parameter values to pass to the
-job. This field is not implemented currently. 
+job.
 - `env` specifies the environment in which job is run. `env` is
 specified as a key=value pair. Key `env` or `env-id` can be used to chose a runtime environment.
 Example: `--env $APT_DUMP_SCORE=true --env env=ds-px-default`
@@ -998,7 +998,7 @@ cpdctl dsjob run-pipeline [--project PROJECT | --project-id PROJID] [--name name
 format `name=value`, where name is the parameter name and value is the value to be
 set. This flag can be repeated, ex: `--param k1=v1 --param k2=v2`
 - `paramfile` specifies a file that contains the parameter values to pass to the
-job. This field is not implemented currently. 
+job.
 - `env` specifies the environment in which job is run. `env` is
 specified as a key=value pair. Key `env` or `env-id` can be used to chose a runtime environment.
 Example: `--env $APT_DUMP_SCORE=true --env env=ds-px-default`
