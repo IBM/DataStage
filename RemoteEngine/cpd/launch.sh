@@ -25,9 +25,12 @@ DS_REGISTRY_SECRET="datastage-pull-secret"
 DS_API_KEY_SECRET="datastage-api-key-secret"
 DS_GATEWAY="api.dataplatform.cloud.ibm.com"
 
-px_runtime_digest="sha256:97818d50e9d595c6cd105d0c7e39febde9e665da0085322b478a562732fdb6cd"
-px_compute_digest="sha256:7aba440f6f8117038fe32899e19c976e7461954320a7079127e43fdbca2d9044"
-operator_digest="sha256:00d4afc1d3c6e84bf067a78cc87b110dca952621b94077d646afe3673af526a9"
+px_runtime_digest="sha256:dcfbf9f990afba4ffe498733b229fa027682dccec2bef45a0da0ae3c51a28f9f"
+px_compute_digest="sha256:af9425b151e18250ce8fb1a1c43d4bc8062b1081e1dd78652081af152ff2bc76"
+operator_digest="sha256:ee692f78a7a09b8dd1e2030a6696741e656ff8dd3fdfe4bd7ad6f06f50540c06"
+
+# default username for icr.io when using apikey
+username="iamapikey"
 
 storage_size="10"
 size="small"
@@ -339,12 +342,9 @@ rules:
   - persistentvolumes
   - cronjobs
   - serviceaccounts
-  - namespaces
   - roles
   - rolebindings
   - horizontalpodautoscalers
-  - routes
-  - routes/custom-host
   - jobs/status
   - pods/status
   - networkpolicies
@@ -414,11 +414,13 @@ create_operator_deployment() {
     # sed <"${deploymentFile}" "s/env:/env:\n            - name: KUBERNETES\n              value: \"True\"/g" | $kubernetesCLI -n ${namespace} apply ${dryRun} -f -
     k8sEnv=$'- name: KUBERNETES\n              value: "True"'
   fi
+  # remove deployment with incorrect name used previously
+  $kubernetesCLI -n $namespace delete deploy ibm-cpd-dastage-operator --ignore-not-found=true
   cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ibm-cpd-dastage-operator
+  name: ibm-cpd-datastage-operator
   annotations:
     productID: d8a97b146d6f4bf18f033db9105f87f1
     productMetric: FREE
@@ -536,7 +538,7 @@ create_pull_secret() {
 
 create_apikey_secret() {
   if [ -z $api_key ]; then
-    display_missing_arg "apiKey"
+    display_missing_arg "apikey"
   fi
   # name is used for cr name in inputFile
   if [[ ! -z $name ]] && [[ -z $inputFile ]]; then
@@ -556,7 +558,12 @@ create_instance() {
   if [ -z $projectId ]; then
     display_missing_arg "project-id"
   fi
-  cat <<EOF | $kubernetesCLI apply -f -
+  $kubernetesCLI -n $namespace get pxruntime $name
+  if [ $? -eq 0 ]; then
+    echo "PXRuntime $name already exists; updating its image digests."
+    $kubernetesCLI -n $namespace patch pxruntime $name -p "{\"spec\":{\"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}}}" --type=merge
+  else
+    cat <<EOF | $kubernetesCLI apply -f -
 apiVersion: ds.cpd.ibm.com/v1
 kind: PXRuntime
 metadata:
@@ -577,6 +584,7 @@ spec:
     pxcompute: $px_compute_digest
     pxruntime: $px_runtime_digest
 EOF
+fi
 }
 
 handle_badusage() {
@@ -698,7 +706,7 @@ do
             shift
             namespace="${1}"
             ;;
-        --apiKey)
+        --apikey)
             shift
             api_key="${1}"
             ;;
