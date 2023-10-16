@@ -45,6 +45,7 @@ DATASTAGE_HOME="https://${GATEWAY_DOMAIN_YPPROD}"
 IAM_URL='https://iam.cloud.ibm.com'
 PLATFORM='icp4d'
 PX_MEMORY='4g'
+PX_CPUS='2'
 COMPUTE_COUNT=0
 
 bold=$(tput bold)
@@ -60,7 +61,8 @@ STR_DSTAGE_HOME='  --home                      IBM DataStage enviroment: [ys1dev
 STR_VOLUMES="  --volume-dir                Directory for persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
 # STR_VERSION='  --version                   Version of the remote engine to use'
-STR_MEMORY='  --memory                    Memory allocated to the docker container. Default is 4Gb'
+STR_MEMORY='  --memory                    Memory allocated to the docker container (default is 4Gi).'
+STR_CPUS='  --cpus                      CPU allocated to the docker container (Default is 2 cores).'
 STR_HELP='  --help                      Print usage information'
 
 #######################################################################
@@ -144,6 +146,7 @@ print_usage() {
 
     if [[ "${ACTION}" == 'start' ]]; then
         echo "${STR_MEMORY}"
+        echo "${STR_CPUS}"
         echo "${STR_VOLUMES}"
         # echo "${STR_PLATFORM}"
         # echo "${STR_VERSION}"
@@ -198,6 +201,10 @@ function start() {
         --memory)
             shift
             PX_MEMORY="$1"
+            ;;
+        --cpus)
+            shift
+            PX_CPUS="$1"
             ;;
         --volume-dir)
             shift
@@ -495,6 +502,7 @@ run_px_runtime_docker() {
         --name ${PXRUNTIME_CONTAINER_NAME}
         --hostname="$(hostname)"
         --memory=${PX_MEMORY}
+        --cpus=${PX_CPUS}
         --env COMPONENT_ID=ds-px-runtime
         --env ENVIRONMENT_TYPE=CLOUD
         --env ENVIRONMENT_NAME=${PLATFORM}
@@ -880,11 +888,11 @@ create_environment() {
       \"num_computes\": 0,
       \"conductor\": {
         \"cpu\": {
-          \"units\": \"1\",
+          \"units\": \"${PX_CPUS}\",
           \"model\": \"\"
         },
         \"mem\": {
-          \"size\": \"4Gi\"
+          \"size\": \"${PX_MEMORY}\"
         }
       },
       \"compute\": {
@@ -1004,6 +1012,7 @@ validate_action_arguments() {
     echo "PROJECT_ID=${PROJECT_ID}"
     echo "REMOTE_ENGINE_PREFIX=${REMOTE_ENGINE_NAME}"
     echo "CONTAINER_MEMORY=${PX_MEMORY}"
+    echo "CONTAINER_CPUS=${PX_CPUS}"
     echo "DOCKER_VOLUMES_DIR=${DOCKER_VOLUMES_DIR}"
     echo ""
 
