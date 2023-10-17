@@ -33,6 +33,8 @@ if ! [ -x "$(command -v docker)" ] && [ -x "$(command -v podman)" ]; then
     DOCKER_CMD='podman'
 fi
 DOCKER_VOLUMES_DIR='/tmp/docker/volumes'
+WLM_COMPUTE_RUNNING_FILE="${DOCKER_VOLUMES_DIR}/.compute_running"
+WLM_LOCAL_DOCKER_FILE="${DOCKER_VOLUMES_DIR}/.local_docker"
 
 # env constnats
 GATEWAY_DOMAIN_YS1DEV='dataplatform.dev.cloud.ibm.com'
@@ -528,6 +530,8 @@ run_px_runtime_docker() {
             -v "${DS_STORAGE_HOST_DIR}":/ds-storage
             -v "${PX_STORAGE_HOST_DIR}":/px-storage
             -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch
+            -v ${WLM_COMPUTE_RUNNING_FILE}:/px-storage/PXRuntime/WLM/.compute_running
+            -v ${WLM_LOCAL_DOCKER_FILE}:/px-storage/PXRuntime/WLM/.local_docker
         )
     fi
 
@@ -822,7 +826,7 @@ update_datastage_settings() {
     _datastage_settings_put_response=$(curl -s -X PUT "${GATEWAY_URL}/data_intg/v3/assets/datastage_settings/${DATASTAGE_SETTINGS_ASSET_ID}?project_id=${PROJECT_ID}" \
     --header "Authorization: Bearer $IAM_TOKEN" \
     --header 'Content-Type: application/json' \
-    --data-raw "$payload")
+    --data "$payload")
 
     if [[ -z "${_datastage_settings_put_response}" || "${_datastage_settings_put_response}" == "null" ]]; then
         echo ""
@@ -1049,6 +1053,10 @@ update_docker_volume_permissions() {
         fi
     fi
 
+    # Mount an empty file for running computes since they aren't supported locally
+    touch "${WLM_COMPUTE_RUNNING_FILE}"
+    # Mount an empty file telling WLM it is running in cpd mode but in a local docker
+    touch "${WLM_LOCAL_DOCKER_FILE}"
 }
 
 #######################################################################
