@@ -33,8 +33,6 @@ if ! [ -x "$(command -v docker)" ] && [ -x "$(command -v podman)" ]; then
     DOCKER_CMD='podman'
 fi
 DOCKER_VOLUMES_DIR='/tmp/docker/volumes'
-WLM_COMPUTE_RUNNING_FILE="${DOCKER_VOLUMES_DIR}/.compute_running"
-WLM_LOCAL_DOCKER_FILE="${DOCKER_VOLUMES_DIR}/.local_docker"
 
 # env constnats
 GATEWAY_DOMAIN_YS1DEV='dataplatform.dev.cloud.ibm.com'
@@ -521,6 +519,8 @@ run_px_runtime_docker() {
         --network=${PXRUNTIME_CONTAINER_NAME}
     )
 
+    # echo "WLM_COMPUTE_RUNNING_FILE = ${WLM_COMPUTE_RUNNING_FILE}"
+    # echo "WLM_LOCAL_DOCKER_FILE = ${WLM_LOCAL_DOCKER_FILE}"
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         runtime_docker_opts+=(
             --env WLMON=1
@@ -530,8 +530,8 @@ run_px_runtime_docker() {
             -v "${DS_STORAGE_HOST_DIR}":/ds-storage
             -v "${PX_STORAGE_HOST_DIR}":/px-storage
             -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch
-            -v ${WLM_COMPUTE_RUNNING_FILE}:/px-storage/PXRuntime/WLM/.compute_running
-            -v ${WLM_LOCAL_DOCKER_FILE}:/px-storage/PXRuntime/WLM/.local_docker
+            # -v "${WLM_COMPUTE_RUNNING_FILE}":/px-storage/PXRuntime/WLM/.compute_running
+            # -v "${WLM_LOCAL_DOCKER_FILE}":/px-storage/PXRuntime/WLM/.local_docker
         )
     fi
 
@@ -1033,6 +1033,7 @@ update_docker_volume_permissions() {
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         DS_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/ds-storage"
         PX_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}/px-storage"
+        PX_STORAGE_WLM_DIR="${PX_STORAGE_HOST_DIR}/PXRuntime/WLM"
         SCRATCH_DIR="${DOCKER_VOLUMES_DIR}/scratch"
 
         if [[ "${ACTION}" == 'start' ]]; then
@@ -1044,6 +1045,7 @@ update_docker_volume_permissions() {
             if [ ! -d "${PX_STORAGE_HOST_DIR}" ]; then
               echo "${PX_STORAGE_HOST_DIR} does not exist, creating ..."
               mkdir -p "${PX_STORAGE_HOST_DIR}"
+              mkdir -p "${PX_STORAGE_WLM_DIR}"
             fi
             if [ ! -d "${SCRATCH_DIR}" ]; then
               echo "${SCRATCH_DIR} does not exist, creating ..."
@@ -1054,8 +1056,10 @@ update_docker_volume_permissions() {
     fi
 
     # Mount an empty file for running computes since they aren't supported locally
+    WLM_COMPUTE_RUNNING_FILE="${PX_STORAGE_WLM_DIR}/.compute_running"
     touch "${WLM_COMPUTE_RUNNING_FILE}"
     # Mount an empty file telling WLM it is running in cpd mode but in a local docker
+    WLM_LOCAL_DOCKER_FILE="${PX_STORAGE_WLM_DIR}/.local_docker"
     touch "${WLM_LOCAL_DOCKER_FILE}"
 }
 
