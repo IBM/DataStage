@@ -826,7 +826,7 @@ update_datastage_settings() {
     _datastage_settings_put_response=$(curl -s -X PUT "${GATEWAY_URL}/data_intg/v3/assets/datastage_settings/${DATASTAGE_SETTINGS_ASSET_ID}?project_id=${PROJECT_ID}" \
     --header "Authorization: Bearer $IAM_TOKEN" \
     --header 'Content-Type: application/json' \
-    --data-raw "$payload")
+    --data "$payload")
 
     if [[ -z "${_datastage_settings_put_response}" || "${_datastage_settings_put_response}" == "null" ]]; then
         echo ""
