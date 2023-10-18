@@ -516,6 +516,8 @@ run_px_runtime_docker() {
         --env REMOTE_ENGINE_NAME=${REMOTE_ENGINE_NAME}
         --env DSNEXT_SEC_KEY=${DSNEXT_SEC_KEY}
         --env IVSPEC=${IVSPEC}
+        --env WLM_JOB_START=1
+        --env WLM_JOB_COUNT=5
         --network=${PXRUNTIME_CONTAINER_NAME}
     )
 
@@ -532,10 +534,12 @@ run_px_runtime_docker() {
             -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch
             # -v "${WLM_COMPUTE_RUNNING_FILE}":/px-storage/PXRuntime/WLM/.compute_running
             # -v "${WLM_LOCAL_DOCKER_FILE}":/px-storage/PXRuntime/WLM/.local_docker
+            --mount type=bind,source="${PX_STORAGE_HOST_DIR}/snc-automate.sh",target=/etc/px_tmp/snc-automate.sh
+            --mount type=bind,source="${PX_STORAGE_HOST_DIR}/startup.sh",target=/opt/ibm/startup.sh
         )
     fi
 
-    $DOCKER_CMD run "${runtime_docker_opts[@]}" $PXRUNTIME_DOCKER_IMAGE
+    $DOCKER_CMD run "${runtime_docker_opts[@]}" --entrypoint='/bin/bash' $PXRUNTIME_DOCKER_IMAGE -c "/px-storage/init-volume.sh;/opt/ibm/startup.sh"
     status=$?
     if [ $status -ne 0 ]; then
         echo "docker run return code: $status."
@@ -1023,44 +1027,263 @@ validate_action_arguments() {
     # finalize constants if all arguments are valid
     PXRUNTIME_CONTAINER_NAME="${REMOTE_ENGINE_NAME//[ ]/_}_runtime"
     PXCOMPUTE_CONTAINER_NAME="${REMOTE_ENGINE_NAME//[ ]/_}_compute"
-    echo "REMOTE_ENGINE_VERSION=${PX_VERSION}"
 
     update_docker_volume_permissions
 }
 
 update_docker_volume_permissions() {
 
-    if [[ "${PLATFORM}" == 'icp4d' ]]; then
-        DS_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/ds-storage"
-        PX_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}/px-storage"
-        PX_STORAGE_WLM_DIR="${PX_STORAGE_HOST_DIR}/PXRuntime/WLM"
-        SCRATCH_DIR="${DOCKER_VOLUMES_DIR}/scratch"
+    if [[ "${ACTION}" == 'start' ]]; then
 
-        if [[ "${ACTION}" == 'start' ]]; then
-            echo "Setting ICP4D specific variables ..."
-            if [ ! -d "${DS_STORAGE_HOST_DIR}" ]; then
-              echo "${DS_STORAGE_HOST_DIR} does not exist, creating ..."
-              mkdir -p "${DS_STORAGE_HOST_DIR}"
+        if [[ "${PLATFORM}" == 'icp4d' ]]; then
+            DS_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/ds-storage"
+            PX_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}/px-storage"
+            PX_STORAGE_WLM_DIR="${PX_STORAGE_HOST_DIR}/PXRuntime/WLM"
+            SCRATCH_DIR="${DOCKER_VOLUMES_DIR}/scratch"
+
+            if [[ "${ACTION}" == 'start' ]]; then
+                echo "Setting ICP4D specific variables ..."
+                if [ ! -d "${DS_STORAGE_HOST_DIR}" ]; then
+                  echo "${DS_STORAGE_HOST_DIR} does not exist, creating ..."
+                  mkdir -p "${DS_STORAGE_HOST_DIR}"
+                fi
+                if [ ! -d "${PX_STORAGE_HOST_DIR}" ]; then
+                  echo "${PX_STORAGE_HOST_DIR} does not exist, creating ..."
+                  mkdir -p "${PX_STORAGE_HOST_DIR}"
+                  mkdir -p "${PX_STORAGE_WLM_DIR}"
+                fi
+                if [ ! -d "${SCRATCH_DIR}" ]; then
+                  echo "${SCRATCH_DIR} does not exist, creating ..."
+                  mkdir -p "${SCRATCH_DIR}"
+                fi
+                chmod -R 777 "${DOCKER_VOLUMES_DIR}"
             fi
-            if [ ! -d "${PX_STORAGE_HOST_DIR}" ]; then
-              echo "${PX_STORAGE_HOST_DIR} does not exist, creating ..."
-              mkdir -p "${PX_STORAGE_HOST_DIR}"
-              mkdir -p "${PX_STORAGE_WLM_DIR}"
-            fi
-            if [ ! -d "${SCRATCH_DIR}" ]; then
-              echo "${SCRATCH_DIR} does not exist, creating ..."
-              mkdir -p "${SCRATCH_DIR}"
-            fi
-            chmod -R 777 "${DOCKER_VOLUMES_DIR}"
         fi
-    fi
 
-    # Mount an empty file for running computes since they aren't supported locally
-    WLM_COMPUTE_RUNNING_FILE="${PX_STORAGE_WLM_DIR}/.compute_running"
-    touch "${WLM_COMPUTE_RUNNING_FILE}"
-    # Mount an empty file telling WLM it is running in cpd mode but in a local docker
-    WLM_LOCAL_DOCKER_FILE="${PX_STORAGE_WLM_DIR}/.local_docker"
-    touch "${WLM_LOCAL_DOCKER_FILE}"
+        # Mount an empty file for running computes since they aren't supported locally
+        WLM_COMPUTE_RUNNING_FILE="${PX_STORAGE_WLM_DIR}/.compute_running"
+        touch "${WLM_COMPUTE_RUNNING_FILE}"
+        # Mount an empty file telling WLM it is running in cpd mode but in a local docker
+        WLM_LOCAL_DOCKER_FILE="${PX_STORAGE_WLM_DIR}/.local_docker"
+        touch "${WLM_LOCAL_DOCKER_FILE}"
+
+        echo "Creating init scripts"
+        copy_startup_script
+        copy_snc_script
+        init_volume_setup
+    fi
+}
+
+copy_startup_script() {
+cat <<EOL > "${PX_STORAGE_HOST_DIR}/startup.sh"
+#!/bin/sh
+secretDir="/etc/secrets"
+iterateSecrets() {
+   for filename in \${secretDir}/*; do
+      envname=\`basename "\$filename"\`
+      lines=\`cat \$filename | wc -l\`
+      if [ \$lines -gt 1 ]; then
+         # multiline - must be a cert file
+         envcontent=\`cat \$filename | awk 'NR>2 {print last} {last=\$0}' | tr -d '\n'\`
+      else
+         envcontent=\`cat \$filename\`
+      fi
+      export \$envname=\$envcontent
+   done
+   # add support for using environment variable to extend LD_LIBRARY_PATH
+   if [ ! -z \$ADDITIONAL_LD_LIRABRY_PATH ]; then
+      export LD_LIRABRY_PATH="LD_LIRABRY_PATH:\${ADDITIONAL_LD_LIRABRY_PATH}"
+   fi
+}
+
+startContainer() {
+  # if [ -z \$COMPUTE_FASTNAME_PREFIX ]; then
+  #   #px-compute
+  #   #cert files created by px-runtime; needed by compute for ssl
+  #   until [ -f /opt/ibm/PXService/Server/PXEngine/etc/certs/pxesslcert.p12 ]; do
+  #     echo "Waiting for certs..."
+  #     sleep 5
+  #   done
+  #   echo "Cert files found..."
+  #   /opt/ibm/startcontainer.sh
+  # else
+  #   #px-runtime
+  #   /opt/ibm/initScripts/startcontainer.sh
+  # fi
+  /opt/ibm/initScripts/startcontainer.sh
+}
+startCassandraSQLENgine() {
+   if [ ! -z "\${CASSANDRA_SQLENGINE_ENABLED}" ] && [ "\${CASSANDRA_SQLENGINE_ENABLED}" = "True" ]; then
+      echo "Starting Cassandra SQLEngine on port \${CASSANDRA_SQLENGINE_PORT} with \${CASSANDRA_SQLENGINE_MEMORY_MB}MB of memory."
+      java_opts="-Xmx\${CASSANDRA_SQLENGINE_MEMORY_MB}m -cp /opt/ibm/PXService/Server/branded_odbc/java/lib/cassandra.jar"
+      java \$java_opts com.ddtek.cassandracloud.sql.Server -port 19933 &
+   fi
+}
+
+startMongoDBSQLEngine() {
+   if [ ! -z "\${MONGODB_SQLENGINE_ENABLED}" ] && [ "\${MONGODB_SQLENGINE_ENABLED}" = "True" ]; then
+      echo "Starting MongoDB SQLEngine on port \${MONGODB_SQLENGINE_PORT} with \${MONGODB_SQLENGINE_MEMORY_MB}MB of memory."
+      java_opts="-Xmx\${MONGODB_SQLENGINE_MEMORY_MB}m -cp /opt/ibm/PXService/Server/branded_odbc/java/lib/mongodb.jar"
+      java \$java_opts com.ddtek.mongodbcloud.sql.Server -port 19967 &
+   fi
+}
+iterateSecrets
+startCassandraSQLENgine
+startMongoDBSQLEngine
+startContainer
+EOL
+chmod 777 "${PX_STORAGE_HOST_DIR}/startup.sh"
+}
+
+copy_snc_script() {
+cat <<EOL > "${PX_STORAGE_HOST_DIR}/snc-automate.sh"
+# retrieve environment variables from /etc/secrets
+SNC_PSE=\`cat /etc/secrets/SNC_PSE\`
+SNC_PASSCODE=\`cat /etc/secrets/SNC_PASSCODE\`
+if [[ -v SECUDIR ]] && [[ -v SNC_LIB ]] && [[ -v SNC_PSE ]];
+then
+if [[ -v SNC_PASSCODE ]];
+then
+passcode=\$(echo -n \$SNC_PASSCODE)
+echo \$passcode
+user=\$(whoami)
+echo \$user
+
+export PATH=\$PATH:\$SECUDIR
+
+echo -n \$SNC_PSE | base64 -d > \$SECUDIR/tmp.pse
+sapgenpse seclogin -p \$SECUDIR/tmp.pse -x \$passcode -O \$user
+#rm \$SECUDIR/tmp.pse
+else
+echo "SNC passcode must be set by user to proceed. Aborting SNC configuration."
+fi
+else
+echo "SNC related environment variables must be set by user to proceed. Aborting SNC configuration."
+fi
+EOL
+chmod 777 "${PX_STORAGE_HOST_DIR}/snc-automate.sh"
+}
+
+init_volume_setup() {
+cat <<EOL > "${PX_STORAGE_HOST_DIR}/init-volume.sh"
+#! /bin/bash
+cd /px-storage && mkdir -p pds_files/node1 pds_files/node2 Datasets certs data/sap config/wlm config/jdbc config/odbc PXRuntime/WLM/logs dbdrivers;
+# create directory for tempdir
+mkdir -p /opt/ibm/PXService/Server/scratch/tmpdir;
+# mkdir -p /px-storage/ds-storage;
+rm -rf /opt/ibm/PXService/Server/Datasets;
+ln -s  /px-storage/pds_files /opt/ibm/PXService/Server/pds_files;
+ln -s  /px-storage/Datasets /opt/ibm/PXService/Server/Datasets;
+ln -s  /px-storage/certs /opt/ibm/PXService/Server/PXEngine/etc/certs;
+ln -s  /px-storage/data/sap /opt/ibm/data/sap;
+# create directory for snc configuratio for SAP connector
+mkdir -p /ds-storage/snc;
+if [[ ! -f "/ds-storage/snc/snc-automate.sh" ]]; then
+  cp /etc/px_tmp/snc-automate.sh /ds-storage/snc/snc-automate.sh;
+else
+# update current file to set SNC_PSE and SNC_PASSCODE
+  envCount=\`cat /ds-storage/snc/snc-automate.sh | grep '/etc/secrets' | wc -l\`
+  if [[ \$envCount -eq 0 ]]; then
+    sed -i '1s|^|SNC_PSE=\`cat /etc/secrets/SNC_PSE\`\nSNC_PASSCODE=\`cat /etc/secrets/SNC_PASSCODE\`\n|' /ds-storage/snc/snc-automate.sh
+  fi
+fi;
+
+# only set for runtime
+if [[ ! -z \$WLM_JOB_COUNT && ! -z \$WLM_JOB_START ]]; then
+  if [[ -f /px-storage/config/wlm/wlm.config.xml ]]; then
+    rm /opt/ibm/PXService/Server/DSWLM/dist/lib/wlm.config.xml;
+  else
+    mv /opt/ibm/PXService/Server/DSWLM/dist/lib/wlm.config.xml /px-storage/config/wlm/wlm.config.xml;
+    sed -i "s/name=\"JobCount\" value=\"5\"/name=\"JobCount\" value=\"\${WLM_JOB_COUNT}\"/" /px-storage/config/wlm/wlm.config.xml;
+    sed -i "s/name=\"StartJob\" value=\"2\"/name=\"StartJob\" value=\"\${WLM_JOB_START}\"/" /px-storage/config/wlm/wlm.config.xml;
+    # line number for MediumPriorityJobsPolicy, JobCount is on the next line #}
+    mediumPriorityLN=\`cat /px-storage/config/wlm/wlm.config.xml | grep -n 'Policy name="MediumPriorityJobsPolicy"' | cut -d ':' -f 1\`;
+    jobCountLN=\$((mediumPriorityLN + 1));
+    sed -i "\${jobCountLN}s/resource=\"JobCount\" value=\"5\"/resource=\"JobCount\" value=\"\${WLM_JOB_COUNT}\"/" /px-storage/config/wlm/wlm.config.xml;
+    lowPriorityLN=\`cat /px-storage/config/wlm/wlm.config.xml | grep -n 'Policy name="LowPriorityJobsPolicy"' | cut -d ':' -f 1\`;
+    jobCountLN=\$((lowPriorityLN + 1));
+    sed -i "\${jobCountLN}s/resource=\"JobCount\" value=\"5\"/resource=\"JobCount\" value=\"\${WLM_JOB_COUNT}\"/" /px-storage/config/wlm/wlm.config.xml;
+    highPriorityLN=\`cat /px-storage/config/wlm/wlm.config.xml | grep -n 'Policy name="HighPriorityJobsPolicy"' | cut -d ':' -f 1\`;
+    jobCountLN=\$((highPriorityLN + 1));
+    sed -i "\${jobCountLN}s/resource=\"JobCount\" value=\"5\"/resource=\"JobCount\" value=\"\${WLM_JOB_COUNT}\"/" /px-storage/config/wlm/wlm.config.xml;
+    # update low and high to the same value
+  fi;
+  ln -s  /px-storage/config/wlm/wlm.config.xml /opt/ibm/PXService/Server/DSWLM/dist/lib/wlm.config.xml;
+  if [[ -f /px-storage/config/wlm/Logging.properties ]]; then
+    rm /opt/ibm/PXService/Server/DSWLM/dist/lib/Logging.properties;
+  else
+    mv /opt/ibm/PXService/Server/DSWLM/dist/lib/Logging.properties /px-storage/config/wlm/Logging.properties;
+  fi
+  ln -s  /px-storage/config/wlm/Logging.properties /opt/ibm/PXService/Server/DSWLM/dist/lib/Logging.properties;
+fi;
+
+if [[ -f /px-storage/config/jdbc/isjdbc.config  ]]; then
+  rm /opt/ibm/PXService/Server/DSEngine/isjdbc.config;
+  rm /opt/ibm/PXService/Server/DSEngine/isjdbc.config.biginsights;
+  rm /opt/ibm/PXService/Server/DSEngine/isjdbc.config.default;
+else
+  mv /opt/ibm/PXService/Server/DSEngine/isjdbc.config /px-storage/config/jdbc/isjdbc.config;
+  mv /opt/ibm/PXService/Server/DSEngine/isjdbc.config.biginsights /px-storage/config/jdbc/isjdbc.config.biginsights;
+  mv /opt/ibm/PXService/Server/DSEngine/isjdbc.config.default /px-storage/config/jdbc/isjdbc.config.default;
+fi;
+ln -s  /px-storage/config/jdbc/isjdbc.config             /opt/ibm/PXService/Server/DSEngine/isjdbc.config;
+ln -s  /px-storage/config/jdbc/isjdbc.config.biginsights /opt/ibm/PXService/Server/DSEngine/isjdbc.config.biginsights;
+ln -s  /px-storage/config/jdbc/isjdbc.config.default     /opt/ibm/PXService/Server/DSEngine/isjdbc.config.default;
+mkdir -p /ds-storage/rule-set /ds-storage/avi;
+ln -s  /ds-storage/rule-set /opt/ibm/data/rule-set;
+ln -s  /ds-storage/avi /opt/ibm/data/avi;
+if [[ -f /ds-storage/connectors/odbc/config/odbc.ini ]]; then
+  rm /opt/ibm/PXService/Server/DSEngine/.odbc.ini;
+else
+  # move odbc.ini from px-storage to ds-storage
+  mkdir -p /ds-storage/connectors/odbc/config
+  if [[ -f /px-storage/config/odbc/odbc.ini ]]; then
+     mv /px-storage/config/odbc/odbc.ini /ds-storage/connectors/odbc/config/odbc.ini;
+     rm /opt/ibm/PXService/Server/DSEngine/.odbc.ini;
+  else
+     mv /opt/ibm/PXService/Server/DSEngine/.odbc.ini /ds-storage/connectors/odbc/config/odbc.ini;
+  fi;
+fi;
+ln -s /ds-storage/connectors/odbc/config/odbc.ini /opt/ibm/PXService/Server/DSEngine/.odbc.ini;
+if [[ ! -f /px-storage/config/log_retention/LogRetention.cfg && -f /etc/px_tmp/LogRetention.cfg ]]; then
+  mkdir -p /px-storage/config/log_retention;
+  cp /etc/px_tmp/LogRetention.cfg /px-storage/config/log_retention/LogRetention.cfg;
+fi;
+# create symlink for DSWLM/logs
+if [ -d /opt/ibm/PXService/Server/DSWLM/logs ]; then
+  rm -rf /opt/ibm/PXService/Server/DSWLM/logs
+  ln -s /px-storage/PXRuntime/WLM/logs /opt/ibm/PXService/Server/DSWLM/logs
+fi
+# create symlink for db2 catalog node/db
+sed -i 's/dsadm/dsuser/g' /home/dsuser/sqllib/db2profile
+if [[ ! -d /px-storage/db2 ]]; then
+   mkdir -p /px-storage/db2/sqldbdir
+   source /home/dsuser/sqllib/db2profile
+   # db2 catalog fails when symlinked to an empty dir
+   # the workaround is to catalog a dummy node and use the created dir for the symlink
+   db2 CATALOG TCPIP NODE ignore REMOTE IGNORE.DB2.IBM.COM SERVER 50000
+   mv /home/dsuser/sqllib/sqlnodir /px-storage/db2/sqlnodir
+fi
+if [[ ! -f /px-storage/db2/db2nodes.cfg ]]; then
+   echo "0 ds-px-default-ibm-datastage-px-compute-0.ds-px-default-ibm-datastage-px-compute 0" > /px-storage/db2/db2nodes.cfg
+fi
+ln -s /px-storage/db2/db2nodes.cfg /home/dsuser/sqllib/db2nodes.cfg
+ln -s /px-storage/db2/sqlnodir /home/dsuser/sqllib/sqlnodir
+ln -s /px-storage/db2/sqldbdir /home/dsuser/sqllib/sqldbdir
+# for px compute; call initScript to import java certs
+if [[ -z "\${DS_PX_COMPUTE_REPLICAS}" ]]; then
+  set +e;
+  # different scripts for import certs on IBM and OpenJDK base image
+  if [[ -f /opt/ibm/initScripts/03-misccerts.sh ]]; then
+    /opt/ibm/initScripts/03-misccerts.sh;
+  elif [[ -f /opt/ibm/initScripts/01-libertycert.sh ]]; then
+    /opt/ibm/initScripts/01-libertycert.sh start;
+  else
+    echo "Missing cert update script";
+  fi
+fi
+EOL
+chmod 777 "${PX_STORAGE_HOST_DIR}/init-volume.sh"
 }
 
 #######################################################################
