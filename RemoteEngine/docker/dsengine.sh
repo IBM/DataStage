@@ -370,6 +370,15 @@ print_tool_name_version() {
     print_header "$TOOL_NAME ${TOOL_VERSION}"
 }
 
+create_dir_if_not_exist() {
+    DIR_PATH=$1
+    if [ ! -d $DIR_PATH ]; then
+        echo "Folder ${DIR_PATH} does not exist, creating ..."
+        mkdir "${DIR_PATH}"
+        chmod 777 "${DIR_PATH}"
+    fi
+}
+
 #######################################################################
 # docker functions
 #######################################################################
@@ -521,8 +530,6 @@ run_px_runtime_docker() {
         --network=${PXRUNTIME_CONTAINER_NAME}
     )
 
-    # echo "WLM_COMPUTE_RUNNING_FILE = ${WLM_COMPUTE_RUNNING_FILE}"
-    # echo "WLM_LOCAL_DOCKER_FILE = ${WLM_LOCAL_DOCKER_FILE}"
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         runtime_docker_opts+=(
             --env WLMON=1
@@ -532,10 +539,6 @@ run_px_runtime_docker() {
             -v "${DS_STORAGE_HOST_DIR}":/ds-storage
             -v "${PX_STORAGE_HOST_DIR}":/px-storage
             -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch
-            # -v "${WLM_COMPUTE_RUNNING_FILE}":/px-storage/PXRuntime/WLM/.compute_running
-            # -v "${WLM_LOCAL_DOCKER_FILE}":/px-storage/PXRuntime/WLM/.local_docker
-            --mount type=bind,source="${PX_STORAGE_HOST_DIR}/snc-automate.sh",target=/etc/px_tmp/snc-automate.sh
-            --mount type=bind,source="${PX_STORAGE_HOST_DIR}/startup.sh",target=/opt/ibm/startup.sh
         )
     fi
 
@@ -689,7 +692,6 @@ wait_readiness_px_compute() {
         fi
         sleep 5
     done
-
 }
 
 initialize_docker_network() {
@@ -1028,11 +1030,10 @@ validate_action_arguments() {
     PXRUNTIME_CONTAINER_NAME="${REMOTE_ENGINE_NAME//[ ]/_}_runtime"
     PXCOMPUTE_CONTAINER_NAME="${REMOTE_ENGINE_NAME//[ ]/_}_compute"
 
-    update_docker_volume_permissions
+    setup_docker_volumes
 }
 
-update_docker_volume_permissions() {
-
+setup_docker_volumes() {
     if [[ "${ACTION}" == 'start' ]]; then
 
         if [[ "${PLATFORM}" == 'icp4d' ]]; then
@@ -1041,41 +1042,33 @@ update_docker_volume_permissions() {
             PX_STORAGE_WLM_DIR="${PX_STORAGE_HOST_DIR}/PXRuntime/WLM"
             SCRATCH_DIR="${DOCKER_VOLUMES_DIR}/scratch"
 
-            if [[ "${ACTION}" == 'start' ]]; then
-                echo "Setting ICP4D specific variables ..."
-                if [ ! -d "${DS_STORAGE_HOST_DIR}" ]; then
-                  echo "${DS_STORAGE_HOST_DIR} does not exist, creating ..."
-                  mkdir -p "${DS_STORAGE_HOST_DIR}"
-                fi
-                if [ ! -d "${PX_STORAGE_HOST_DIR}" ]; then
-                  echo "${PX_STORAGE_HOST_DIR} does not exist, creating ..."
-                  mkdir -p "${PX_STORAGE_HOST_DIR}"
-                  mkdir -p "${PX_STORAGE_WLM_DIR}"
-                fi
-                if [ ! -d "${SCRATCH_DIR}" ]; then
-                  echo "${SCRATCH_DIR} does not exist, creating ..."
-                  mkdir -p "${SCRATCH_DIR}"
-                fi
-                chmod -R 777 "${DOCKER_VOLUMES_DIR}"
-            fi
+            chmod -R 777 "${DOCKER_VOLUMES_DIR}"
+            echo "Setting ICP4D specific variables ..."
+            create_dir_if_not_exist "${DS_STORAGE_HOST_DIR}"
+            create_dir_if_not_exist "${PX_STORAGE_HOST_DIR}"
+            create_dir_if_not_exist "${PX_STORAGE_WLM_DIR}"
+            create_dir_if_not_exist "${SCRATCH_DIR}"
+
         fi
 
         # Mount an empty file for running computes since they aren't supported locally
-        WLM_COMPUTE_RUNNING_FILE="${PX_STORAGE_WLM_DIR}/.compute_running"
-        touch "${WLM_COMPUTE_RUNNING_FILE}"
+        touch "${PX_STORAGE_WLM_DIR}/.compute_running"
         # Mount an empty file telling WLM it is running in cpd mode but in a local docker
         WLM_LOCAL_DOCKER_FILE="${PX_STORAGE_WLM_DIR}/.local_docker"
-        touch "${WLM_LOCAL_DOCKER_FILE}"
+        touch "${PX_STORAGE_WLM_DIR}/.compute_running"
 
         echo "Creating init scripts"
-        copy_startup_script
-        copy_snc_script
-        init_volume_setup
+        generate_startup_script
+        generate_snc_script
+        generate_log_retention_cfg
+        generate_init_volume_script
     fi
 }
 
-copy_startup_script() {
-cat <<EOL > "${PX_STORAGE_HOST_DIR}/startup.sh"
+generate_startup_script() {
+    STARTUP_FILE="${PX_STORAGE_HOST_DIR}/startup.sh"
+    if [ ! -f "${STARTUP_FILE}" ]; then
+cat <<EOL > "${STARTUP_FILE}"
 #!/bin/sh
 secretDir="/etc/secrets"
 iterateSecrets() {
@@ -1132,10 +1125,16 @@ startCassandraSQLENgine
 startMongoDBSQLEngine
 startContainer
 EOL
-chmod 777 "${PX_STORAGE_HOST_DIR}/startup.sh"
+chmod 777 "${STARTUP_FILE}"
+    fi
 }
 
-copy_snc_script() {
+generate_snc_script() {
+    SNC_DIR="${DS_STORAGE_HOST_DIR}/snc"
+    create_dir_if_not_exist "${SNC_DIR}"
+    SNC_FILE="${SNC_DIR}/snc-automate.sh"
+
+    if [ ! -f "${SNC_FILE}" ]; then
 cat <<EOL > "${PX_STORAGE_HOST_DIR}/snc-automate.sh"
 # retrieve environment variables from /etc/secrets
 SNC_PSE=\`cat /etc/secrets/SNC_PSE\`
@@ -1161,12 +1160,50 @@ else
 echo "SNC related environment variables must be set by user to proceed. Aborting SNC configuration."
 fi
 EOL
-chmod 777 "${PX_STORAGE_HOST_DIR}/snc-automate.sh"
+    fi
 }
 
-init_volume_setup() {
-cat <<EOL > "${PX_STORAGE_HOST_DIR}/init-volume.sh"
+generate_log_retention_cfg() {
+    LOGRTNCFG_DIR="${PX_STORAGE_HOST_DIR/config/log_retention}"
+    create_dir_if_not_exist "${LOGRTNCFG_DIR}"
+    LOGRTNCFG_FILE="${PX_STORAGE_HOST_DIR}/LogRetention.cfg"
+
+    if [ ! -f "${LOGRTNCFG_FILE}" ]; then
+cat <<EOL > "${LOGRTNCFG_FILE}"
+#           Licensed Materials - Property of IBM
+#           (c) Copyright IBM Corp. 2010, 2020
+#
+# DataStage PX Runtime Log Configuration
+# ===================================================
+
+# Enables log retention manager if set to `TRUE` otherwise is not active
+ENABLE_LOG_RETENTION=TRUE
+
+# Sets the metric to check on logs for cleanup
+# Use \`TIME\` to define a cutoff point in days for logs
+# Use \`RUN\` to define a cutoff point by count for logs
+LOG_RETENTION_POLICY = TIME
+# The number of days to keep logs from runs
+# Only active if the retention policy is set to this mode
+LOG_RETENTION_DAYS = 10
+# The number of runs to keep logs for
+# Only active if the retention policy is set to this mode
+LOG_RETENTION_RUNS = 10
+# The frequency of log retention manager in hours
+LOG_MANAGER_FREQ = 24
+EOL
+    fi
+chmod 777 "${LOGRTNCFG_FILE}"
+}
+
+generate_init_volume_script() {
+    INIT_VOL_FILE="${PX_STORAGE_HOST_DIR}/init-volume.sh"
+    if [ ! -f "${INIT_VOL_FILE}" ]; then
+cat <<EOL > "${INIT_VOL_FILE}"
 #! /bin/bash
+
+cp "/px-storage/startup.sh" /opt/ibm/startup.sh
+
 cd /px-storage && mkdir -p pds_files/node1 pds_files/node2 Datasets certs data/sap config/wlm config/jdbc config/odbc PXRuntime/WLM/logs dbdrivers;
 # create directory for tempdir
 mkdir -p /opt/ibm/PXService/Server/scratch/tmpdir;
@@ -1283,7 +1320,8 @@ if [[ -z "\${DS_PX_COMPUTE_REPLICAS}" ]]; then
   fi
 fi
 EOL
-chmod 777 "${PX_STORAGE_HOST_DIR}/init-volume.sh"
+chmod 777 "${INIT_VOL_FILE}"
+    fi
 }
 
 #######################################################################
@@ -1370,7 +1408,6 @@ if [[ ${ACTION} == "start" ]]; then
     echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is registered."
 
     echo "Updating the project to use ${REMOTE_ENGINE_NAME} as the default environment"
-    update_docker_volume_permissions
     update_datastage_settings
     echo "Remote Engine docker setup is complete"
 
