@@ -88,7 +88,6 @@ print_help() {
     echo "${bold}commands:${normal}"
     echo "    start         start a remote engine instance"
     echo "    stop          stop a remote engine instance"
-    echo "    restart       restart a remote engine instance"
     echo "    cleanup       cleanup a remote engine instance"
     echo "    help          Print usage information"
     echo ""
@@ -101,7 +100,7 @@ function main(){
     fi
 
     case ${1} in
-        start | stop | restart | cleanup | help)
+        start | stop | cleanup | help)
             $1 "${@:2}";
         ;;
         * )
@@ -119,8 +118,6 @@ print_usage() {
         echo "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] [-i | --ivspec] [-d | --project-id] [--home] [--memory]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
-    elif [[ "${ACTION}" == 'restart' ]]; then
-        echo "${bold}usage:${normal} ${script_name} restart [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
         echo "${bold}usage:${normal} ${script_name} cleanup [-n | --remote-engine-name] [-a | --apikey] [-d | --project-id] [--home]"
     fi
@@ -259,33 +256,6 @@ function stop() {
     done
 }
 
-function restart() {
-    ACTION='restart'
-    if [[ "$#" == 0 ]]; then
-        print_usage
-        exit 1
-    fi
-
-    # process options
-    while [[ "$1" != "" ]]; do
-        case "$1" in
-        -n | --remote-engine-name)
-            shift
-            REMOTE_ENGINE_NAME="$1"
-            ;;
-        -h | --help)
-            print_usage
-            exit 1
-            ;;
-        *)
-            print_usage
-            exit 1
-            ;;
-        esac
-        shift
-    done
-}
-
 function cleanup() {
     ACTION='cleanup'
     if [[ "$#" == 0 ]]; then
@@ -315,6 +285,10 @@ function cleanup() {
         --platform)
             shift
             PLATFORM="$1"
+            ;;
+        --volume-dir)
+            shift
+            DOCKER_VOLUMES_DIR="$1"
             ;;
         -h | --help)
             print_usage
@@ -374,7 +348,7 @@ create_dir_if_not_exist() {
     DIR_PATH=$1
     if [ ! -d $DIR_PATH ]; then
         echo "Folder ${DIR_PATH} does not exist, creating ..."
-        mkdir "${DIR_PATH}"
+        mkdir -p "${DIR_PATH}"
         chmod 777 "${DIR_PATH}"
     fi
 }
@@ -548,6 +522,9 @@ run_px_runtime_docker() {
         echo "docker run return code: $status."
         echo_error_and_exit "Aborting script run."
     fi
+
+    # once the container is up, reset permissions on the volumes dir
+    chmod -R 777 "${DOCKER_VOLUMES_DIR}"
 
     # wait until docker is in a running state - doesn't mean server has started
     until [[ $( $DOCKER_CMD ps -a | grep $PXRUNTIME_CONTAINER_NAME | wc -l ) -gt 0 ]]; do
@@ -810,7 +787,6 @@ update_datastage_settings() {
     DATASTAGE_SETTINGS_ASSET_ID=$(printf "%s" "${_datastage_settings_get_response}" | jq -r .metadata.asset_id | tr -d '"')
     if [[ ${DATASTAGE_SETTINGS_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
         echo "DataStage Settings asset id: ${DATASTAGE_SETTINGS_ASSET_ID}"
-        echo ""
     fi
 
     payload="{
@@ -1029,35 +1005,33 @@ validate_action_arguments() {
     # finalize constants if all arguments are valid
     PXRUNTIME_CONTAINER_NAME="${REMOTE_ENGINE_NAME//[ ]/_}_runtime"
     PXCOMPUTE_CONTAINER_NAME="${REMOTE_ENGINE_NAME//[ ]/_}_compute"
-
-    setup_docker_volumes
 }
 
 setup_docker_volumes() {
+    DS_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/ds-storage"
+    CONTAINER_HOST_DIR="${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}"
+    PX_STORAGE_HOST_DIR="${CONTAINER_HOST_DIR}/px-storage"
+    PX_STORAGE_WLM_DIR="${PX_STORAGE_HOST_DIR}/PXRuntime/WLM"
+    SCRATCH_DIR="${DOCKER_VOLUMES_DIR}/scratch"
+
     if [[ "${ACTION}" == 'start' ]]; then
 
         if [[ "${PLATFORM}" == 'icp4d' ]]; then
-            DS_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/ds-storage"
-            PX_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}/px-storage"
-            PX_STORAGE_WLM_DIR="${PX_STORAGE_HOST_DIR}/PXRuntime/WLM"
-            SCRATCH_DIR="${DOCKER_VOLUMES_DIR}/scratch"
-
-            chmod -R 777 "${DOCKER_VOLUMES_DIR}"
-            echo "Setting ICP4D specific variables ..."
+            create_dir_if_not_exist "${DOCKER_VOLUMES_DIR}"
+            create_dir_if_not_exist "${CONTAINER_HOST_DIR}"
             create_dir_if_not_exist "${DS_STORAGE_HOST_DIR}"
             create_dir_if_not_exist "${PX_STORAGE_HOST_DIR}"
             create_dir_if_not_exist "${PX_STORAGE_WLM_DIR}"
             create_dir_if_not_exist "${SCRATCH_DIR}"
-
+            chmod -R 777 "${DOCKER_VOLUMES_DIR}"
         fi
 
         # Mount an empty file for running computes since they aren't supported locally
         touch "${PX_STORAGE_WLM_DIR}/.compute_running"
         # Mount an empty file telling WLM it is running in cpd mode but in a local docker
-        WLM_LOCAL_DOCKER_FILE="${PX_STORAGE_WLM_DIR}/.local_docker"
-        touch "${PX_STORAGE_WLM_DIR}/.compute_running"
+        touch "${PX_STORAGE_WLM_DIR}/.local_docker"
 
-        echo "Creating init scripts"
+        echo "Creating init scripts ..."
         generate_startup_script
         generate_snc_script
         generate_log_retention_cfg
@@ -1135,7 +1109,7 @@ generate_snc_script() {
     SNC_FILE="${SNC_DIR}/snc-automate.sh"
 
     if [ ! -f "${SNC_FILE}" ]; then
-cat <<EOL > "${PX_STORAGE_HOST_DIR}/snc-automate.sh"
+cat <<EOL > "${SNC_FILE}"
 # retrieve environment variables from /etc/secrets
 SNC_PSE=\`cat /etc/secrets/SNC_PSE\`
 SNC_PASSCODE=\`cat /etc/secrets/SNC_PASSCODE\`
@@ -1160,16 +1134,17 @@ else
 echo "SNC related environment variables must be set by user to proceed. Aborting SNC configuration."
 fi
 EOL
+    chmod 777 "${SNC_FILE}"
     fi
 }
 
 generate_log_retention_cfg() {
-    LOGRTNCFG_DIR="${PX_STORAGE_HOST_DIR/config/log_retention}"
-    create_dir_if_not_exist "${LOGRTNCFG_DIR}"
-    LOGRTNCFG_FILE="${PX_STORAGE_HOST_DIR}/LogRetention.cfg"
+    LOG_CFG_DIR="${PX_STORAGE_HOST_DIR}/config/log_retention"
+    create_dir_if_not_exist "${LOG_CFG_DIR}"
+    LOG_CFG_FILE="${LOG_CFG_DIR}/LogRetention.cfg"
 
-    if [ ! -f "${LOGRTNCFG_FILE}" ]; then
-cat <<EOL > "${LOGRTNCFG_FILE}"
+    if [ ! -f "${LOG_CFG_FILE}" ]; then
+cat <<EOL > "${LOG_CFG_FILE}"
 #           Licensed Materials - Property of IBM
 #           (c) Copyright IBM Corp. 2010, 2020
 #
@@ -1192,8 +1167,8 @@ LOG_RETENTION_RUNS = 10
 # The frequency of log retention manager in hours
 LOG_MANAGER_FREQ = 24
 EOL
+    chmod 777 "${LOG_CFG_FILE}"
     fi
-chmod 777 "${LOGRTNCFG_FILE}"
 }
 
 generate_init_volume_script() {
@@ -1320,7 +1295,7 @@ if [[ -z "\${DS_PX_COMPUTE_REPLICAS}" ]]; then
   fi
 fi
 EOL
-chmod 777 "${INIT_VOL_FILE}"
+    chmod 777 "${INIT_VOL_FILE}"
     fi
 }
 
@@ -1334,6 +1309,7 @@ print_tool_name_version
 echo ""
 
 validate_action_arguments
+setup_docker_volumes
 
 if [[ ${ACTION} == "start" ]]; then
 
@@ -1346,6 +1322,7 @@ if [[ ${ACTION} == "start" ]]; then
 
     # check if this container is present but not running. Restart the container
     if [[ $(check_pxruntime_container_exists) == "true" ]]; then
+        echo "Existing container ${PXRUNTIME_CONTAINER_NAME} found in a stopped state"
         check_used_port_pxruntime
         start_px_runtime_docker
         wait_readiness_px_runtime
@@ -1409,11 +1386,10 @@ if [[ ${ACTION} == "start" ]]; then
 
     echo "Updating the project to use ${REMOTE_ENGINE_NAME} as the default environment"
     update_datastage_settings
-    echo "Remote Engine docker setup is complete"
 
     PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
     echo ""
-    echo "Remote Engine setup is complete."
+    echo "${bold}Remote Engine setup is complete${normal}"
     echo ""
     echo "Project environments:"
     echo "* ${PROJECTS_LINK}/manage/environments/templates?context=cpdaas"
@@ -1440,7 +1416,6 @@ if [[ ${ACTION} == "start" ]]; then
     # Job https://api.dataplatform.dev.cloud.ibm.com/v2/jobs/docs/swagger/#/Jobs/jobs_create POST, with env_id from POST CALL response
     # Run Job https://api.dataplatform.dev.cloud.ibm.com/v2/jobs/docs/swagger/#/Job%20Runs
 
-
     # echo ""
     # echo "${bold}Running rowgen peek ...${normal}"
     # echo ""
@@ -1451,55 +1426,43 @@ elif [[ ${ACTION} == "stop" ]]; then
     stop_px_runtime_docker
     remove_px_runtime_docker
 
-elif [[ ${ACTION} == "restart" ]]; then
-
-    # stop the docker container
-    # --------------------------
-    echo "Checking for existing container '${PXRUNTIME_CONTAINER_NAME}'"
-    if [[ $(check_pxruntime_container_exists_and_running) == "true" ]]; then
-        echo ""
-        stop_px_runtime_docker
-    fi
-
-    echo ""
-    check_used_port_pxruntime
-    start_px_runtime_docker
-    wait_readiness_px_runtime
-
-    echo ""
-    echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is available, and can be used to run DataStage flows"
-
 elif [[ ${ACTION} == "cleanup" ]]; then
+    echo "WARNING: This will remove the docker container and also remove the persistent storage used with this instance:"
+    echo " - ${CONTAINER_HOST_DIR}"
+    read -p "Are you sure you want to cleanup this instance? "
+    echo    # (optional) move to a new line
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
 
-    stop_px_runtime_docker
-    remove_px_runtime_docker
-    # stop_px_compute_docker
-    cleanup_docker_network
+        stop_px_runtime_docker
+        remove_px_runtime_docker
+        cleanup_docker_network
 
-    print_header "Cleaning Remote Engine '${REMOTE_ENGINE_NAME}'..."
+        print_header "Cleaning Remote Engine '${REMOTE_ENGINE_NAME}'..."
 
-    echo "Getting IAM token"
-    get_iam_token
-
-    echo "Getting Remote Engine ID ..."
-    get_remote_engine_id
-    echo "Getting Project Environment Engine ID ..."
-    get_environment_id
-
-    echo "Removing Remote Engine registration ..."
-    remove_remote_engine
-
-    echo "Removing Runtime associated with the remote Engine ..."
-    remove_environment
-
-    echo "Resetting DataStage settings"
-    reset_datastage_settings
-
-    if [[ "${PLATFORM}" == 'icp4d' ]]; then
-        if [ -d "$directory" ]; then
-            echo "Removing ${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}"
-            rm -rf "${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}"
+        if [[ "${PLATFORM}" == 'icp4d' ]]; then
+            if [ -d "${CONTAINER_HOST_DIR}" ]; then
+                rm -rf "${CONTAINER_HOST_DIR}"
+            fi
         fi
+
+        echo "Getting IAM token"
+        get_iam_token
+
+        echo "Getting Remote Engine ID ..."
+        get_remote_engine_id
+        echo "Getting Project Environment Engine ID ..."
+        get_environment_id
+
+        echo "Removing Remote Engine registration ..."
+        remove_remote_engine
+
+        echo "Removing Runtime associated with the remote Engine ..."
+        remove_environment
+
+        echo "Resetting DataStage settings"
+        reset_datastage_settings
+    else
+        echo 'Aborted cleanup.'
     fi
 fi
 
