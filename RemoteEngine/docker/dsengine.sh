@@ -1151,7 +1151,7 @@ cat <<EOL > "${LOG_CFG_FILE}"
 # DataStage PX Runtime Log Configuration
 # ===================================================
 
-# Enables log retention manager if set to `TRUE` otherwise is not active
+# Enables log retention manager if set to \`TRUE\` otherwise is not active
 ENABLE_LOG_RETENTION=TRUE
 
 # Sets the metric to check on logs for cleanup
