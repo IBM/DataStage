@@ -31,7 +31,7 @@
 The `dsengine.sh` script can be invoked from the `docker` folder of this project. Note that the name in the below command can be changed form `remote_engine_name_01` to your preferred name.
 ```bash
 # create/start a local remote engine instance
-./dsengine.sh start -n "remote_engine_name_01" \
+./dsengine.sh start -n 'remote_engine_name_01' \
                     -a "$IBMCLOUD_APIKEY" \
                     -e "$ENCRYPTION_KEY" \
                     -i "$ENCRYPTION_IV" \
@@ -46,6 +46,6 @@ The `dsengine.sh` script can be invoked from the `docker` folder of this project
 
 # cleanup a remote engine instance and its registration with DataPlatform
 ./dsengine.sh cleanup -n 'remote_engine_name_01' \
-                      -a $IBMCLOUD_APIKEY \
+                      -a "$IBMCLOUD_APIKEY" \
                       --project-id "$PROJECT_ID"
 ```
