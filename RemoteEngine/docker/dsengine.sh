@@ -63,7 +63,7 @@ STR_VOLUMES="  --volume-dir                Directory for persistent storage. Def
 # STR_VERSION='  --version                   Version of the remote engine to use'
 STR_MEMORY='  --memory                    Memory allocated to the docker container (default is 4Gi).'
 STR_CPUS='  --cpus                      CPU allocated to the docker container (Default is 2 cores).'
-STR_HELP='  --help                      Print usage information'
+STR_HELP='  help, --help                Print usage information'
 
 #######################################################################
 # cli functions
@@ -86,15 +86,20 @@ print_help() {
     echo "${bold}usage:${normal} ${script_name} <command> [<args>]"
     echo ""
     echo "${bold}commands:${normal}"
-    echo "    start         start a remote engine instance"
-    echo "    stop          stop a remote engine instance"
-    echo "    cleanup       cleanup a remote engine instance"
-    echo "    help          Print usage information"
+    echo "    start           start a remote engine instance"
+    echo "    stop            stop a remote engine instance"
+    echo "    cleanup         cleanup a remote engine instance"
+    echo "    help, --help    Print usage information"
     echo ""
 }
 
 function main(){
     if (( "${#}" == 0 )); then
+        print_help 0;
+        exit 1
+    fi
+
+    if [[ "${1}" == 'help' || "${1}" == '--help' ]]; then
         print_help 0;
         exit 1
     fi
@@ -120,6 +125,9 @@ print_usage() {
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
         echo "${bold}usage:${normal} ${script_name} cleanup [-n | --remote-engine-name] [-a | --apikey] [-d | --project-id] [--home]"
+    elif [[ "${ACTION}" == 'help' ]]; then
+        print_help 1;
+        exit 1;
     fi
 
     echo ""
@@ -215,7 +223,7 @@ function start() {
         #     shift
         #     PX_VERSION="$1"
         #     ;;
-        -h | --help)
+        -h | --help | help)
             print_usage
             exit 1
             ;;
@@ -243,7 +251,7 @@ function stop() {
             shift
             REMOTE_ENGINE_NAME="$1"
             ;;
-        -h | --help)
+        -h | --help | help)
             print_usage
             exit 1
             ;;
@@ -290,7 +298,7 @@ function cleanup() {
             shift
             DOCKER_VOLUMES_DIR="$1"
             ;;
-        -h | --help)
+        -h | --help | help)
             print_usage
             exit 1
             ;;
