@@ -123,4 +123,5 @@ tmpfile2.txt
 
 
 execute_*.sh
+input-file-*.txt
 loop.sh
