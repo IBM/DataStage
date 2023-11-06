@@ -221,30 +221,33 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   creationTimestamp: null
-  name: pxruntimes.ds.cpd.ibm.com
+  name: pxremoteengines.ds.cpd.ibm.com
 spec:
   group: ds.cpd.ibm.com
   names:
-    kind: PXRuntime
-    listKind: PXRuntimeList
-    plural: pxruntimes
-    singular: pxruntime
+    kind: PXRemoteEngine
+    listKind: PXRemoteEngineList
+    plural: pxremoteengines
+    singular: pxremoteengine
+    shortNames:
+    - pxre
+    - pxres
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-      - description: The desired version of PXRuntime
+      - description: The desired version of PXRemoteEngine
         jsonPath: .spec.version
         name: Version
         type: string
-      - description: The actual version PXRuntime
+      - description: The actual version PXRemoteEngine
         jsonPath: .status.dsVersion
         name: Reconciled
         type: string
-      - description: The status of PXRuntime
+      - description: The status of PXRemoteEngine
         jsonPath: .status.dsStatus
         name: Status
         type: string
-      - description: The age of PXRuntime
+      - description: The age of PXRemoteEngine
         jsonPath: .metadata.creationTimestamp
         name: Age
         type: date
@@ -289,12 +292,12 @@ create_service_account() {
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: ibm-cpd-datastage-operator-serviceaccount
+  name: ibm-cpd-datastage-remote-operator-serviceaccount
   namespace: $namespace
   labels:
-    app.kubernetes.io/instance: ibm-cpd-datastage-operator-sa
-    app.kubernetes.io/managed-by: ibm-cpd-datastage-operator
-    app.kubernetes.io/name: ibm-cpd-datastage-operator-sa
+    app.kubernetes.io/instance: ibm-cpd-datastage-remote-operator-sa
+    app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+    app.kubernetes.io/name: ibm-cpd-datastage-remote-operator-sa
 imagePullSecrets:
 - name: ibm-entitlement-key
 - name: $DS_REGISTRY_SECRET
@@ -306,12 +309,12 @@ create_role() {
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: ibm-cpd-datastage-operator-role
+  name: ibm-cpd-datastage-remote-operator-role
   namespace: $namespace
   labels:
-     app.kubernetes.io/instance: ibm-cpd-datastage-operator-cluster-role
-     app.kubernetes.io/managed-by: ibm-cpd-datastage-operator
-     app.kubernetes.io/name: ibm-cpd-datastage-operator-cluster-role
+     app.kubernetes.io/instance: ibm-cpd-datastage-remote-operator-cluster-role
+     app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+     app.kubernetes.io/name: ibm-cpd-datastage-remote-operator-cluster-role
 
 rules:
 - apiGroups:
@@ -361,12 +364,9 @@ rules:
 - apiGroups:
   - ds.cpd.ibm.com
   resources:
-  - pxruntimes
-  - pxruntimes/status
-  - pxruntimes/finalizers
-  - datastages
-  - datastages/status
-  - datastages/finalizers
+  - pxremoteengines
+  - pxremoteengines/status
+  - pxremoteengines/finalizers
   verbs:
   - apply
   - edit
@@ -385,19 +385,19 @@ create_role_binding() {
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: ibm-cpd-datastage-operator-role-binding
+  name: ibm-cpd-datastage-remote-operator-role-binding
   namespace: $namespace
   labels:
-    app.kubernetes.io/instance: ibm-cpd-datastage-operator-role-binding
-    app.kubernetes.io/managed-by: ibm-cpd-datastage-operator
-    app.kubernetes.io/name: ibm-cpd-datastage-operator-role-binding
+    app.kubernetes.io/instance: ibm-cpd-datastage-remote-operator-role-binding
+    app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+    app.kubernetes.io/name: ibm-cpd-datastage-remote-operator-role-binding
 subjects:
 - kind: ServiceAccount
-  name: ibm-cpd-datastage-operator-serviceaccount
+  name: ibm-cpd-datastage-remote-operator-serviceaccount
   namespace: $namespace
 roleRef:
   kind: Role
-  name: ibm-cpd-datastage-operator-role
+  name: ibm-cpd-datastage-remote-operator-role
   apiGroup: rbac.authorization.k8s.io
 EOF
 }
@@ -415,49 +415,46 @@ create_operator_deployment() {
     k8sEnv=$'- name: KUBERNETES\n              value: "True"'
   fi
   # remove deployment with incorrect name used previously
-  $kubernetesCLI -n $namespace delete deploy ibm-cpd-dastage-operator --ignore-not-found=true
+  $kubernetesCLI -n $namespace delete deploy ibm-cpd-datastage-operator --ignore-not-found=true
+	$kubernetesCLI -n $namespace delete deploy ibm-cpd-datastage-remote-operator --ignore-not-found=true
   cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ibm-cpd-datastage-operator
+  name: ibm-cpd-datastage-remote-operator
   annotations:
-    productID: d8a97b146d6f4bf18f033db9105f87f1
+    productID: ff566289767a4a7f822ab01ebaa16cf4
     productMetric: FREE
-    productName: IBM DataStage Enterprise Plus Cartridge for IBM Cloud Pak for Data
-    productVersion: 4.7.0
-    cloudpakName: IBM Cloud Pak for Data
-    cloudpakId: 49a42b864bb94569bef0188ead948f11
+    productName: IBM DataStage as a Service Anywhere
+    productVersion: 4.8.0
   labels:
-    app.kubernetes.io/instance: ibm-cpd-datastage-operator
-    app.kubernetes.io/managed-by: ibm-cpd-datastage-operator
-    app.kubernetes.io/name: ibm-cpd-datastage-operator
+    app.kubernetes.io/instance: ibm-cpd-datastage-remote-operator
+    app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+    app.kubernetes.io/name: ibm-cpd-datastage-remote-operator
     intent: projected
     icpdsupport/addOnId: datastage
     icpdsupport/app: operator
-    name: ibm-cpd-datastage-operator
+    name: ibm-cpd-datastage-remote-operator
 spec:
   selector:
     matchLabels:
-      name: ibm-cpd-datastage-operator
+      name: ibm-cpd-datastage-remote-operator
   replicas: 1
   template:
     metadata:
       annotations:
-        productID: d8a97b146d6f4bf18f033db9105f87f1
-        productName: IBM DataStage Enterprise Plus Cartridge for IBM Cloud Pak for Data
-        productVersion: 4.7.0
+        productID: ff566289767a4a7f822ab01ebaa16cf4
         productMetric: FREE
-        cloudpakName: IBM Cloud Pak for Data
-        cloudpakId: 49a42b864bb94569bef0188ead948f11
+        productName: IBM DataStage as a Service Anywhere
+        productVersion: 4.8.0
       labels:
-        app.kubernetes.io/instance: ibm-cpd-datastage-operator
-        app.kubernetes.io/managed-by: ibm-cpd-datastage-operator
-        app.kubernetes.io/name: ibm-cpd-datastage-operator
+        app.kubernetes.io/instance: ibm-cpd-datastage-remote-operator
+        app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+        app.kubernetes.io/name: ibm-cpd-datastage-remote-operator
         intent: projected
         icpdsupport/addOnId: datastage
         icpdsupport/app: operator
-        name: ibm-cpd-datastage-operator
+        name: ibm-cpd-datastage-remote-operator
     spec:
       affinity:
         nodeAffinity:
@@ -474,9 +471,9 @@ spec:
             - "--zap-log-level"
             - "error"
             - "--max-concurrent-reconciles"
-            - "8"
+            - "6"
             - "--watches-file"
-            - "./pxremote_watches.yaml"
+            - "./px_remote_engine_watches.yaml"
           image: ${OPERATOR_REGISTRY}/ds-operator@${operator_digest}
           imagePullPolicy: IfNotPresent
           livenessProbe:
@@ -519,8 +516,8 @@ spec:
               cpu: 1
               memory: 512Mi
               ephemeral-storage: 900Mi
-      serviceAccount: ibm-cpd-datastage-operator-serviceaccount
-      serviceAccountName: ibm-cpd-datastage-operator-serviceaccount
+      serviceAccount: ibm-cpd-datastage-remote-operator-serviceaccount
+      serviceAccountName: ibm-cpd-datastage-remote-operator-serviceaccount
       terminationGracePeriodSeconds: 10
 EOF
 }
@@ -548,6 +545,28 @@ create_apikey_secret() {
   $kubernetesCLI -n ${namespace} create secret generic $DS_API_KEY_SECRET --from-literal=api-key=${api_key}
 }
 
+remove_previous_resources() {
+  $kubernetesCLI -n ${namespace} delete deploy ${name}-ibm-datastage-px-runtime --ignore-not-found=true
+  $kubernetesCLI -n ${namespace} delete sts ${name}-ibm-datastage-px-compute --ignore-not-found=true
+  $kubernetesCLI -n ${namespace} delete svc ${name}-ibm-datastage-px-runtime --ignore-not-found=true
+  $kubernetesCLI -n ${namespace} delete svc ${name}-ibm-datastage-px-compute --ignore-not-found=true
+}
+
+get_resource_id() {
+  px_cr_uid=`$kubernetesCLI -n ${namespace} get pxremoteengine $name -o=jsonpath='{.metadata.uid}'`
+  if [ -z $px_cr_uid ]; then
+    echo "Unable to retrieve resource ID for PXRemoteEngine ${name}"
+    exit 1
+  fi
+}
+
+change_ownership() {
+  resource_name=$2
+  resource_kind=$1
+  echo "Changing ownership for ${resource_kind} ${resource_name} to PXRemoteEngine CR"
+  $kubernetesCLI -n ${namespace} patch $resource_kind $resource_name -p "{\"metadata\":{\"ownerReferences\":[{\"apiVersion\":\"ds.cpd.ibm.com/v1\", \"kind\":\"PXRemoteEngine\", \"name\":\"${name}\", \"uid\":\"${px_cr_uid}\"}]}}" --type=merge
+}
+
 create_instance() {
   if [ -z $name ]; then
     display_missing_arg "name"
@@ -558,14 +577,23 @@ create_instance() {
   if [ -z $projectId ]; then
     display_missing_arg "project-id"
   fi
-  $kubernetesCLI -n $namespace get pxruntime $name
+  if [ -z $license_accept ] || [ $license_accept != "true" ]; then
+    display_missing_arg "license-accept"
+  fi
+  # check if pxruntime with the same name exists
+  px_runtime_cr_count=`$kubernetesCLI -n $namespace get pxruntime $name --ignore-not-found=true | wc -l`
+  if [ $px_runtime_cr_count -ne 0 ]; then
+    remove_previous_resources
+    has_previous_pxruntime_cr="true"
+  fi
+  $kubernetesCLI -n $namespace get pxremoteengine $name
   if [ $? -eq 0 ]; then
-    echo "PXRuntime $name already exists; updating its image digests."
-    $kubernetesCLI -n $namespace patch pxruntime $name -p "{\"spec\":{\"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}}}" --type=merge
+    echo "PXRemoteEngine $name already exists; updating its image digests."
+    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}}}" --type=merge
   else
     cat <<EOF | $kubernetesCLI apply -f -
 apiVersion: ds.cpd.ibm.com/v1
-kind: PXRuntime
+kind: PXRemoteEngine
 metadata:
   name: $name
   namespace: $namespace
@@ -585,6 +613,17 @@ spec:
     pxruntime: $px_runtime_digest
 EOF
 fi
+  if [ ! -z $has_previous_pxruntime_cr ]; then
+    get_resource_id
+    change_ownership secret ${name}-ibm-datastage-enc-secret
+    change_ownership pvc ${name}-ibm-datastage-px-storage-pvc
+    # remove finalizer and delete previous CR
+    echo "Removing PXRuntime CR ${name}"
+    $kubernetesCLI -n $namespace patch pxruntime $name -p '{"metadata":{"finalizers":null}}' --type=merge
+    $kubernetesCLI -n $namespace delete pxruntime $name
+  fi
+  echo "To check the status of the PXRemoteEngine instance, run the command below:"
+  echo "$kubernetesCLI -n $namespace get pxre ${name}"
 }
 
 handle_badusage() {
@@ -623,13 +662,14 @@ handle_apikey_usage() {
 handle_create_instance_usage() {
   echo ""
   echo "Description: creates an instance of the remote engine; the pull secret and the api-key secret should have been created in the same namespace."
-  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id> --storageClass <storage-class> [--storageSize <storage-size>] [--size <size>]"
+  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id> --storageClass <storage-class> [--storageSize <storage-size>] [--size <size>] --license-accept true"
   echo "--namespace: the namespace to create the instance"
   echo "--name: the name of the remote engine"
   echo "--project-id: the project ID to register the remote engine"
   echo "--storageClass: the file storageClass to use"
   echo "--storageSize: the storage size to use (in GB); defaults to 10"
   echo "--size: the size of the instance (small, medium, large); defaults to small"
+  echo "--license-accept: set the to true to indicate that you have accepted the license for IBM DataStage as a Service Anywhere - https://ibm.biz/BdMGft"
   echo ""
   exit 0
 }
@@ -757,6 +797,10 @@ do
         --file|-f)
             shift
             inputFile="${1}"
+            ;;
+        --license-accept)
+            shift
+            license_accept="${1}"
             ;;
         install)
             action="install"
