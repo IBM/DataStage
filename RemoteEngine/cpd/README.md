@@ -35,7 +35,7 @@ To deploy the DataStage operator on cluster without global pull secret configure
 
 # create the remote instance - add '--gateway api.dataplatform.cloud.ibm.com' if the instance needs to registers with prod env
 
-./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project-id> --storageClass <storage-class> [--storageSize <storage-size>] [--size <size>] [--gateway api.dataplatform.cloud.ibm.com]
+./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project-id> --storageClass <storage-class> [--storageSize <storage-size>] [--size <size>] [--gateway api.dataplatform.cloud.ibm.com] --license-accept true
 ```
 For documentation on how to create API keys, see https://cloud.ibm.com/docs/account?topic=account-manapikey.
 
@@ -63,6 +63,9 @@ Instead of running the installation script multiple times, the entire installati
 
 sample input file:
 ```
+# indicate that you have accepted license for BM DataStage as a Service Anywhere (https://ibm.biz/BdMGft)
+accept_license=true
+
 # the namespace to deploy the remote engine
 namespace=<namespace>
 
