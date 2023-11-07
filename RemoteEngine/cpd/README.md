@@ -1,5 +1,8 @@
 # DataStage CPD Remote Engine
 
+## License
+[IBM DataStage as a Service Anywhere](https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en)
+
 ## Requirements
 DataStage Remote Engine supports deployment on the following platforms:
 * IBM Cloud Pak For Data (CP4D 4.7 and above)
@@ -13,12 +16,10 @@ DataStage Remote Engine supports deployment on the following platforms:
     * Details on setting up an EKS cluster: https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html
     * Setting up and Elastic file system: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.6.x?topic=storage-setting-up-amazon-elastic-file-system (see details below)
 
-
 ## Pre-Requisites
 * The following software are required to be installed on the client from where you will be executing this script:
     - `kubectl` or `oc`
     - `jq`
-
 
 ## Usage
 To deploy the DataStage operator on cluster without global pull secret configured for the container registry, the pull secret needs to be created. You need an active connection to the cluster with either kubectl or oc cli available.
@@ -63,7 +64,7 @@ Instead of running the installation script multiple times, the entire installati
 
 sample input file:
 ```
-# indicate that you have accepted license for BM DataStage as a Service Anywhere (https://ibm.biz/BdMGft)
+# indicate that you have accepted license for IBM DataStage as a Service Anywhere(https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en)
 accept_license=true
 
 # the namespace to deploy the remote engine

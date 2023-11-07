@@ -1,5 +1,8 @@
 # DataStage Remote Engine
 
+## License
+[IBM DataStage as a Service Anywhere](https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en)
+
 ## Pre-Requisites
 1. Software that must be installed on the system.
     1. `docker`
