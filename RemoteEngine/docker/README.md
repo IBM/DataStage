@@ -49,3 +49,19 @@ The `dsengine.sh` script can be invoked from the `docker` folder of this project
                       -a "$IBMCLOUD_APIKEY" \
                       --project-id "$PROJECT_ID"
 ```
+
+## Upgrade
+Upgrade the remote engine instance to the latest version.
+1. Stop and remove the Remote engine
+```bash
+./dsengine.sh stop -n 'remote_engine_name_01'
+```
+2. Create and start local remote engine instance
+```bash
+./dsengine.sh start -n 'remote_engine_name_01' \
+                    -a "$IBMCLOUD_APIKEY" \
+                    -e "$ENCRYPTION_KEY" \
+                    -i "$ENCRYPTION_IV" \
+                    -p "$IBMCLOUD_CONTAINER_REGISTRY_APIKEY" \
+                    --project-id "$PROJECT_ID"
+```
