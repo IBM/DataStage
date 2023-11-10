@@ -703,6 +703,31 @@ generate_access_token() {
   fi
 }
 
+# retrieve px image digests from ds-runtime
+retrieve_px_image_digests() {
+  if [ -z $api_key ]; then
+    # retrieve apikey from secret
+    api_key=`$kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET -o=jsonpath="{.data.api-key}" | base64 -d`
+  fi
+  if [ $DS_GATEWAY = "api.dataplatform.cloud.ibm.com" ]; then
+    cloud_access_token=`curl -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
+  else 
+    cloud_access_token=`curl -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.test.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
+  fi
+  if [ -z $cloud_access_token ]; then
+    echo "Unable to retrieve access token from IBM Cloud."
+    exit 1
+  fi
+  image_digests=`curl -s -X GET -H "Authorization: Bearer $cloud_access_token" -H 'accept: application/json;charset=utf-8' https://${DS_GATEWAY}/data_intg/v3/flows_runtime/remote_engine/versions | jq -r '.versions[0].image_digests.px_runtime, .versions[0].image_digests.px_compute'`
+  image_digest_array=(${image_digests})
+  if [ ${#image_digest_array[@]} -eq 2 ]; then
+    px_runtime_digest="${image_digest_array[0]}"
+    px_compute_digest="${image_digest_array[1]}"
+    echo "Retrieved digest for ds-px-runtime: ${px_runtime_digest}"
+    echo "Retrieved digest for ds-px-compute: ${px_compute_digest}"
+  fi
+}
+
 retrieve_latest() {
   image="$1"
   latest_digest=`curl -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $access_token" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${image}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"'`
@@ -711,28 +736,36 @@ retrieve_latest() {
 
 retrieve_latest_image_digests() {
   check_jq_installation
-  generate_access_token
-  retrieved_digest=$(retrieve_latest 'ds-px-runtime')
-  if [[ $retrieved_digest = sha256* ]]; then
-    px_runtime_digest="${retrieved_digest}"
-    echo "Retrieved digest for ds-px-runtime: ${px_runtime_digest}"
+  if [ $DOCKER_REGISTRY = "icr.io" ]; then
+    generate_access_token
+    retrieved_digest=$(retrieve_latest 'ds-px-runtime')
+    if [[ $retrieved_digest = sha256* ]]; then
+      px_runtime_digest="${retrieved_digest}"
+      echo "Retrieved digest for ds-px-runtime: ${px_runtime_digest}"
+    else
+      echo "Unable to retrieve latest digest for ds-px-runtime; defaulting to ${px_runtime_digest}."
+    fi
+    retrieved_digest=$(retrieve_latest 'ds-px-compute')
+    if [[ $retrieved_digest = sha256* ]]; then
+      px_compute_digest="${retrieved_digest}"
+      echo "Retrieved digest for ds-px-compute: ${px_compute_digest}"
+    else
+      echo "Unable to retrieve latest digest for ds-px-compute; defaulting to ${px_compute_digest}."
+    fi
+    retrieved_digest=$(retrieve_latest 'ds-operator')
+    if [[ $retrieved_digest = sha256* ]]; then
+      operator_digest="${retrieved_digest}"
+      echo "Retrieved digest for ds-operator: ${operator_digest}"
+    else
+      echo "Unable to retrieve latest digest for ds-operator; defaulting to ${operator_digest}."
+    fi
   else
-    echo "Unable to retrieve latest digest for ds-px-runtime; defaulting to ${px_runtime_digest}."
+    # set cpd registry location
+    OPERATOR_REGISTRY="${DOCKER_REGISTRY}/cpopen"
+    DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/cp/cpd"
+    retrieve_px_image_digests
   fi
-  retrieved_digest=$(retrieve_latest 'ds-px-compute')
-  if [[ $retrieved_digest = sha256* ]]; then
-    px_compute_digest="${retrieved_digest}"
-		echo "Retrieved digest for ds-px-compute: ${px_compute_digest}"
-  else
-    echo "Unable to retrieve latest digest for ds-px-compute; defaulting to ${px_compute_digest}."
-  fi
-  retrieved_digest=$(retrieve_latest 'ds-operator')
-  if [[ $retrieved_digest = sha256* ]]; then
-    operator_digest="${retrieved_digest}"
-    echo "Retrieved digest for ds-operator: ${operator_digest}"
-  else
-    echo "Unable to retrieve latest digest for ds-operator; defaulting to ${operator_digest}."
-  fi
+  
 }
 
 
@@ -772,8 +805,12 @@ do
             ;;
         --storageSize)
             shift
-            storage_size="${size}"
+            storage_size="${1}"
             ;;
+        --size)
+           shift
+           size="${1}"
+           ;;
         --registry)
             shift
             DOCKER_REGISTRY="${1}"
@@ -892,7 +929,7 @@ if [ ! -z $inputFile ]; then
   validate_common_args
   retrieve_latest_image_digests
 	if [[ ! -z $nfs_server ]]; then
-    create_nfs_provisioner
+   create_nfs_provisioner
   fi
   create_pull_secret
   create_apikey_secret
