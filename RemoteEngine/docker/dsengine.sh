@@ -20,7 +20,8 @@ TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
 # image information
-ICR_REGISTRY='icr.io/datastage'
+DOCKER_REGISTRY='icr.io/datastage'
+# DOCKER_REGISTRY='cp.icr.io/cp/cpd'
 PX_VERSION='latest'
 
 # container names
@@ -372,11 +373,34 @@ check_docker_daemon() {
 }
 
 # docker login
+
 docker_login() {
+    if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
+        docker_login_datastage
+    else
+        docker_login_cpd
+    fi
+}
+
+docker_login_datastage() {
     echo ""
     [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify DataStage Container Registry IAM APIKey (-p | --prod-apikey). Aborting."
     DELAY=5
-    until $DOCKER_CMD login -u iamapikey -p $IAM_APIKEY_PROD $ICR_REGISTRY  || [ $DELAY -eq 10 ]; do
+    until $DOCKER_CMD login -u iamapikey -p $IAM_APIKEY_PROD $DOCKER_REGISTRY  || [ $DELAY -eq 10 ]; do
+        sleep $(( DELAY++ ))
+    done
+    status=$?
+    if [ $status -ne 0 ]; then
+        echo "docker login return code: $status."
+        echo_error_and_exit "Aborting setup."
+    fi
+}
+
+docker_login_cpd() {
+    echo ""
+    [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify CPD Entitlement Key (-p | --prod-apikey). Aborting."
+    DELAY=5
+    until $DOCKER_CMD login -u cp -p $IAM_APIKEY_PROD $DOCKER_REGISTRY  || [ $DELAY -eq 10 ]; do
         sleep $(( DELAY++ ))
     done
     status=$?
@@ -391,7 +415,13 @@ retrieve_latest_px_version() {
     get_cr_iam_token
     icr_response=$(curl -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $CR_IAM_TOKEN" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${PXRUNTIME_IMAGE_NAME}")
     PX_VERSION=$(echo "${icr_response}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"')
-    echo "Obtained digest=$PX_VERSION"
+    echo "Retrieved px-runtime digest = $PX_VERSION"
+}
+
+retrieve_latest_px_version_from_runtime() {
+    echo "Getting PX Version to access Container Registry"
+    PX_VERSION=$(curl -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "https://${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
+    echo "Retrieved px-runtime digest = $PX_VERSION"
 }
 
 check_or_pull_image() {
@@ -1375,13 +1405,13 @@ if [[ ${ACTION} == "start" ]]; then
     if [[ "${PX_VERSION}" == 'latest' ]]; then
         retrieve_latest_px_version
     fi
+
+    PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/datastage/ds-px-runtime"
     # update the image variables to use the PX_VERSION version
-    if [[ "$string" == "latest" || "$string" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        PXRUNTIME_DOCKER_IMAGE="${ICR_REGISTRY}/ds-px-runtime:${PX_VERSION}"
-        PXCOMPUTE_DOCKER_IMAGE="${ICR_REGISTRY}/ds-px-compute:${PX_VERSION}"
+    if [[ "$PX_VERSION" == "latest" || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
     else
-        PXRUNTIME_DOCKER_IMAGE="${ICR_REGISTRY}/ds-px-runtime@${PX_VERSION}"
-        PXCOMPUTE_DOCKER_IMAGE="${ICR_REGISTRY}/ds-px-compute@${PX_VERSION}"
+        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
     fi
     check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
     print_header "Initializing ${TOOL_SHORTNAME} Runtime environment with name '${REMOTE_ENGINE_NAME}' ..."
