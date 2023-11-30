@@ -5,6 +5,12 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[4.7.3](#473)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.7.3.md)
+
+[4.7.2](#472)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.7.2.md)
+
 [4.7.1](#471)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.7.1.md)
 
@@ -19,6 +25,29 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 4.7.3
+
+### Command changes
+
+`migrate` now takes a new flag to migrate optimized connectors: `use-dsn-name`.
+
+`compile` now takes a new flag `materialization-policy` when ELT compile is enabled with the flag `--enable-elt-mode`. This flag determines the generated output and takes the following values: OUTPUT_ONLY, TEMP_TABLES, TEMP_VIEWS, CARDINARLITY_CHANGER_TABLES. The output of the command now displays total time in the summary line.
+
+`delete-dataset` and `delete-fileset` now have an option to delete multiple objects. A `--dry-run` option is now available to show the details of the objects that would be deleted.  
+
+### Fixes
+
+`list-jobruns` exits gracefully when the incorrect job run id is specified. 
+
+`validate-flow` no longer crashes when a single flow name needs validating due to incorrect initialization of cache entries. 
+
+## 4.7.2
+
+### Command changes
+
+`delete-dataset` and `delete-fileset` can now take unix-like globbing pattern to delete multiple datasets.
+`delete-dataset` and `delete-fileset` can now take the `--dry-run` option to run the command without deletions.
 
 ## 4.7.1
 
