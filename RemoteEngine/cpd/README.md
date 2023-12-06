@@ -1,12 +1,10 @@
-# DataStage CPD Remote Engine
+# DataStage Remote Engine on Kubernetes
 
 ## License
 [IBM DataStage as a Service Anywhere](https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en)
 
 ## Requirements
 DataStage Remote Engine supports deployment on the following platforms:
-* IBM Cloud Pak For Data (CP4D 4.7 and above)
-    * Details on setting up a CP4D cluster: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.7.x?topic=planning-system-requirements
 * OpenShift 4.12 and above
     * Details on setting up an OpenShift cluster: https://docs.openshift.com/container-platform/4.12/welcome/index.html
 * IBM Cloud Kubernetes Service (IKS)

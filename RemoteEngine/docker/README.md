@@ -1,15 +1,7 @@
-# DataStage Remote Engine
+# DataStage Remote Engine using Docker
 
 ## License
 [IBM DataStage as a Service Anywhere](https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en)
-
-## Pre-Requisites
-1. Software that must be installed on the system.
-    1. `docker`
-    1. `jq`
-
-## Limitations
-1. The docker images used in Remote Engine are x86 images, hence might not work on Apple M1 processors.
 
 ## Requirements
 1. Clone this repo: `git clone git@github.com:IBM/DataStage.git` OR `git clone https://github.com/IBM/DataStage.git`.
@@ -29,6 +21,14 @@
     From this output, the `key` and `iv` are used as the Encryption Key and IV respectively.
 1. Your Project ID. This is the ID of the project on https://dataplatform.cloud.ibm.com that you want to use with this Remote Engine instance. (If you are using the DataStage in Frankfurt datacenter then please use https://eu-de.dataplatform.cloud.ibm.com).
 1. IBM Cloud Container Registry APIKey. This apikey will be used to download the images needed to run Remote Engine.
+
+## Pre-Requisites
+1. Software that must be installed on the system.
+    1. `docker`
+    1. `jq`
+
+## Limitations
+1. The docker images used in Remote Engine are x86 images, hence might not work on Apple M1/M2/M3 processors.
 
 ## Usage
 The `dsengine.sh` script can be invoked from the `docker` folder of this project. Note that the name in the below command can be changed form `remote_engine_name_01` to your preferred name.
