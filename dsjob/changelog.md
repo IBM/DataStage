@@ -5,6 +5,9 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[4.7.4](#474)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.7.4.md)
+
 [4.7.3](#473)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.7.3.md)
 
@@ -25,6 +28,26 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 4.7.4
+
+### Command changes
+
+All `export-` commands will now use a globbing pattern to export multiple files. This includes: `export-quality-definition`,`export-quality-rule`,`export-asset`,`export-build-stage`,`export-connection`,`export-cff-schema`,`export-custom-stage`,`export-dataset`,`export-fileset`,`export-function-lib`,`export-java-library`,`export-library`,`export-match-spec`,`export-paramset`,`export-rule`,`export-subflow`,`export-tabledef`,`export-wrapped-stage`
+
+ex: `cpdclt dsjob export-subflow --project >PROJECTNAME> --name ab*` will export all sub flows that start with name `ab`.
+
+`upload-volume-files`: Enhanced upload-volume-files to allow user to specify a destination file name.
+
+`create-paramset` and `update-paramset`: added logic to verify Parameter Set fields that reference PROJDEF are valid such that PROJDEF exists and the reference exists, if not a warning message is displayed.
+
+### Fixes
+
+`update-env-vars`: fixed issue with update-env-vars to avoid overwriting the existing environment variables
+
+`download-volume-files`: fixed issue to report proper error when it fails to write the downloaded file to local disk.
+
+
 
 ## 4.7.3
 
