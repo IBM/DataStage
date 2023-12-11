@@ -146,7 +146,7 @@ All export-<Component> commands now use unix globbing pattern with wild cards in
 
 `run` command now implements multiple retry loops to accommodate any intermittent errors and ensure completion of job runs in a high number of conncurrent runs.
 
- 
+`jobrunstat` fixed to handle data type changes that was causing marshaling exception. 
  
 ## 4.7.4
 
