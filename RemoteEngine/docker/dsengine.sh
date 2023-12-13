@@ -21,7 +21,6 @@ TOOL_SHORTNAME='DataStage Remote Engine'
 
 # image information
 DOCKER_REGISTRY='icr.io/datastage'
-# DOCKER_REGISTRY='cp.icr.io/cp/cpd'
 PX_VERSION='latest'
 
 # container names
@@ -63,7 +62,8 @@ STR_VOLUMES="  --volume-dir                Directory for persistent storage. Def
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
 # STR_VERSION='  --version                   Version of the remote engine to use'
 STR_MEMORY='  --memory                    Memory allocated to the docker container (default is 4G).'
-STR_CPUS='  --cpus                      CPU allocated to the docker container (Default is 2 cores).'
+STR_CPUS='  --cpus                      CPU allocated to the docker container (default is 2 cores).'
+STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, or the container registry apikey (default is false)'
 STR_HELP='  help, --help                Print usage information'
 
 #######################################################################
@@ -121,7 +121,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] [-i | --ivspec] [-d | --project-id] [--home] [--memory]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--use-entitlement-key]\n                         [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -154,6 +154,7 @@ print_usage() {
         echo "${STR_MEMORY}"
         echo "${STR_CPUS}"
         echo "${STR_VOLUMES}"
+        echo "${STR_USE_ENT_KEY}"
         # echo "${STR_PLATFORM}"
         # echo "${STR_VERSION}"
     fi
@@ -224,6 +225,16 @@ function start() {
         #     shift
         #     PX_VERSION="$1"
         #     ;;
+        --use-entitlement-key)
+            shift
+            if [[ "${1}" == 'true' ]]; then
+                DOCKER_REGISTRY='cp.icr.io/cp'
+            elif [[ "${1}" == 'false' ]]; then
+                DOCKER_REGISTRY='icr.io/datastage'
+            else
+                echo_error_and_exit 'Incorrect option specified for flag "--use-entitlement-key". Acceptable values are: [true, false]'
+            fi
+            ;;
         -h | --help | help)
             print_usage
             exit 1
@@ -358,7 +369,7 @@ create_dir_if_not_exist() {
     if [ ! -d $DIR_PATH ]; then
         echo "Folder ${DIR_PATH} does not exist, creating ..."
         mkdir -p "${DIR_PATH}"
-        chmod -R 775 "${DIR_PATH}"
+        chmod -R 777 "${DIR_PATH}"
     fi
 }
 
@@ -420,7 +431,9 @@ retrieve_latest_px_version() {
 
 retrieve_latest_px_version_from_runtime() {
     echo "Getting PX Version to access Container Registry"
-    PX_VERSION=$(curl -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "https://${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
+    get_iam_token
+    echo "https://${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions"
+    PX_VERSION=$(curl -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
     echo "Retrieved px-runtime digest = $PX_VERSION"
 }
 
@@ -1065,6 +1078,7 @@ validate_action_arguments() {
     echo "GATEWAY_URL=${GATEWAY_URL}"
     echo "PROJECT_ID=${PROJECT_ID}"
     echo "REMOTE_ENGINE_PREFIX=${REMOTE_ENGINE_NAME}"
+    echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
     echo "CONTAINER_MEMORY=${PX_MEMORY}"
     echo "CONTAINER_CPUS=${PX_CPUS}"
     echo "DOCKER_VOLUMES_DIR=${DOCKER_VOLUMES_DIR}"
@@ -1403,10 +1417,14 @@ if [[ ${ACTION} == "start" ]]; then
     # check if the runtime image exists, if not, then download
     print_header "Checking docker images ..."
     if [[ "${PX_VERSION}" == 'latest' ]]; then
-        retrieve_latest_px_version
+        if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
+            retrieve_latest_px_version
+        else
+            retrieve_latest_px_version_from_runtime
+        fi
     fi
 
-    PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/datastage/ds-px-runtime"
+    PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
     # update the image variables to use the PX_VERSION version
     if [[ "$PX_VERSION" == "latest" || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"

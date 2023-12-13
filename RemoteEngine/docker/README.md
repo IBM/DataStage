@@ -4,7 +4,7 @@
 [IBM DataStage as a Service Anywhere](https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en)
 
 ## Requirements
-1. Clone this repo: `git clone git@github.com:IBM/DataStage.git` OR `git clone https://github.com/IBM/DataStage.git`.
+1. Clone this repo: `git clone https://github.com/IBM/DataStage.git`.
     1. If you already have this repo cloned, go to the root directory and run `git pull` to get the latest changes.
 1. Your IBM Cloud APIKey. The API key is required for registering the remote engine to your Cloud Pak for Data project on IBM Cloud. To generate a new apikey, open https://cloud.ibm.com in your browser.
     1. Click Manage > Access (IAM) > API keys to open the "API keys" page (URL: https://cloud.ibm.com/iam/apikeys).
