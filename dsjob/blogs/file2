@@ -1,0 +1,5 @@
+record
+( Name: string[variable_max=10];
+  Age: int32;
+  DOB: date;
+)
