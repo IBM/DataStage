@@ -5,6 +5,19 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+
+[4.8.0](#480)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.0.md)
+
+[4.7.4](#474)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.7.4.md)
+
+[4.7.3](#473)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.7.3.md)
+
+[4.7.2](#472)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.7.2.md)
+
 [4.7.1](#471)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.7.1.md)
 
@@ -19,6 +32,164 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 4.8.0
+
+### New commands
+
+The following commands are added to manage assets in folders.
+
+  - `list-folders`                List all folders.
+  
+  - `list-folder`                 List folder contents.
+  
+  - `create-folder`               Create a folder.
+  
+  - `delete-folder`               Delete a folder.
+  
+  - `update-folder`               Update folder name.
+  
+  - `move-folder`                 Move a folder.
+  
+  - `move-asset`                  Move asset to a folder.
+
+The following commands are added to work with Cobol File Formats.
+
+  - `list-cff-schemas`            List CFF Schemas.
+  
+  - `get-cff-schema`              Get CFF Schema.
+  
+  - `create-cff-schema`           Create CFF Schema.
+  
+  - `delete-cff-schema`           Delete CFF Schema.
+  
+  - `export-cff-schema`           Export CFF Schema(s).
+  
+The following commands are added to synchronize projects artifacts with git.
+
+  - `git-commit`                  Git commit a Project.
+  
+  - `git-pull`                    Git pull a Project.
+  
+  - `git-status`                  Get git status of a Project.
+  
+  Other:
+  
+ - `dataset-truncate` allows truncation of data in a DataSet. 
+ 
+ - `encrypt` allows cluster-specific encryption of text. 
+ 
+
+### Command changes
+
+The following commands have changed:
+
+`list-active-runs`: enhanced to display run-name and duration. Users can sort on these fields.
+
+`list-usage`: 
+- asset name can be prefixed with type to avoid conflicts.
+- supports data rules and data definitions.
+
+`list-dependencies` supports data rules and data definitions.
+
+`migrate` command added new options:
+- `enable-notifications`         Enable Notifications for Migration.
+- `storage-path`                      Folder path of the storage volume for routine scripts and other data assets.
+- `migrate-to-send-email`         Will migrate all notification activity stages in sequence job to send email task nodes.
+- `migrate_hive_impala`           Enable hive impala for migration.
+
+`import-zip`: 
+  - now import flows with or without compilations.
+  - import only listed DataStage components.
+  - takes a key to decrypt sensitive data, this must match the key used during export.
+
+`export-datastage-assets`: now can exclude data files from datasets and filesets to be part of export.
+
+`export-zip`, `export-project` will allow 'testcase' DataStage components to be specified to export.
+
+`export-zip`, `export-project` and `export-datastage-assets` commands take an encryption key to encrypt any sensitive data before writing to the zip output file.
+
+`list-job-status`: 
+- enhanced to show all job runs and in a specified time window.
+- migrate command enhanced to enable notifications,
+- migrate databases connections using dsn type, 
+- enables hive impala migration and enables migration of notification activities as send email nodes.
+- sort by duration is added.
+
+`run-pipeline` now allows reset-cache options to clear cache before the run.
+
+`compile` enhanced to support pushdown materialization  policy.
+
+`run` can now use runtime environment  and runtime language settings for each job run.
+
+`update-ds-settings` is enhanced to set collate option on the project.
+
+`describe-dataset` enhanced to write to a file with additional infomation on dataset size, location and last access time.
+`describe-fileset` enhanced to write to a file with additional infomation on fileset size, location and last access time.
+
+All export-<Component> commands now use unix globbing pattern with wild cards instead of regular expressions.
+
+`create-dsparams`  changed to export user environment definitions from DSParams file from legacy into PROJDEF parameter file. It will no longer use runtime environment to export and store DSParams.
+
+`jobrunclean` enhanced to accept timestamp to clean up jobs that started before a specific time.
+
+`create-paramset`, `update-paramset` now validates references to PROFDEF in parameter definitions. 
+`create-paramset`, `update-paramset` now support `encrypted` data type.
+
+`upload-volume-files` enhanced to accept destination file different from the source file.
+
+
+
+### Fixes
+
+`export-project`, `export-datastage-assets` commands adjusted internally to accommodate for rate-limiting issues for exporting large projects on ibm-cloud.
+
+`run` command now implements multiple retry loops to accommodate any intermittent errors and ensure completion of job runs in a high number of conncurrent runs.
+
+`jobrunstat` fixed to handle data type changes that was causing marshaling exception. 
+ 
+## 4.7.4
+
+### Command changes
+
+All `export-` commands will now use a globbing pattern to export multiple files. This includes: `export-quality-definition`,`export-quality-rule`,`export-asset`,`export-build-stage`,`export-connection`,`export-cff-schema`,`export-custom-stage`,`export-dataset`,`export-fileset`,`export-function-lib`,`export-java-library`,`export-library`,`export-match-spec`,`export-paramset`,`export-rule`,`export-subflow`,`export-tabledef`,`export-wrapped-stage`.
+
+ex: `cpdclt dsjob export-subflow --project >PROJECTNAME> --name ab*` will export all sub flows that start with name `ab`.
+
+`upload-volume-files`: Enhanced upload-volume-files to allow user to specify a destination file name.
+
+`create-paramset` and `update-paramset`: added logic to verify Parameter Set fields that reference PROJDEF are valid such that PROJDEF exists and the reference exists, if not a warning message is displayed.
+
+### Fixes
+
+`update-env-vars`: fixed issue with update-env-vars to avoid overwriting the existing environment variables
+
+`download-volume-files`: fixed issue to report proper error when it fails to write the downloaded file to local disk.
+
+
+
+## 4.7.3
+
+### Command changes
+
+`migrate` now takes a new flag to migrate optimized connectors: `use-dsn-name`.
+
+`compile` now takes a new flag `materialization-policy` when ELT compile is enabled with the flag `--enable-elt-mode`. This flag determines the generated output and takes the following values: OUTPUT_ONLY, TEMP_TABLES, TEMP_VIEWS, CARDINARLITY_CHANGER_TABLES. The output of the command now displays total time in the summary line.
+
+`delete-dataset` and `delete-fileset` now have an option to delete multiple objects. A `--dry-run` option is now available to show the details of the objects that would be deleted.  
+
+### Fixes
+
+`list-jobruns` exits gracefully when the incorrect job run id is specified. 
+
+`validate-flow` no longer crashes when a single flow name needs validating due to incorrect initialization of cache entries. 
+
+## 4.7.2
+
+### Command changes
+
+`delete-dataset` and `delete-fileset` can now take unix-like globbing pattern to delete multiple datasets.
+`delete-dataset` and `delete-fileset` can now take the `--dry-run` option to run the command without deletions.
 
 ## 4.7.1
 
@@ -93,19 +264,19 @@ DSJob plugin commands are now organized alphabetically for easier browsing.
 
 ### New commands
 
-`list-message-handlers` List all Message Handlers.
+- `list-message-handlers` List all Message Handlers.
 
-`get-message-handler` Get a Message Handler.
+-`get-message-handler` Get a Message Handler.
 
-`create-message-handler` Create a Message Handler.
+-`create-message-handler` Create a Message Handler.
 
-`delete-message-handler` Delete a Message Handler.
+-`delete-message-handler` Delete a Message Handler.
 
-`list-job-status` List Jobs with their run status.
+-`list-job-status` List Jobs with their run status.
 
-`export-paramset` Export Parameter Set(s).
+-`export-paramset` Export Parameter Set(s).
 
-`list-usage` List dependencies between DataStage components.
+-`list-usage` List dependencies between DataStage components.
 
 `update-function-lib` Update User Defined Function.
 
