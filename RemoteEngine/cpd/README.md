@@ -15,9 +15,22 @@ DataStage Remote Engine supports deployment on the following platforms:
     * Setting up and Elastic file system: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.6.x?topic=storage-setting-up-amazon-elastic-file-system (see details below)
 
 ## Pre-Requisites
-* The following software are required to be installed on the client from where you will be executing this script:
-    - `kubectl` or `oc`
-    - `jq`
+The following software are required to be installed on the client from where you will be executing this script:
+
+1. `kubectl` or `oc`
+2. `jq`
+
+### Entitlement API Key
+An entitlement API key is required for pulling the required images from the IBM Container Registry.
+1. Log in to [Container software library on My IBM](https://myibm.ibm.com/products-services/containerlibrary) with the IBMid and password that are associated with the entitled software.
+2. On the Entitlement keys tab, select Copy to copy the entitlement key to the clipboard.
+3. Save the API key in a text file.
+
+### IBM Cloud API key
+An IBM Cloud API key is required for registering the remote engine to your Cloud Pak for Data project on IBM Cloud.
+1. Click Manage > Access (IAM) > API keys to open the “API keys” page (URL: https://cloud.ibm.com/iam/apikeys).
+2. Ensure that My IBM Cloud API keys is selected in the View list.
+3. Click Create an IBM Cloud API key, and then specify a name and description
 
 ## Usage
 To deploy the DataStage operator on cluster without global pull secret configured for the container registry, the pull secret needs to be created. You need an active connection to the cluster with either kubectl or oc cli available.
@@ -69,9 +82,8 @@ accept_license=true
 namespace=<namespace>
 
 # the username and password for the container registry
-
-username=<username>
-password=<password-or-apikey>
+username=cp
+password=<entitlement-key>
 
 # IBM cloud api key for the remote engine to use
 api_key=<api-key>

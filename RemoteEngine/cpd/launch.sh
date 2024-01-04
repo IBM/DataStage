@@ -18,16 +18,16 @@ nfsProvisionerFile="${filesDir}/efs-provisioner.yaml"
 nfsStorageClassFile="${filesDir}/efs-storageclass.yaml"
 nfs_path="/"
 
-DOCKER_REGISTRY="icr.io"
+DOCKER_REGISTRY="cp.icr.io"
 OPERATOR_REGISTRY="${DOCKER_REGISTRY}/datastage"
 DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/datastage"
 DS_REGISTRY_SECRET="datastage-pull-secret"
 DS_API_KEY_SECRET="datastage-api-key-secret"
 DS_GATEWAY="api.dataplatform.cloud.ibm.com"
 
-px_runtime_digest="sha256:dcfbf9f990afba4ffe498733b229fa027682dccec2bef45a0da0ae3c51a28f9f"
-px_compute_digest="sha256:af9425b151e18250ce8fb1a1c43d4bc8062b1081e1dd78652081af152ff2bc76"
-operator_digest="sha256:ee692f78a7a09b8dd1e2030a6696741e656ff8dd3fdfe4bd7ad6f06f50540c06"
+px_runtime_digest="sha256:bc4a60dbe644a84d2fb1754c59ac0c2abadc927e7cea9b4f2dbe61be32ce5ed9"
+px_compute_digest="sha256:25e32630097591287b6e403437868fcaf2fa36147b0f85e61d14498e5d7fdd4b"
+operator_digest="sha256:ee74f02d98ba6c1de22ce825c906dc3290dcafff30683cf28270b0afa88977c4"
 
 # default username for icr.io when using apikey
 username="iamapikey"
@@ -589,7 +589,7 @@ create_instance() {
   $kubernetesCLI -n $namespace get pxremoteengine $name
   if [ $? -eq 0 ]; then
     echo "PXRemoteEngine $name already exists; updating its image digests."
-    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}}}" --type=merge
+    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"docker_registry_prefix\":\"${DOCKER_REGISTRY_PREFIX}\", \"api_key_secret\":\"${DS_API_KEY_SECRET}\", \"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}}}" --type=merge
   else
     cat <<EOF | $kubernetesCLI apply -f -
 apiVersion: ds.cpd.ibm.com/v1
@@ -761,7 +761,7 @@ retrieve_latest_image_digests() {
     fi
   else
     # set cpd registry location
-    OPERATOR_REGISTRY="${DOCKER_REGISTRY}/cpopen"
+    OPERATOR_REGISTRY="icr.io/cpopen"
     DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/cp/cpd"
     retrieve_px_image_digests
   fi
@@ -929,7 +929,7 @@ if [ ! -z $inputFile ]; then
   validate_common_args
   retrieve_latest_image_digests
 	if [[ ! -z $nfs_server ]]; then
-   create_nfs_provisioner
+    create_nfs_provisioner
   fi
   create_pull_secret
   create_apikey_secret
