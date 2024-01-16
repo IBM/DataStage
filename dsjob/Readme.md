@@ -11,6 +11,7 @@ CPDCTL and the  `dsjob`  tool are command-line interfaces (CLI) you can use to m
 
 ### Documentation:
 #### Latest : [DSJob Plugin 4.8.0](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.0.md)
+#### [cpdctl for DSJob 4.8.0](https://github.com/IBM/cpdctl/releases/tag/v1.4.84)
 
 #### Other Releases
 [DSJob Plugin 4.8.0](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.0.md)
@@ -32,3 +33,22 @@ CPDCTL and the  `dsjob`  tool are command-line interfaces (CLI) you can use to m
 [DSJob Plugin 4.6.2](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
 
 [Change Log](https://github.com/IBM/DataStage/tree/main/dsjob/changelog.md)
+
+
+The following table illustrate CP4D release compatibility to corresponding CPDCTL release. 
+CPDCTL release build contains the dsjob plugin which is release for the mentioned CP4D release.
+| CPD release | CPDCTL Version |
+| -------------|---------------|
+|4.0.8 | 1.1.194 |
+|4.5.0 | 1.1.235 |
+|4.5.2 | 1.1.243 |
+|4.5.3 | 1.1.257 |
+|4.5.3 | 1.1.269 |
+|4.6.0 | 1.1.299 |
+|4.6.1 | 1.1.313 |
+|4.6.2 | v1.2.1 |
+|4.6.4 | v1.3.16 |
+|4.7.0 | v1.4.20 |
+|4.7.1 | v1.4.34 |
+|4.7.2 | v1.4.42 |
+|4.8.0 | v1.4.84 |
