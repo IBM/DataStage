@@ -61,7 +61,7 @@ STR_DSTAGE_HOME='  --home                      IBM DataStage enviroment: [ys1dev
 STR_VOLUMES="  --volume-dir                Directory for persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
 # STR_VERSION='  --version                   Version of the remote engine to use'
-STR_MEMORY='  --memory                    Memory allocated to the docker container (default is 4Gi).'
+STR_MEMORY='  --memory                    Memory allocated to the docker container (default is 4G).'
 STR_CPUS='  --cpus                      CPU allocated to the docker container (Default is 2 cores).'
 STR_HELP='  help, --help                Print usage information'
 
@@ -797,20 +797,51 @@ update_datastage_settings() {
         echo "DataStage Settings asset id: ${DATASTAGE_SETTINGS_ASSET_ID}"
     fi
 
-    payload="{
-      \"project\": {
-          \"runEnvironmentIds\": [\"${PROJECT_ENV_ASSET_ID}\"],
-          \"runRemoteEngineEnforcement\": true
-       }
-    }"
+    # get the existing runEnvironmentId or runEnvironmentIds,
+    EXISTING_RUN_ENVIROMENT_IDS=$(printf "%s" "${_datastage_settings_get_response}" | jq -r .entity.project.runEnvironmentId | tr -d '[\|]' | tr -d ' ' | tr -d '\n')
+    if [[ -z $EXISTING_RUN_ENVIROMENT_IDS || "${EXISTING_RUN_ENVIROMENT_IDS}" == 'null' ]]; then
+       EXISTING_RUN_ENVIROMENT_IDS=$(printf "%s" "${_datastage_settings_get_response}" | jq -r .entity.project.runEnvironmentIds | tr -d '[\|]' | tr -d ' ' | tr -d '\n')
+    else
+       echo "$empty"
+       EXISTING_RUN_ENVIROMENT_IDS="\"${EXISTING_RUN_ENVIROMENT_IDS}\""
+    fi
 
     if [[ ${ACTION} == "cleanup" ]]; then
-        payload="{
-          \"project\": {
-              \"runEnvironmentIds\": [],
-              \"runRemoteEngineEnforcement\": false
-           }
-        }"
+      # If there are multiple remote engines, and if so just remove the targeted. There could be 0 or more other remote engines.
+       EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS/,\"$PROJECT_ENV_ASSET_ID\"/}"
+       EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS/\"$PROJECT_ENV_ASSET_ID\",/}"
+       EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS/\"$PROJECT_ENV_ASSET_ID\"/}"
+
+       if [[ -z $EXISTING_RUN_ENVIROMENT_IDS || "${EXISTING_RUN_ENVIROMENT_IDS}" == '' ]]; then
+         payload="{
+           \"project\": {
+               \"runEnvironmentIds\": [${EXISTING_RUN_ENVIROMENT_IDS}],
+               \"runRemoteEngineEnforcement\": false
+            }
+         }"
+       else
+         payload="{
+           \"project\": {
+               \"runEnvironmentIds\": [${EXISTING_RUN_ENVIROMENT_IDS}],
+               \"runRemoteEngineEnforcement\": true
+            }
+         }"
+       fi
+
+    else
+      # add the new engine id to it if it does not exist
+      if [[ -z $EXISTING_RUN_ENVIROMENT_IDS || "${EXISTING_RUN_ENVIROMENT_IDS}" == 'null' ]]; then
+          EXISTING_RUN_ENVIROMENT_IDS="${PROJECT_ENV_ASSET_ID}"
+      else
+          EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS},\"${PROJECT_ENV_ASSET_ID}\""
+      fi
+
+      payload="{
+        \"project\": {
+            \"runEnvironmentIds\": [${EXISTING_RUN_ENVIROMENT_IDS}],
+            \"runRemoteEngineEnforcement\": true
+         }
+      }"
     fi
 
     _datastage_settings_put_response=$(curl -s -X PUT "${GATEWAY_URL}/data_intg/v3/assets/datastage_settings/${DATASTAGE_SETTINGS_ASSET_ID}?project_id=${PROJECT_ID}" \
@@ -895,7 +926,7 @@ create_environment() {
           \"model\": \"\"
         },
         \"mem\": {
-          \"size\": \"4Gi\"
+          \"size\": \"4G\"
         }
       }
     }
@@ -1099,7 +1130,7 @@ startMongoDBSQLEngine() {
    if [ ! -z "\${MONGODB_SQLENGINE_ENABLED}" ] && [ "\${MONGODB_SQLENGINE_ENABLED}" = "True" ]; then
       echo "Starting MongoDB SQLEngine on port \${MONGODB_SQLENGINE_PORT} with \${MONGODB_SQLENGINE_MEMORY_MB}MB of memory."
       java_opts="-Xmx\${MONGODB_SQLENGINE_MEMORY_MB}m -cp /opt/ibm/PXService/Server/branded_odbc/java/lib/mongodb.jar"
-      java \$java_opts com.ddtek.mongodbcloud.sql.Server -port 19967 &
+      java \$java_opts com.ddtek.jdbc.mongodb.phoenix.sql.Server -port 19967 &
    fi
 }
 iterateSecrets
@@ -1397,13 +1428,15 @@ if [[ ${ACTION} == "start" ]]; then
 
     PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
     echo ""
-    echo "${bold}Remote Engine setup is complete${normal}"
+    echo "Setup complete"
     echo ""
     echo "Project environments:"
     echo "* ${PROJECTS_LINK}/manage/environments/templates?context=cpdaas"
     echo ""
     echo "Project settings:"
     echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=cpdaas"
+    echo "(The newly created Remote Engine instance is set as default if there are no other Remote instances set in the project."
+    echo "If there are other Remote Engine instances, please update the DataStage settings.)"
     echo ""
     echo "Project assets:"
     echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
@@ -1428,22 +1461,25 @@ if [[ ${ACTION} == "start" ]]; then
     # echo "${bold}Running rowgen peek ...${normal}"
     # echo ""
     # docker exec -it ds-px-runtime osh -f /tests/rowgen_peek.txt
+    print_header "Remote Engine setup completed."
 
 elif [[ ${ACTION} == "stop" ]]; then
 
     stop_px_runtime_docker
     remove_px_runtime_docker
 
+    print_header "Remote Engine stop completed."
+
 elif [[ ${ACTION} == "cleanup" ]]; then
     echo "WARNING: This will remove the docker container and also remove the persistent storage used with this instance:"
     echo " - ${CONTAINER_HOST_DIR}"
-    read -p "Are you sure you want to cleanup this instance? "
+    read -p "Are you sure you want to cleanup this instance [y/n]? "
     echo    # (optional) move to a new line
     if [[ $REPLY =~ ^[Yy]$ ]]; then
 
         stop_px_runtime_docker
         remove_px_runtime_docker
-        cleanup_docker_network
+        # cleanup_docker_network
 
         print_header "Cleaning Remote Engine '${REMOTE_ENGINE_NAME}'..."
 
@@ -1469,10 +1505,24 @@ elif [[ ${ACTION} == "cleanup" ]]; then
 
         echo "Resetting DataStage settings"
         reset_datastage_settings
+
+        PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
+        echo ""
+        echo "Cleanup complete"
+        echo ""
+        echo "Project environments:"
+        echo "* ${PROJECTS_LINK}/manage/environments/templates?context=cpdaas"
+        echo ""
+        echo "Project settings:"
+        echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=cpdaas"
+        echo ""
+        echo "Project assets:"
+        echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
+
+        print_header "Remote Engine cleanup completed."
     else
-        echo 'Aborted cleanup.'
+        print_header "Remote Engine cleanup aborted."
     fi
+
 fi
 
-echo ""
-echo "--- Done ---"
