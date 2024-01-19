@@ -832,6 +832,8 @@ update_datastage_settings() {
       # add the new engine id to it if it does not exist
       if [[ -z $EXISTING_RUN_ENVIROMENT_IDS || "${EXISTING_RUN_ENVIROMENT_IDS}" == 'null' ]]; then
           EXISTING_RUN_ENVIROMENT_IDS="${PROJECT_ENV_ASSET_ID}"
+      elif [[ "${EXISTING_RUN_ENVIROMENT_IDS}" = *"${PROJECT_ENV_ASSET_ID}"* ]]; then
+          echo "Remote Engine id: ${PROJECT_ENV_ASSET_ID} already exists in project DataStage settings"
       else
           EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS},\"${PROJECT_ENV_ASSET_ID}\""
       fi
