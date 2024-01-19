@@ -68,7 +68,7 @@ While starting a remote engine, following optional flags can be used in addition
     <volume_dir>/<remote_engine_name>_runtime/px-storage
     ```
     Once the remote engine is up and running, additional files and folders will be created inside the above folders as needed by the engine.
-1. `--home <value>`: Sets the target IBM Cloud enviroment to either ypprod (Dallas datacenter - default) or frprod (Frankfurt datacenter). Your associated project must be in the associated datacenter.
+1. `--home <value>`: Sets the target IBM Cloud enviroment to either `ypprod` (Dallas datacenter - default) or `frprod` (Frankfurt datacenter). The project associated with this engine instance must be in same datacenter.
 
 
 ## Upgrade
