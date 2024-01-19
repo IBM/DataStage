@@ -60,12 +60,13 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--memory <value>`: Sets the maximum amount of memory the engine can use. The value takes a positive integer, followed by a suffix of m/M, g/G, to indicate megabytes or gigabytes. Default is `4G`.
 1. `--cpu <value>`: Sets the maximum amount of cpu resources the engine can use. The value takes a positive number. Default is `2` cores.
 1. `--volume-dir <value>`: Sets the directory to be used as the volume directory for persistent storage. Default location is `/tmp/docker/volumes`. The volume directory will be updated with the following top level file structure:
-        ```
-        <volume_dir>/scratch
-        <volume_dir>/ds-storage
-        <volume_dir>/<remote_engine_name>_runtime
-        <volume_dir>/<remote_engine_name>_runtime/px-storage
-        ```
+
+    ```
+    <volume_dir>/scratch
+    <volume_dir>/ds-storage
+    <volume_dir>/<remote_engine_name>_runtime
+    <volume_dir>/<remote_engine_name>_runtime/px-storage
+    ```
     Once the remote engine is up and running, additional files and folders will be created inside the above folders as needed by the engine.
 1. `--home <value>`: Sets the target IBM Cloud enviroment to either ypprod (Dallas datacenter - default) or frprod (Frankfurt datacenter). Your associated project must be in the associated datacenter.
 
