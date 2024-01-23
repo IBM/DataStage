@@ -5,6 +5,8 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[4.8.1](#481)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.1.md)
 
 [4.8.0](#480)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.0.md)
@@ -32,6 +34,38 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 4.8.1
+
+### New commands
+
+The following commands are added to enable job run analysis.
+
+-   `list-links`  List all links to or from a stage in a DataStage job.
+    
+-   `list-stages`  List all stages in a DataStage job.
+    
+-   `get-stage-link`  Display information for a link to or from a stage in a datastage job.
+    
+-  `get-jobrun-report` Display job run report for a datastage job.
+
+The following commands are added to allow fileset cleanup.
+
+-  `truncate-fileset` Truncate File Set data from a given project by name.
+
+### Command changes
+
+The following commands have changed:
+
+`run-pipeline`: 
+- enhanced to take `run-name`.
+- added ability to process PROJDEF parameter references.
+- flag short-name for `reset-cache` changed from `-R` to `-C`
+
+`list-jobruns`: fixed incorrect flag name from `sort-by-runid` to `sort-by-runname`.
+
+`list-paramsets`  supports json formatted output.
+
 
 ## 4.8.0
 
