@@ -1423,8 +1423,8 @@ if [[ ${ACTION} == "start" ]]; then
     fi
     echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is registered."
 
-    echo "Updating the project to use ${REMOTE_ENGINE_NAME} as the default environment"
-    update_datastage_settings
+    # echo "Updating the project to use ${REMOTE_ENGINE_NAME} as the default environment"
+    # update_datastage_settings
 
     PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
     echo ""
@@ -1435,8 +1435,6 @@ if [[ ${ACTION} == "start" ]]; then
     echo ""
     echo "Project settings:"
     echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=cpdaas"
-    echo "(The newly created Remote Engine instance is set as default if there are no other Remote instances set in the project."
-    echo "If there are other Remote Engine instances, please update the DataStage settings.)"
     echo ""
     echo "Project assets:"
     echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
@@ -1503,8 +1501,8 @@ elif [[ ${ACTION} == "cleanup" ]]; then
         echo "Removing Runtime associated with the remote Engine ..."
         remove_environment
 
-        echo "Resetting DataStage settings"
-        reset_datastage_settings
+        # echo "Resetting DataStage settings"
+        # reset_datastage_settings
 
         PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
         echo ""
