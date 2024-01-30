@@ -512,6 +512,7 @@ run_px_runtime_docker() {
         --network=${PXRUNTIME_CONTAINER_NAME}
     )
 
+    # --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         runtime_docker_opts+=(
             --env WLMON=1
@@ -522,7 +523,6 @@ run_px_runtime_docker() {
             -v "${PX_STORAGE_HOST_DIR}":/px-storage
             --env DS_STORAGE_PATH=/ds-storage:/px-storage
             --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
-            --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
             -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch
         )
     fi
