@@ -18,15 +18,16 @@ nfsProvisionerFile="${filesDir}/efs-provisioner.yaml"
 nfsStorageClassFile="${filesDir}/efs-storageclass.yaml"
 nfs_path="/"
 
-DOCKER_REGISTRY="cp.icr.io"
+DOCKER_REGISTRY="icr.io"
 OPERATOR_REGISTRY="${DOCKER_REGISTRY}/datastage"
 DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/datastage"
 DS_REGISTRY_SECRET="datastage-pull-secret"
 DS_API_KEY_SECRET="datastage-api-key-secret"
 DS_GATEWAY="api.dataplatform.cloud.ibm.com"
+data_center="dallas"
 
-px_runtime_digest="sha256:bc4a60dbe644a84d2fb1754c59ac0c2abadc927e7cea9b4f2dbe61be32ce5ed9"
-px_compute_digest="sha256:25e32630097591287b6e403437868fcaf2fa36147b0f85e61d14498e5d7fdd4b"
+px_runtime_digest="sha256:7b1a21a5ddacb157ba3e27729c493769f344a70ad4ae64fc7d4501efb66cd7f2"
+px_compute_digest="sha256:dc3236055473b2e45d22162bbbd8c2d12888d2b8fac8d803bd275965cbf1cc22"
 operator_digest="sha256:ee74f02d98ba6c1de22ce825c906dc3290dcafff30683cf28270b0afa88977c4"
 
 # default username for icr.io when using apikey
@@ -213,6 +214,7 @@ validate_common_args()
   if [ -z $namespace ]; then
     display_missing_arg "namespace"
   fi
+  check_namespace
 }
 
 create_pxruntime_crd() {
@@ -580,6 +582,7 @@ create_instance() {
   if [ -z $license_accept ] || [ $license_accept != "true" ]; then
     display_missing_arg "license-accept"
   fi
+  configure_data_center
   # check if pxruntime with the same name exists
   px_runtime_cr_count=`$kubernetesCLI -n $namespace get pxruntime $name --ignore-not-found=true | wc -l`
   if [ $px_runtime_cr_count -ne 0 ]; then
@@ -662,13 +665,14 @@ handle_apikey_usage() {
 handle_create_instance_usage() {
   echo ""
   echo "Description: creates an instance of the remote engine; the pull secret and the api-key secret should have been created in the same namespace."
-  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id> --storageClass <storage-class> [--storageSize <storage-size>] [--size <size>] --license-accept true"
+  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [data-center <data-center>] --license-accept true"
   echo "--namespace: the namespace to create the instance"
   echo "--name: the name of the remote engine"
   echo "--project-id: the project ID to register the remote engine"
   echo "--storageClass: the file storageClass to use"
   echo "--storageSize: the storage size to use (in GB); defaults to 10"
   echo "--size: the size of the instance (small, medium, large); defaults to small"
+  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud: dallas(default), or frankfurt"
   echo "--license-accept: set the to true to indicate that you have accepted the license for IBM DataStage as a Service Anywhere - https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en"
   echo ""
   exit 0
@@ -736,7 +740,7 @@ retrieve_latest() {
 
 retrieve_latest_image_digests() {
   check_jq_installation
-  if [ $DOCKER_REGISTRY = "icr.io" ]; then
+  if [ $username = "iamapikey" ]; then
     generate_access_token
     retrieved_digest=$(retrieve_latest 'ds-px-runtime')
     if [[ $retrieved_digest = sha256* ]]; then
@@ -762,12 +766,62 @@ retrieve_latest_image_digests() {
   else
     # set cpd registry location
     OPERATOR_REGISTRY="icr.io/cpopen"
-    DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/cp/cpd"
+    DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"
     retrieve_px_image_digests
-  fi
-  
+  fi 
 }
 
+# determine registry from pull secret
+determine_registry() {
+  $kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET > /dev/null
+  if [ $? -ne 0 ]; then
+    echo "The pull secret for the container registry has not been created."
+    exit 1
+  fi
+  username_secret=`$kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq -r '.auths | select(."icr.io") | ."icr.io" | .username'`
+  if [ $username_secret = "cp" ]; then
+    OPERATOR_REGISTRY="icr.io/cpopen"
+    DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"
+    retrieve_api_key
+    if [ ! -z $api_key ]; then
+      retrieve_px_image_digests
+    fi
+  elif [ $username_secret = "iamapikey" ]; then
+    password_secret=`$kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq -r '.auths | select(."icr.io") | ."icr.io" | .password'`
+    # set the registry credentials to be the ones from the secret
+    if [ ! -z $password_secret ]; then
+      password="${password_secret}"
+      retrieve_latest_image_digests
+    fi
+  fi
+}
+
+retrieve_api_key() {
+  $kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET > /dev/null
+  if [ $? -ne 0 ]; then
+    echo "The secret containing the API key IBM Cloud has not been created."
+    exit 1
+  fi
+  api_key=`$kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET -o jsonpath='{.data.api-key}' | base64 -d`
+}
+
+check_namespace() {
+  $kubernetesCLI get namespace $namespace > /dev/null
+  if [ $? -ne 0 ]; then
+    echo "The namespace $namepace does not exist. Please create it and run the command again."
+    exit 1
+  fi
+}
+
+configure_data_center() {
+  if [ $data_center = "frankfurt" ]; then
+    # eu-de
+    DS_GATEWAY="api.eu-de.dataplatform.cloud.ibm.com"
+  elif [ $data_center != "dallas" ]; then
+    echo "Unknown value for data center '${data_center}'. Please specified either dallas, or frankfurt."
+    exit 1
+  fi
+}
 
 while [ $# -gt 0 ]
 do
@@ -799,13 +853,17 @@ do
             shift
             name="${1}"
             ;;
-        --storageClass)
+        --storageClass|--storage-class)
             shift
             storage_class="${1}"
             ;;
-        --storageSize)
+        --storageSize|--storage-size)
             shift
             storage_size="${1}"
+            ;;
+        --data-center)
+            shift
+            data_center="${1}"
             ;;
         --size)
            shift
@@ -870,6 +928,12 @@ if [[ -z $action ]] && [[ -z $inputFile ]]; then
 fi
 
 handle_action_install() {
+  if [ -z $password ]; then
+    # this is from individual install action - check if the pull secret is for datastage repo
+    determine_registry
+
+
+  fi
   echo "Deploying DataStage operator to namespace ${namespace}..."
   create_service_account
   create_role
@@ -916,6 +980,7 @@ create-apikey-secret)
   create_apikey_secret
   ;;
 create-instance)
+  determine_registry
   create_instance
   ;;
 create-nfs-provisioner)
