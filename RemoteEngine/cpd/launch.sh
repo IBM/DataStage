@@ -28,7 +28,7 @@ data_center="dallas"
 
 px_runtime_digest="sha256:7b1a21a5ddacb157ba3e27729c493769f344a70ad4ae64fc7d4501efb66cd7f2"
 px_compute_digest="sha256:dc3236055473b2e45d22162bbbd8c2d12888d2b8fac8d803bd275965cbf1cc22"
-operator_digest="sha256:ee74f02d98ba6c1de22ce825c906dc3290dcafff30683cf28270b0afa88977c4"
+operator_digest="sha256:97f6d5398efdae57f3d30bd55badc452e3c895fb8707557628e62822d0ca5dea"
 
 # default username for icr.io when using apikey
 username="iamapikey"
