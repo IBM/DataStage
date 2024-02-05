@@ -15,16 +15,38 @@ DataStage Remote Engine supports deployment on the following platforms:
     * Setting up and Elastic file system: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.6.x?topic=storage-setting-up-amazon-elastic-file-system (see details below)
 
 ## Pre-Requisites
-* The following software are required to be installed on the client from where you will be executing this script:
-    - `kubectl` or `oc`
-    - `jq`
+The following software are required to be installed on the client from where you will be executing this script:
+
+1. `kubectl` or `oc`
+2. `jq`
+
+## Sizing
+The remote engine supports three default sizes: small, medium, and large.
+
+### Small
+- 2 compute pods: 3 vCPU and 12 GB RAM
+- 1 conductor pod: 1 vCPU and 4 GB RAM
+
+### Medium
+- 2 compute pods: 6 vCPU and 24 GB RAM
+- 1 conductor pod: 2 vCPU and 4 GB RAM
+
+### Large
+- 3 compute pods: 8 vCPU and 32 GB RAM
+- 1 conductor pod: 4 vCPU and 4 GB RAM
+
+## IBM Cloud API key
+An IBM Cloud API key is required for registering the remote engine to your Cloud Pak for Data project on IBM Cloud.
+1. Click Manage > Access (IAM) > API keys to open the “API keys” page (URL: https://cloud.ibm.com/iam/apikeys).
+2. Ensure that My IBM Cloud API keys is selected in the View list.
+3. Click Create an IBM Cloud API key, and then specify a name and description
 
 ## Usage
 To deploy the DataStage operator on cluster without global pull secret configured for the container registry, the pull secret needs to be created. You need an active connection to the cluster with either kubectl or oc cli available.
 
 ```
 # create pull secret for container registry
-./launch.sh create-pull-secret --username <username> --password ${api-key}
+./launch.sh create-pull-secret --namespace <namespace> --username <username> --password ${api-key}
 
 # deploy the operator
 ./launch.sh install --namespace <namespace>
@@ -34,7 +56,7 @@ To deploy the DataStage operator on cluster without global pull secret configure
 
 # create the remote instance - add '--gateway api.dataplatform.cloud.ibm.com' if the instance needs to registers with prod env
 
-./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project-id> --storageClass <storage-class> [--storageSize <storage-size>] [--size <size>] [--gateway api.dataplatform.cloud.ibm.com] --license-accept true
+./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt] --license-accept true
 ```
 For documentation on how to create API keys, see https://cloud.ibm.com/docs/account?topic=account-manapikey.
 
@@ -63,15 +85,17 @@ Instead of running the installation script multiple times, the entire installati
 sample input file:
 ```
 # indicate that you have accepted license for IBM DataStage as a Service Anywhere(https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en)
-accept_license=true
+license_accept=true
+
+# the data center where your DataStage is provisioned on IBM cloud (dallas, or frankfurt); the default is dallas.
+# data_center=dallas
 
 # the namespace to deploy the remote engine
 namespace=<namespace>
 
 # the username and password for the container registry
-
-username=<username>
-password=<password-or-apikey>
+username=iamapikey
+password=<container-registry-api-key>
 
 # IBM cloud api key for the remote engine to use
 api_key=<api-key>
@@ -85,7 +109,7 @@ name=<name>
 #the size of the pxruntime - small, medium, or large (default is small)
 size=small
 
-# the storage class to use
+# the file storage class to use
 storage_class=<storage-class-name>
 
 # the storage size in gb
@@ -103,4 +127,20 @@ provisioner_namespace=<namespace>
 Running the install script with the input file:
 ```
 ./launch.sh -f inputFile.txt
+```
+
+## Mounting Additional Persistence Volumes
+To mount additional storage volumes to the remote engine instance, edit the custom resource (CR) and add the additional PVCs under `additional_storage`
+1. Edit the PXRemoteEngine CR via `oc` or `kubectl`
+```
+oc edit pxre <remote-engine-name>
+```
+2. For each PVC, add its name and mount path under the `additional_storage`.
+```
+spec:
+  additional_storage:                      # mount additional persistent volumes
+  - mount_path: /data1                     # the path to mount the persistent volume
+    pvc_name: <pvc-1-name>                 # the name of the associated persistent volume claim
+  - mount_path: /data2
+    pvc_name: <pvc-2-name>
 ```

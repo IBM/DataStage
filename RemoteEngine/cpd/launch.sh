@@ -24,10 +24,11 @@ DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/datastage"
 DS_REGISTRY_SECRET="datastage-pull-secret"
 DS_API_KEY_SECRET="datastage-api-key-secret"
 DS_GATEWAY="api.dataplatform.cloud.ibm.com"
+data_center="dallas"
 
-px_runtime_digest="sha256:dcfbf9f990afba4ffe498733b229fa027682dccec2bef45a0da0ae3c51a28f9f"
-px_compute_digest="sha256:af9425b151e18250ce8fb1a1c43d4bc8062b1081e1dd78652081af152ff2bc76"
-operator_digest="sha256:ee692f78a7a09b8dd1e2030a6696741e656ff8dd3fdfe4bd7ad6f06f50540c06"
+px_runtime_digest="sha256:7b1a21a5ddacb157ba3e27729c493769f344a70ad4ae64fc7d4501efb66cd7f2"
+px_compute_digest="sha256:dc3236055473b2e45d22162bbbd8c2d12888d2b8fac8d803bd275965cbf1cc22"
+operator_digest="sha256:97f6d5398efdae57f3d30bd55badc452e3c895fb8707557628e62822d0ca5dea"
 
 # default username for icr.io when using apikey
 username="iamapikey"
@@ -213,6 +214,7 @@ validate_common_args()
   if [ -z $namespace ]; then
     display_missing_arg "namespace"
   fi
+  check_namespace
 }
 
 create_pxruntime_crd() {
@@ -580,6 +582,7 @@ create_instance() {
   if [ -z $license_accept ] || [ $license_accept != "true" ]; then
     display_missing_arg "license-accept"
   fi
+  configure_data_center
   # check if pxruntime with the same name exists
   px_runtime_cr_count=`$kubernetesCLI -n $namespace get pxruntime $name --ignore-not-found=true | wc -l`
   if [ $px_runtime_cr_count -ne 0 ]; then
@@ -589,7 +592,7 @@ create_instance() {
   $kubernetesCLI -n $namespace get pxremoteengine $name
   if [ $? -eq 0 ]; then
     echo "PXRemoteEngine $name already exists; updating its image digests."
-    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}}}" --type=merge
+    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"docker_registry_prefix\":\"${DOCKER_REGISTRY_PREFIX}\", \"api_key_secret\":\"${DS_API_KEY_SECRET}\", \"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}}}" --type=merge
   else
     cat <<EOF | $kubernetesCLI apply -f -
 apiVersion: ds.cpd.ibm.com/v1
@@ -662,13 +665,14 @@ handle_apikey_usage() {
 handle_create_instance_usage() {
   echo ""
   echo "Description: creates an instance of the remote engine; the pull secret and the api-key secret should have been created in the same namespace."
-  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id> --storageClass <storage-class> [--storageSize <storage-size>] [--size <size>] --license-accept true"
+  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [data-center <data-center>] --license-accept true"
   echo "--namespace: the namespace to create the instance"
   echo "--name: the name of the remote engine"
   echo "--project-id: the project ID to register the remote engine"
   echo "--storageClass: the file storageClass to use"
   echo "--storageSize: the storage size to use (in GB); defaults to 10"
   echo "--size: the size of the instance (small, medium, large); defaults to small"
+  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud: dallas(default), or frankfurt"
   echo "--license-accept: set the to true to indicate that you have accepted the license for IBM DataStage as a Service Anywhere - https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en"
   echo ""
   exit 0
@@ -703,6 +707,31 @@ generate_access_token() {
   fi
 }
 
+# retrieve px image digests from ds-runtime
+retrieve_px_image_digests() {
+  if [ -z $api_key ]; then
+    # retrieve apikey from secret
+    api_key=`$kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET -o=jsonpath="{.data.api-key}" | base64 -d`
+  fi
+  if [ $DS_GATEWAY = "api.dataplatform.cloud.ibm.com" ]; then
+    cloud_access_token=`curl -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
+  else 
+    cloud_access_token=`curl -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.test.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
+  fi
+  if [ -z $cloud_access_token ]; then
+    echo "Unable to retrieve access token from IBM Cloud."
+    exit 1
+  fi
+  image_digests=`curl -s -X GET -H "Authorization: Bearer $cloud_access_token" -H 'accept: application/json;charset=utf-8' https://${DS_GATEWAY}/data_intg/v3/flows_runtime/remote_engine/versions | jq -r '.versions[0].image_digests.px_runtime, .versions[0].image_digests.px_compute'`
+  image_digest_array=(${image_digests})
+  if [ ${#image_digest_array[@]} -eq 2 ]; then
+    px_runtime_digest="${image_digest_array[0]}"
+    px_compute_digest="${image_digest_array[1]}"
+    echo "Retrieved digest for ds-px-runtime: ${px_runtime_digest}"
+    echo "Retrieved digest for ds-px-compute: ${px_compute_digest}"
+  fi
+}
+
 retrieve_latest() {
   image="$1"
   latest_digest=`curl -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $access_token" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${image}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"'`
@@ -711,30 +740,88 @@ retrieve_latest() {
 
 retrieve_latest_image_digests() {
   check_jq_installation
-  generate_access_token
-  retrieved_digest=$(retrieve_latest 'ds-px-runtime')
-  if [[ $retrieved_digest = sha256* ]]; then
-    px_runtime_digest="${retrieved_digest}"
-    echo "Retrieved digest for ds-px-runtime: ${px_runtime_digest}"
+  if [ $username = "iamapikey" ]; then
+    generate_access_token
+    retrieved_digest=$(retrieve_latest 'ds-px-runtime')
+    if [[ $retrieved_digest = sha256* ]]; then
+      px_runtime_digest="${retrieved_digest}"
+      echo "Retrieved digest for ds-px-runtime: ${px_runtime_digest}"
+    else
+      echo "Unable to retrieve latest digest for ds-px-runtime; defaulting to ${px_runtime_digest}."
+    fi
+    retrieved_digest=$(retrieve_latest 'ds-px-compute')
+    if [[ $retrieved_digest = sha256* ]]; then
+      px_compute_digest="${retrieved_digest}"
+      echo "Retrieved digest for ds-px-compute: ${px_compute_digest}"
+    else
+      echo "Unable to retrieve latest digest for ds-px-compute; defaulting to ${px_compute_digest}."
+    fi
+    retrieved_digest=$(retrieve_latest 'ds-operator')
+    if [[ $retrieved_digest = sha256* ]]; then
+      operator_digest="${retrieved_digest}"
+      echo "Retrieved digest for ds-operator: ${operator_digest}"
+    else
+      echo "Unable to retrieve latest digest for ds-operator; defaulting to ${operator_digest}."
+    fi
   else
-    echo "Unable to retrieve latest digest for ds-px-runtime; defaulting to ${px_runtime_digest}."
+    # set cpd registry location
+    OPERATOR_REGISTRY="icr.io/cpopen"
+    DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"
+    retrieve_px_image_digests
+  fi 
+}
+
+# determine registry from pull secret
+determine_registry() {
+  $kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET > /dev/null
+  if [ $? -ne 0 ]; then
+    echo "The pull secret for the container registry has not been created."
+    exit 1
   fi
-  retrieved_digest=$(retrieve_latest 'ds-px-compute')
-  if [[ $retrieved_digest = sha256* ]]; then
-    px_compute_digest="${retrieved_digest}"
-		echo "Retrieved digest for ds-px-compute: ${px_compute_digest}"
-  else
-    echo "Unable to retrieve latest digest for ds-px-compute; defaulting to ${px_compute_digest}."
-  fi
-  retrieved_digest=$(retrieve_latest 'ds-operator')
-  if [[ $retrieved_digest = sha256* ]]; then
-    operator_digest="${retrieved_digest}"
-    echo "Retrieved digest for ds-operator: ${operator_digest}"
-  else
-    echo "Unable to retrieve latest digest for ds-operator; defaulting to ${operator_digest}."
+  username_secret=`$kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq -r '.auths | select(."icr.io") | ."icr.io" | .username'`
+  if [ $username_secret = "cp" ]; then
+    OPERATOR_REGISTRY="icr.io/cpopen"
+    DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"
+    retrieve_api_key
+    if [ ! -z $api_key ]; then
+      retrieve_px_image_digests
+    fi
+  elif [ $username_secret = "iamapikey" ]; then
+    password_secret=`$kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq -r '.auths | select(."icr.io") | ."icr.io" | .password'`
+    # set the registry credentials to be the ones from the secret
+    if [ ! -z $password_secret ]; then
+      password="${password_secret}"
+      retrieve_latest_image_digests
+    fi
   fi
 }
 
+retrieve_api_key() {
+  $kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET > /dev/null
+  if [ $? -ne 0 ]; then
+    echo "The secret containing the API key IBM Cloud has not been created."
+    exit 1
+  fi
+  api_key=`$kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET -o jsonpath='{.data.api-key}' | base64 -d`
+}
+
+check_namespace() {
+  $kubernetesCLI get namespace $namespace > /dev/null
+  if [ $? -ne 0 ]; then
+    echo "The namespace $namepace does not exist. Please create it and run the command again."
+    exit 1
+  fi
+}
+
+configure_data_center() {
+  if [ $data_center = "frankfurt" ]; then
+    # eu-de
+    DS_GATEWAY="api.eu-de.dataplatform.cloud.ibm.com"
+  elif [ $data_center != "dallas" ]; then
+    echo "Unknown value for data center '${data_center}'. Please specified either dallas, or frankfurt."
+    exit 1
+  fi
+}
 
 while [ $# -gt 0 ]
 do
@@ -766,14 +853,22 @@ do
             shift
             name="${1}"
             ;;
-        --storageClass)
+        --storageClass|--storage-class)
             shift
             storage_class="${1}"
             ;;
-        --storageSize)
+        --storageSize|--storage-size)
             shift
-            storage_size="${size}"
+            storage_size="${1}"
             ;;
+        --data-center)
+            shift
+            data_center="${1}"
+            ;;
+        --size)
+           shift
+           size="${1}"
+           ;;
         --registry)
             shift
             DOCKER_REGISTRY="${1}"
@@ -833,6 +928,12 @@ if [[ -z $action ]] && [[ -z $inputFile ]]; then
 fi
 
 handle_action_install() {
+  if [ -z $password ]; then
+    # this is from individual install action - check if the pull secret is for datastage repo
+    determine_registry
+
+
+  fi
   echo "Deploying DataStage operator to namespace ${namespace}..."
   create_service_account
   create_role
@@ -879,6 +980,7 @@ create-apikey-secret)
   create_apikey_secret
   ;;
 create-instance)
+  determine_registry
   create_instance
   ;;
 create-nfs-provisioner)
