@@ -36,10 +36,11 @@ The remote engine supports three default sizes: small, medium, and large.
 - 1 conductor pod: 4 vCPU and 4 GB RAM
 
 ## IBM Cloud API key
-An IBM Cloud API key is required for registering the remote engine to your Cloud Pak for Data project on IBM Cloud.
-1. Click Manage > Access (IAM) > API keys to open the “API keys” page (URL: https://cloud.ibm.com/iam/apikeys).
-2. Ensure that My IBM Cloud API keys is selected in the View list.
-3. Click Create an IBM Cloud API key, and then specify a name and description
+1. An IBM Cloud API key is required for registering the remote engine to your Cloud Pak for Data project on IBM Cloud.
+    1. Click Manage > Access (IAM) > API keys to open the “API keys” page (URL: https://cloud.ibm.com/iam/apikeys).
+    2. Ensure that My IBM Cloud API keys is selected in the View list.
+    3. Click Create an IBM Cloud API key, and then specify a name and description
+2. IBM Cloud Container Registry APIKey. This apikey will be used to download the images needed to run Remote Engine. Currently there is no way to generate this, so it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport
 
 ## Usage
 To deploy the DataStage operator on cluster without global pull secret configured for the container registry, the pull secret needs to be created. You need an active connection to the cluster with either kubectl or oc cli available.

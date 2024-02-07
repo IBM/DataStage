@@ -1426,9 +1426,6 @@ if [[ ${ACTION} == "start" ]]; then
     echo ""
     echo "Setup complete"
     echo ""
-    echo "Project environments:"
-    echo "* ${PROJECTS_LINK}/manage/environments/templates?context=cpdaas"
-    echo ""
     echo "Project settings:"
     echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=cpdaas"
     echo ""
@@ -1455,6 +1452,8 @@ if [[ ${ACTION} == "start" ]]; then
     # echo "${bold}Running rowgen peek ...${normal}"
     # echo ""
     # docker exec -it ds-px-runtime osh -f /tests/rowgen_peek.txt
+    echo ''
+    echo 'Remote engine is setup. You can navigate to the project settings and select this engine to be used by the project.'
     print_header "Remote Engine setup completed."
 
 elif [[ ${ACTION} == "stop" ]]; then
@@ -1467,7 +1466,8 @@ elif [[ ${ACTION} == "stop" ]]; then
 elif [[ ${ACTION} == "cleanup" ]]; then
     echo "WARNING: This will remove the docker container and also remove the persistent storage used with this instance:"
     echo " - ${CONTAINER_HOST_DIR}"
-    read -p "Are you sure you want to cleanup this instance [y/n]? "
+    echo "You may backup this directory to any other location."
+    read -p "Are you sure you want to proceed with the cleanup [y/n]? "
     echo    # (optional) move to a new line
     if [[ $REPLY =~ ^[Yy]$ ]]; then
 
@@ -1504,9 +1504,6 @@ elif [[ ${ACTION} == "cleanup" ]]; then
         echo ""
         echo "Cleanup complete"
         echo ""
-        echo "Project environments:"
-        echo "* ${PROJECTS_LINK}/manage/environments/templates?context=cpdaas"
-        echo ""
         echo "Project settings:"
         echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=cpdaas"
         echo ""
@@ -1514,7 +1511,7 @@ elif [[ ${ACTION} == "cleanup" ]]; then
         echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
 
         echo ''
-        echo 'Remote engine is setup. You can navigate to the project settings and set this engine to be used by the project.'
+        echo 'Remote engine is cleaned up. You can navigate to the project settings and select a different engine if this engine was the default.'
         print_header "Remote Engine cleanup completed."
     else
         print_header "Remote Engine cleanup aborted."
