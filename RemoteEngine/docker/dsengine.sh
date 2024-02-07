@@ -427,32 +427,32 @@ check_pxruntime_container_exists() {
     fi
 }
 
-check_unused_port_forpxruntime() {
-    echo "Checking open ports ..."
-    PXRUNTIME_PORT='9443'
-    for i in {3..103}; do
-        if [[ $( netstat -an | grep -w $((9440 + ${i})) | grep LISTEN | wc -l ) -gt 0 ]]; then
-            echo "Port $((9440 + ${i})) is not available, checking port $((9440 + ${i} + 1))"
-        else
-            PXRUNTIME_PORT="$((9440 + ${i}))"
-            break
-        fi
-    done
-    PXRUNTIME_VERSION_ENDPOINT="https://localhost:${PXRUNTIME_PORT}/v3/px_runtime/version"
-    PXCOMPUTE_VERSION_ENDPOINT='https://localhost:9443/v3/px_runtime/version'
-}
+# check_unused_port_forpxruntime() {
+#     echo "Checking open ports ..."
+#     PXRUNTIME_PORT='9443'
+#     for i in {3..103}; do
+#         if [[ $( netstat -an | grep -w $((9440 + ${i})) | grep LISTEN | wc -l ) -gt 0 ]]; then
+#             echo "Port $((9440 + ${i})) is not available, checking port $((9440 + ${i} + 1))"
+#         else
+#             PXRUNTIME_PORT="$((9440 + ${i}))"
+#             break
+#         fi
+#     done
+#     PXRUNTIME_VERSION_ENDPOINT="https://localhost:${PXRUNTIME_PORT}/v3/px_runtime/version"
+#     PXCOMPUTE_VERSION_ENDPOINT='https://localhost:9443/v3/px_runtime/version'
+# }
 
-check_used_port_pxruntime() {
-    if [ "$DOCKER_CMD" == "podman" ]; then
-        PXRUNTIME_USED_PORTS=$($DOCKER_CMD inspect --format='{{range $p, $conf := .NetworkSettings.Ports}} {{(index $conf 0).HostPort}} {{end}}' ${PXRUNTIME_CONTAINER_NAME})
-    else
-        PXRUNTIME_USED_PORTS=$($DOCKER_CMD inspect --format='{{.Config.ExposedPorts}}' ${PXRUNTIME_CONTAINER_NAME})
-    fi
-    PXRUNTIME_PORT=$(echo ${PXRUNTIME_USED_PORTS} | grep -o "[0-9.]\+")
-    echo "Found ${PXRUNTIME_CONTAINER_NAME} with port ${PXRUNTIME_PORT}"
-    PXRUNTIME_VERSION_ENDPOINT="https://localhost:${PXRUNTIME_PORT}/v3/px_runtime/version"
-    PXCOMPUTE_VERSION_ENDPOINT='https://localhost:9443/v3/px_runtime/version'
-}
+# check_used_port_pxruntime() {
+#     if [ "$DOCKER_CMD" == "podman" ]; then
+#         PXRUNTIME_USED_PORTS=$($DOCKER_CMD inspect --format='{{range $p, $conf := .NetworkSettings.Ports}} {{(index $conf 0).HostPort}} {{end}}' ${PXRUNTIME_CONTAINER_NAME})
+#     else
+#         PXRUNTIME_USED_PORTS=$($DOCKER_CMD inspect --format='{{.Config.ExposedPorts}}' ${PXRUNTIME_CONTAINER_NAME})
+#     fi
+#     PXRUNTIME_PORT=$(echo ${PXRUNTIME_USED_PORTS} | grep -o "[0-9.]\+")
+#     echo "Found ${PXRUNTIME_CONTAINER_NAME} with port ${PXRUNTIME_PORT}"
+#     PXRUNTIME_VERSION_ENDPOINT="https://localhost:${PXRUNTIME_PORT}/v3/px_runtime/version"
+#     PXCOMPUTE_VERSION_ENDPOINT='https://localhost:9443/v3/px_runtime/version'
+# }
 
 stop_px_runtime_docker() {
     echo "Stopping container '${PXRUNTIME_CONTAINER_NAME}' ..."
@@ -482,14 +482,12 @@ remove_px_runtime_docker() {
 
 run_px_runtime_docker() {
     echo "Running container '${PXRUNTIME_CONTAINER_NAME}' ..."
-    echo "Using port ${PXRUNTIME_PORT}"
     end_port_1=$(( 10000 + ${COMPUTE_COUNT} ))
     end_port_2=$(( 11000 + ${COMPUTE_COUNT} ))
     # -p 10000-${end_port_1}:10000-${end_port_1} -p 11000-${end_port_2}:11000-${end_port_2} -p 9443:9443 \
 
     runtime_docker_opts=(
         --detach
-        -p ${PXRUNTIME_PORT}:9443
         --name ${PXRUNTIME_CONTAINER_NAME}
         --hostname="$(hostname)"
         --memory=${PX_MEMORY}
@@ -512,7 +510,6 @@ run_px_runtime_docker() {
         --network=${PXRUNTIME_CONTAINER_NAME}
     )
 
-    # --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         runtime_docker_opts+=(
             --env WLMON=1
@@ -523,6 +520,7 @@ run_px_runtime_docker() {
             -v "${PX_STORAGE_HOST_DIR}":/px-storage
             --env DS_STORAGE_PATH=/ds-storage:/px-storage
             --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
+            --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
             -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch
         )
     fi
@@ -546,11 +544,7 @@ run_px_runtime_docker() {
 start_px_runtime_docker() {
     echo "Starting container '${PXRUNTIME_CONTAINER_NAME}' ..."
     $DOCKER_CMD start ${PXRUNTIME_CONTAINER_NAME}
-
-    # check and set the port
     sleep 2
-    PXRUNTIME_PORT=$($DOCKER_CMD container ls --format "table {{.Names}}\t{{.Ports}}" | grep ${PXRUNTIME_CONTAINER_NAME} | sed -e 's/.*:\(.*\)->.*/\1/')
-    echo "Container ${PXRUNTIME_CONTAINER_NAME} is using port ${PXRUNTIME_PORT}"
 }
 
 wait_readiness_px_runtime()
@@ -560,19 +554,21 @@ wait_readiness_px_runtime()
     ret=1
     count=0
 
+    PXRUNTIME_VERSION_ENDPOINT='https://localhost:9443/v3/px_runtime/version'
+
     export CURL_SSL_BACKEND="secure-transport"
     while (true); do
         count=$(( $count + 1 ))
         echo "  waiting for ${PXRUNTIME_CONTAINER_NAME} to start... time elapsed: $(( $count * $WAIT_DURATION )) seconds"
-        curl -ks -o /dev/null $PXRUNTIME_VERSION_ENDPOINT
+        docker exec "${PXRUNTIME_CONTAINER_NAME}" bash -c "curl -ks ${PXRUNTIME_VERSION_ENDPOINT}" 2>&1 | grep -q '"status":"ok"'
         ret=$?
         if [ ${ret} -eq 0 ]; then
             while (true); do
                 count=$(( $count + 1 ))
                 sleep 5
                 echo "  waiting for ${PXRUNTIME_CONTAINER_NAME} to start ... time elapsed: $(( $count * $WAIT_DURATION )) seconds"
-                if curl -ks $PXRUNTIME_VERSION_ENDPOINT | grep -q '"status":"ok"'; then
-                    curl -k $PXRUNTIME_VERSION_ENDPOINT
+                if docker exec "${PXRUNTIME_CONTAINER_NAME}" bash -c "curl -ks ${PXRUNTIME_VERSION_ENDPOINT}" | grep -q '"status":"ok"'; then
+                    docker exec "${PXRUNTIME_CONTAINER_NAME}" bash -c "curl -ks ${PXRUNTIME_VERSION_ENDPOINT}"
                     echo ""
                     echo "Started container ${PXRUNTIME_CONTAINER_NAME} in $(( $count * $WAIT_DURATION )) seconds"
                     break;
@@ -580,7 +576,7 @@ wait_readiness_px_runtime()
                     echo_error_and_exit "Could not start container ${PXRUNTIME_CONTAINER_NAME} in $(( $count * $WAIT_DURATION )) seconds, aborting."
                 fi
             done
-            if curl -ks $PXRUNTIME_VERSION_ENDPOINT | grep -q '"status":"ok"'; then
+            if docker exec "${PXRUNTIME_CONTAINER_NAME}" bash -c "curl -ks ${PXRUNTIME_VERSION_ENDPOINT}" 2>&1 | grep -q '"status":"ok"'; then
                 break;
             fi
         elif [ ${ret} -ne 0 ] && [ ${count} -lt $TOTAL_RETRIES ]; then
@@ -1365,7 +1361,6 @@ if [[ ${ACTION} == "start" ]]; then
     # check if this container is present but not running. Restart the container
     if [[ $(check_pxruntime_container_exists) == "true" ]]; then
         echo "Existing container ${PXRUNTIME_CONTAINER_NAME} found in a stopped state"
-        check_used_port_pxruntime
         start_px_runtime_docker
         wait_readiness_px_runtime
 
@@ -1389,10 +1384,8 @@ if [[ ${ACTION} == "start" ]]; then
         PXCOMPUTE_DOCKER_IMAGE="${ICR_REGISTRY}/ds-px-compute@${PX_VERSION}"
     fi
     check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
-    # check_or_pull_image $PXCOMPUTE_DOCKER_IMAGE
     print_header "Initializing ${TOOL_SHORTNAME} Runtime environment with name '${REMOTE_ENGINE_NAME}' ..."
     echo "Setting up docker environment"
-    check_unused_port_forpxruntime
 
     initialize_docker_network
 
@@ -1520,6 +1513,8 @@ elif [[ ${ACTION} == "cleanup" ]]; then
         echo "Project assets:"
         echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
 
+        echo ''
+        echo 'Remote engine is setup. You can navigate to the project settings and set this engine to be used by the project.'
         print_header "Remote Engine cleanup completed."
     else
         print_header "Remote Engine cleanup aborted."
