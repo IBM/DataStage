@@ -819,101 +819,6 @@ remove_remote_engine () {
 }
 
 # -----------------------------
-# Assets
-# -----------------------------
-
-update_datastage_settings() {
-    _datastage_settings_get_response=$(curl -sS -X 'GET' "${GATEWAY_URL}/data_intg/v3/assets/datastage_settings?project_id=${PROJECT_ID}" \
-        -H 'accept: application/json' \
-        -H "Authorization: Bearer $IAM_TOKEN")
-
-    if [[ -z "${_datastage_settings_get_response}" || "${_datastage_settings_get_response}" == "null" ]]; then
-        echo ""
-        echo "Response: ${_datastage_settings_get_response}"
-        echo_error_and_exit "Failed to get DataStage Settings, please try again"
-    fi
-
-    # is there any project env already present with this remote engine. There could be multiple envs with the same remote engine id, so select the first one
-    DATASTAGE_SETTINGS_ASSET_ID=$(printf "%s" "${_datastage_settings_get_response}" | jq -r .metadata.asset_id | tr -d '"')
-    if [[ ${DATASTAGE_SETTINGS_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
-        echo "DataStage Settings asset id: ${DATASTAGE_SETTINGS_ASSET_ID}"
-    fi
-
-    # get the existing runEnvironmentId or runEnvironmentIds,
-    EXISTING_RUN_ENVIROMENT_IDS=$(printf "%s" "${_datastage_settings_get_response}" | jq -r .entity.project.runEnvironmentId | tr -d '[\|]' | tr -d ' ' | tr -d '\n')
-    if [[ -z $EXISTING_RUN_ENVIROMENT_IDS || "${EXISTING_RUN_ENVIROMENT_IDS}" == 'null' ]]; then
-       EXISTING_RUN_ENVIROMENT_IDS=$(printf "%s" "${_datastage_settings_get_response}" | jq -r .entity.project.runEnvironmentIds | tr -d '[\|]' | tr -d ' ' | tr -d '\n')
-    else
-       echo "$empty"
-       EXISTING_RUN_ENVIROMENT_IDS="\"${EXISTING_RUN_ENVIROMENT_IDS}\""
-    fi
-
-    if [[ ${ACTION} == "cleanup" ]]; then
-      # If there are multiple remote engines, and if so just remove the targeted. There could be 0 or more other remote engines.
-       EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS/,\"$PROJECT_ENV_ASSET_ID\"/}"
-       EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS/\"$PROJECT_ENV_ASSET_ID\",/}"
-       EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS/\"$PROJECT_ENV_ASSET_ID\"/}"
-
-       if [[ -z $EXISTING_RUN_ENVIROMENT_IDS || "${EXISTING_RUN_ENVIROMENT_IDS}" == '' ]]; then
-         payload="{
-           \"project\": {
-               \"runEnvironmentIds\": [${EXISTING_RUN_ENVIROMENT_IDS}],
-               \"runRemoteEngineEnforcement\": false
-            }
-         }"
-       else
-         payload="{
-           \"project\": {
-               \"runEnvironmentIds\": [${EXISTING_RUN_ENVIROMENT_IDS}],
-               \"runRemoteEngineEnforcement\": true
-            }
-         }"
-       fi
-
-    else
-      # add the new engine id to it if it does not exist
-      if [[ -z $EXISTING_RUN_ENVIROMENT_IDS || "${EXISTING_RUN_ENVIROMENT_IDS}" == 'null' ]]; then
-          EXISTING_RUN_ENVIROMENT_IDS="${PROJECT_ENV_ASSET_ID}"
-      else
-          EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS},\"${PROJECT_ENV_ASSET_ID}\""
-      fi
-
-      payload="{
-        \"project\": {
-            \"runEnvironmentIds\": [${EXISTING_RUN_ENVIROMENT_IDS}],
-            \"runRemoteEngineEnforcement\": true
-         }
-      }"
-    fi
-
-    _datastage_settings_put_response=$(curl -s -X PUT "${GATEWAY_URL}/data_intg/v3/assets/datastage_settings/${DATASTAGE_SETTINGS_ASSET_ID}?project_id=${PROJECT_ID}" \
-    --header "Authorization: Bearer $IAM_TOKEN" \
-    --header 'Content-Type: application/json' \
-    --data "$payload")
-
-    if [[ -z "${_datastage_settings_put_response}" || "${_datastage_settings_put_response}" == "null" ]]; then
-        echo ""
-        echo "Response: ${_datastage_settings_put_response}"
-        echo_error_and_exit "Failed to update DataStage settings, please try again"
-    fi
-
-    if [[ ${ACTION} == "start" ]]; then
-        DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS=$(printf "%s" "${_datastage_settings_put_response}" | jq -r .entity.project.runEnvironmentIds[])
-        if [[ -z "${DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS}" || "${DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS}" == "null" ]]; then
-            echo ""
-            echo "Response: ${_datastage_settings_put_response}"
-            echo "WARNING: could not find the Runtime Environment ID in DataStage Settings, please check in the UI"
-        else
-            echo "DataStage Settings updated to use runEnvironmentIds: ${PROJECT_ENV_ASSET_ID}"
-        fi
-    fi
-}
-
-reset_datastage_settings() {
-    update_datastage_settings
-}
-
-# -----------------------------
 # Environments
 # -----------------------------
 
@@ -1509,7 +1414,7 @@ elif [[ ${ACTION} == "stop" ]]; then
     stop_px_runtime_docker
     remove_px_runtime_docker
 
-    print_header "Remote Engine stop completed."
+    print_header "Remote Engine container stopped and removed."
 
 elif [[ ${ACTION} == "cleanup" ]]; then
     echo "WARNING: This will remove the docker container and also remove the persistent storage used with this instance:"
