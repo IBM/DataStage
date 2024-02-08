@@ -369,8 +369,14 @@ create_dir_if_not_exist() {
     if [ ! -d $DIR_PATH ]; then
         echo "Folder ${DIR_PATH} does not exist, creating ..."
         mkdir -p "${DIR_PATH}"
-        chmod -R 777 "${DIR_PATH}"
+        set_permissions "${DIR_PATH}"
     fi
+}
+
+set_permissions() {
+    DIR_PATH=$1
+    chown -R dsuser:dsuser "${DIR_PATH}"
+    chmod -R 775 "${DIR_PATH}"
 }
 
 #######################################################################
@@ -576,7 +582,7 @@ run_px_runtime_docker() {
     fi
 
     # once the container is up, reset permissions on the volumes dir
-    chmod -R 775 "${DOCKER_VOLUMES_DIR}"
+    set_permissions "${DOCKER_VOLUMES_DIR}"
 
     # wait until docker is in a running state - doesn't mean server has started
     until [[ $( $DOCKER_CMD ps -a | grep $PXRUNTIME_CONTAINER_NAME | wc -l ) -gt 0 ]]; do
@@ -1010,7 +1016,7 @@ setup_docker_volumes() {
             create_dir_if_not_exist "${PX_STORAGE_HOST_DIR}"
             create_dir_if_not_exist "${PX_STORAGE_WLM_DIR}"
             create_dir_if_not_exist "${SCRATCH_DIR}"
-            chmod -R 775 "${DOCKER_VOLUMES_DIR}"
+            set_permissions "${DOCKER_VOLUMES_DIR}"
         fi
 
         # Mount an empty file for running computes since they aren't supported locally
@@ -1086,7 +1092,7 @@ startCassandraSQLENgine
 startMongoDBSQLEngine
 startContainer
 EOL
-chmod 775 "${STARTUP_FILE}"
+        set_permissions "${STARTUP_FILE}"
     fi
 }
 
@@ -1121,7 +1127,7 @@ else
 echo "SNC related environment variables must be set by user to proceed. Aborting SNC configuration."
 fi
 EOL
-    chmod 775 "${SNC_FILE}"
+        set_permissions "${SNC_FILE}"
     fi
 }
 
@@ -1154,7 +1160,7 @@ LOG_RETENTION_RUNS = 10
 # The frequency of log retention manager in hours
 LOG_MANAGER_FREQ = 24
 EOL
-    chmod 775 "${LOG_CFG_FILE}"
+        set_permissions "${LOG_CFG_FILE}"
     fi
 }
 
@@ -1282,7 +1288,7 @@ if [[ -z "\${DS_PX_COMPUTE_REPLICAS}" ]]; then
   fi
 fi
 EOL
-    chmod 775 "${INIT_VOL_FILE}"
+        set_permissions "${INIT_VOL_FILE}"
     fi
 }
 
