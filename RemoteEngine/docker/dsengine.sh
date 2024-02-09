@@ -20,7 +20,7 @@ TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
 # image information
-ICR_REGISTRY='icr.io/datastage'
+DOCKER_REGISTRY='icr.io/datastage'
 PX_VERSION='latest'
 
 # container names
@@ -53,7 +53,7 @@ normal=$(tput sgr0)
 
 STR_ENGINE_NAME='  -n, --remote-engine-name    Name of the remote engine instance'
 STR_IAM_APIKEY='  -a, --apikey                IBM Cloud APIKey for the selected home argument'
-STR_PROD_APIKEY='  -p, --prod-apikey           IBM Cloud Production APIKey for image download from DataStage Container registry'
+STR_PROD_APIKEY='  -p, --prod-apikey           IBM Cloud Production APIKey for image download from DataStage Container registry. It can be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport'
 STR_DSNEXT_SEC_KEY='  -e, --encryption key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            DataPlatform Project ID'
@@ -62,7 +62,8 @@ STR_VOLUMES="  --volume-dir                Directory for persistent storage. Def
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
 # STR_VERSION='  --version                   Version of the remote engine to use'
 STR_MEMORY='  --memory                    Memory allocated to the docker container (default is 4G).'
-STR_CPUS='  --cpus                      CPU allocated to the docker container (Default is 2 cores).'
+STR_CPUS='  --cpus                      CPU allocated to the docker container (default is 2 cores).'
+STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, else use a container registry apikey (default is false)'
 STR_HELP='  help, --help                Print usage information'
 
 #######################################################################
@@ -120,7 +121,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] [-i | --ivspec] [-d | --project-id] [--home] [--memory]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--use-entitlement-key]\n                         [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -153,6 +154,7 @@ print_usage() {
         echo "${STR_MEMORY}"
         echo "${STR_CPUS}"
         echo "${STR_VOLUMES}"
+        # echo "${STR_USE_ENT_KEY}"
         # echo "${STR_PLATFORM}"
         # echo "${STR_VERSION}"
     fi
@@ -223,6 +225,17 @@ function start() {
         #     shift
         #     PX_VERSION="$1"
         #     ;;
+        --use-entitlement-key)
+            shift
+            if [[ "${1}" == 'true' ]]; then
+                DOCKER_REGISTRY='cp.icr.io/cp'
+                echo_error_and_exit 'Setting --use-entitlement-key to true is currently not supported. Aborting.'
+            elif [[ "${1}" == 'false' ]]; then
+                DOCKER_REGISTRY='icr.io/datastage'
+            else
+                echo_error_and_exit 'Incorrect option specified for flag "--use-entitlement-key". Acceptable values are: [true, false]'
+            fi
+            ;;
         -h | --help | help)
             print_usage
             exit 1
@@ -357,8 +370,13 @@ create_dir_if_not_exist() {
     if [ ! -d $DIR_PATH ]; then
         echo "Folder ${DIR_PATH} does not exist, creating ..."
         mkdir -p "${DIR_PATH}"
-        chmod 777 "${DIR_PATH}"
+        set_permissions "${DIR_PATH}"
     fi
+}
+
+set_permissions() {
+    DIR_PATH=$1
+    chmod -R 775 "${DIR_PATH}"
 }
 
 #######################################################################
@@ -372,11 +390,34 @@ check_docker_daemon() {
 }
 
 # docker login
+
 docker_login() {
+    if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
+        docker_login_datastage
+    else
+        docker_login_cpd
+    fi
+}
+
+docker_login_datastage() {
     echo ""
     [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify DataStage Container Registry IAM APIKey (-p | --prod-apikey). Aborting."
     DELAY=5
-    until $DOCKER_CMD login -u iamapikey -p $IAM_APIKEY_PROD $ICR_REGISTRY  || [ $DELAY -eq 10 ]; do
+    until $DOCKER_CMD login -u iamapikey -p $IAM_APIKEY_PROD $DOCKER_REGISTRY  || [ $DELAY -eq 10 ]; do
+        sleep $(( DELAY++ ))
+    done
+    status=$?
+    if [ $status -ne 0 ]; then
+        echo "docker login return code: $status."
+        echo_error_and_exit "Aborting setup."
+    fi
+}
+
+docker_login_cpd() {
+    echo ""
+    [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify CPD Entitlement Key (-p | --prod-apikey). Aborting."
+    DELAY=5
+    until $DOCKER_CMD login -u cp -p $IAM_APIKEY_PROD $DOCKER_REGISTRY  || [ $DELAY -eq 10 ]; do
         sleep $(( DELAY++ ))
     done
     status=$?
@@ -391,7 +432,15 @@ retrieve_latest_px_version() {
     get_cr_iam_token
     icr_response=$(curl -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $CR_IAM_TOKEN" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${PXRUNTIME_IMAGE_NAME}")
     PX_VERSION=$(echo "${icr_response}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"')
-    echo "Obtained digest=$PX_VERSION"
+    echo "Retrieved px-runtime digest = $PX_VERSION"
+}
+
+retrieve_latest_px_version_from_runtime() {
+    echo "Getting PX Version to access Container Registry"
+    get_iam_token
+    echo "https://${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions"
+    PX_VERSION=$(curl -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
+    echo "Retrieved px-runtime digest = $PX_VERSION"
 }
 
 check_or_pull_image() {
@@ -510,6 +559,7 @@ run_px_runtime_docker() {
         --network=${PXRUNTIME_CONTAINER_NAME}
     )
 
+    CURRENT_USER=$(id -u)
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         runtime_docker_opts+=(
             --env WLMON=1
@@ -522,6 +572,7 @@ run_px_runtime_docker() {
             --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
             --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
             -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch
+            --user "${CURRENT_USER}"
         )
     fi
 
@@ -533,7 +584,7 @@ run_px_runtime_docker() {
     fi
 
     # once the container is up, reset permissions on the volumes dir
-    chmod -R 777 "${DOCKER_VOLUMES_DIR}"
+    set_permissions "${DOCKER_VOLUMES_DIR}"
 
     # wait until docker is in a running state - doesn't mean server has started
     until [[ $( $DOCKER_CMD ps -a | grep $PXRUNTIME_CONTAINER_NAME | wc -l ) -gt 0 ]]; do
@@ -776,101 +827,6 @@ remove_remote_engine () {
 }
 
 # -----------------------------
-# Assets
-# -----------------------------
-
-update_datastage_settings() {
-    _datastage_settings_get_response=$(curl -sS -X 'GET' "${GATEWAY_URL}/data_intg/v3/assets/datastage_settings?project_id=${PROJECT_ID}" \
-        -H 'accept: application/json' \
-        -H "Authorization: Bearer $IAM_TOKEN")
-
-    if [[ -z "${_datastage_settings_get_response}" || "${_datastage_settings_get_response}" == "null" ]]; then
-        echo ""
-        echo "Response: ${_datastage_settings_get_response}"
-        echo_error_and_exit "Failed to get DataStage Settings, please try again"
-    fi
-
-    # is there any project env already present with this remote engine. There could be multiple envs with the same remote engine id, so select the first one
-    DATASTAGE_SETTINGS_ASSET_ID=$(printf "%s" "${_datastage_settings_get_response}" | jq -r .metadata.asset_id | tr -d '"')
-    if [[ ${DATASTAGE_SETTINGS_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
-        echo "DataStage Settings asset id: ${DATASTAGE_SETTINGS_ASSET_ID}"
-    fi
-
-    # get the existing runEnvironmentId or runEnvironmentIds,
-    EXISTING_RUN_ENVIROMENT_IDS=$(printf "%s" "${_datastage_settings_get_response}" | jq -r .entity.project.runEnvironmentId | tr -d '[\|]' | tr -d ' ' | tr -d '\n')
-    if [[ -z $EXISTING_RUN_ENVIROMENT_IDS || "${EXISTING_RUN_ENVIROMENT_IDS}" == 'null' ]]; then
-       EXISTING_RUN_ENVIROMENT_IDS=$(printf "%s" "${_datastage_settings_get_response}" | jq -r .entity.project.runEnvironmentIds | tr -d '[\|]' | tr -d ' ' | tr -d '\n')
-    else
-       echo "$empty"
-       EXISTING_RUN_ENVIROMENT_IDS="\"${EXISTING_RUN_ENVIROMENT_IDS}\""
-    fi
-
-    if [[ ${ACTION} == "cleanup" ]]; then
-      # If there are multiple remote engines, and if so just remove the targeted. There could be 0 or more other remote engines.
-       EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS/,\"$PROJECT_ENV_ASSET_ID\"/}"
-       EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS/\"$PROJECT_ENV_ASSET_ID\",/}"
-       EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS/\"$PROJECT_ENV_ASSET_ID\"/}"
-
-       if [[ -z $EXISTING_RUN_ENVIROMENT_IDS || "${EXISTING_RUN_ENVIROMENT_IDS}" == '' ]]; then
-         payload="{
-           \"project\": {
-               \"runEnvironmentIds\": [${EXISTING_RUN_ENVIROMENT_IDS}],
-               \"runRemoteEngineEnforcement\": false
-            }
-         }"
-       else
-         payload="{
-           \"project\": {
-               \"runEnvironmentIds\": [${EXISTING_RUN_ENVIROMENT_IDS}],
-               \"runRemoteEngineEnforcement\": true
-            }
-         }"
-       fi
-
-    else
-      # add the new engine id to it if it does not exist
-      if [[ -z $EXISTING_RUN_ENVIROMENT_IDS || "${EXISTING_RUN_ENVIROMENT_IDS}" == 'null' ]]; then
-          EXISTING_RUN_ENVIROMENT_IDS="${PROJECT_ENV_ASSET_ID}"
-      else
-          EXISTING_RUN_ENVIROMENT_IDS="${EXISTING_RUN_ENVIROMENT_IDS},\"${PROJECT_ENV_ASSET_ID}\""
-      fi
-
-      payload="{
-        \"project\": {
-            \"runEnvironmentIds\": [${EXISTING_RUN_ENVIROMENT_IDS}],
-            \"runRemoteEngineEnforcement\": true
-         }
-      }"
-    fi
-
-    _datastage_settings_put_response=$(curl -s -X PUT "${GATEWAY_URL}/data_intg/v3/assets/datastage_settings/${DATASTAGE_SETTINGS_ASSET_ID}?project_id=${PROJECT_ID}" \
-    --header "Authorization: Bearer $IAM_TOKEN" \
-    --header 'Content-Type: application/json' \
-    --data "$payload")
-
-    if [[ -z "${_datastage_settings_put_response}" || "${_datastage_settings_put_response}" == "null" ]]; then
-        echo ""
-        echo "Response: ${_datastage_settings_put_response}"
-        echo_error_and_exit "Failed to update DataStage settings, please try again"
-    fi
-
-    if [[ ${ACTION} == "start" ]]; then
-        DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS=$(printf "%s" "${_datastage_settings_put_response}" | jq -r .entity.project.runEnvironmentIds[])
-        if [[ -z "${DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS}" || "${DATASTAGE_SETTINGS_RUN_ENVIRONMENT_IDS}" == "null" ]]; then
-            echo ""
-            echo "Response: ${_datastage_settings_put_response}"
-            echo "WARNING: could not find the Runtime Environment ID in DataStage Settings, please check in the UI"
-        else
-            echo "DataStage Settings updated to use runEnvironmentIds: ${PROJECT_ENV_ASSET_ID}"
-        fi
-    fi
-}
-
-reset_datastage_settings() {
-    update_datastage_settings
-}
-
-# -----------------------------
 # Environments
 # -----------------------------
 
@@ -1035,6 +991,7 @@ validate_action_arguments() {
     echo "GATEWAY_URL=${GATEWAY_URL}"
     echo "PROJECT_ID=${PROJECT_ID}"
     echo "REMOTE_ENGINE_PREFIX=${REMOTE_ENGINE_NAME}"
+    echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
     echo "CONTAINER_MEMORY=${PX_MEMORY}"
     echo "CONTAINER_CPUS=${PX_CPUS}"
     echo "DOCKER_VOLUMES_DIR=${DOCKER_VOLUMES_DIR}"
@@ -1061,7 +1018,7 @@ setup_docker_volumes() {
             create_dir_if_not_exist "${PX_STORAGE_HOST_DIR}"
             create_dir_if_not_exist "${PX_STORAGE_WLM_DIR}"
             create_dir_if_not_exist "${SCRATCH_DIR}"
-            chmod -R 777 "${DOCKER_VOLUMES_DIR}"
+            set_permissions "${DOCKER_VOLUMES_DIR}"
         fi
 
         # Mount an empty file for running computes since they aren't supported locally
@@ -1137,7 +1094,7 @@ startCassandraSQLENgine
 startMongoDBSQLEngine
 startContainer
 EOL
-chmod 777 "${STARTUP_FILE}"
+        set_permissions "${STARTUP_FILE}"
     fi
 }
 
@@ -1172,7 +1129,7 @@ else
 echo "SNC related environment variables must be set by user to proceed. Aborting SNC configuration."
 fi
 EOL
-    chmod 777 "${SNC_FILE}"
+        set_permissions "${SNC_FILE}"
     fi
 }
 
@@ -1205,7 +1162,7 @@ LOG_RETENTION_RUNS = 10
 # The frequency of log retention manager in hours
 LOG_MANAGER_FREQ = 24
 EOL
-    chmod 777 "${LOG_CFG_FILE}"
+        set_permissions "${LOG_CFG_FILE}"
     fi
 }
 
@@ -1333,7 +1290,7 @@ if [[ -z "\${DS_PX_COMPUTE_REPLICAS}" ]]; then
   fi
 fi
 EOL
-    chmod 777 "${INIT_VOL_FILE}"
+        set_permissions "${INIT_VOL_FILE}"
     fi
 }
 
@@ -1373,15 +1330,19 @@ if [[ ${ACTION} == "start" ]]; then
     # check if the runtime image exists, if not, then download
     print_header "Checking docker images ..."
     if [[ "${PX_VERSION}" == 'latest' ]]; then
-        retrieve_latest_px_version
+        if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
+            retrieve_latest_px_version
+        else
+            retrieve_latest_px_version_from_runtime
+        fi
     fi
+
+    PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
     # update the image variables to use the PX_VERSION version
-    if [[ "$string" == "latest" || "$string" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        PXRUNTIME_DOCKER_IMAGE="${ICR_REGISTRY}/ds-px-runtime:${PX_VERSION}"
-        PXCOMPUTE_DOCKER_IMAGE="${ICR_REGISTRY}/ds-px-compute:${PX_VERSION}"
+    if [[ "$PX_VERSION" == "latest" || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
     else
-        PXRUNTIME_DOCKER_IMAGE="${ICR_REGISTRY}/ds-px-runtime@${PX_VERSION}"
-        PXCOMPUTE_DOCKER_IMAGE="${ICR_REGISTRY}/ds-px-compute@${PX_VERSION}"
+        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
     fi
     check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
     print_header "Initializing ${TOOL_SHORTNAME} Runtime environment with name '${REMOTE_ENGINE_NAME}' ..."
@@ -1461,7 +1422,7 @@ elif [[ ${ACTION} == "stop" ]]; then
     stop_px_runtime_docker
     remove_px_runtime_docker
 
-    print_header "Remote Engine stop completed."
+    print_header "Remote Engine container stopped and removed."
 
 elif [[ ${ACTION} == "cleanup" ]]; then
     echo "WARNING: This will remove the docker container and also remove the persistent storage used with this instance:"
