@@ -558,7 +558,7 @@ run_px_runtime_docker() {
         --network=${PXRUNTIME_CONTAINER_NAME}
     )
 
-    CURRENT_USER=$(whoami)
+    CURRENT_USER=$(id -u)
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         runtime_docker_opts+=(
             --env WLMON=1
