@@ -53,7 +53,7 @@ normal=$(tput sgr0)
 
 STR_ENGINE_NAME='  -n, --remote-engine-name    Name of the remote engine instance'
 STR_IAM_APIKEY='  -a, --apikey                IBM Cloud APIKey for the selected home argument'
-STR_PROD_APIKEY='  -p, --prod-apikey           IBM Cloud Production APIKey for image download from DataStage Container registry'
+STR_PROD_APIKEY='  -p, --prod-apikey           IBM Cloud Production APIKey for image download from DataStage Container registry. It can be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport'
 STR_DSNEXT_SEC_KEY='  -e, --encryption key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            DataPlatform Project ID'
@@ -63,7 +63,7 @@ STR_VOLUMES="  --volume-dir                Directory for persistent storage. Def
 # STR_VERSION='  --version                   Version of the remote engine to use'
 STR_MEMORY='  --memory                    Memory allocated to the docker container (default is 4G).'
 STR_CPUS='  --cpus                      CPU allocated to the docker container (default is 2 cores).'
-STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, or the container registry apikey (default is false)'
+STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, else use a container registry apikey (default is false)'
 STR_HELP='  help, --help                Print usage information'
 
 #######################################################################
@@ -154,7 +154,7 @@ print_usage() {
         echo "${STR_MEMORY}"
         echo "${STR_CPUS}"
         echo "${STR_VOLUMES}"
-        echo "${STR_USE_ENT_KEY}"
+        # echo "${STR_USE_ENT_KEY}"
         # echo "${STR_PLATFORM}"
         # echo "${STR_VERSION}"
     fi
@@ -229,6 +229,7 @@ function start() {
             shift
             if [[ "${1}" == 'true' ]]; then
                 DOCKER_REGISTRY='cp.icr.io/cp'
+                echo_error_and_exit 'Setting --use-entitlement-key to true is currently not supported. Aborting.'
             elif [[ "${1}" == 'false' ]]; then
                 DOCKER_REGISTRY='icr.io/datastage'
             else
