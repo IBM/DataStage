@@ -443,16 +443,12 @@ retrieve_latest_px_version() {
 
 retrieve_latest_px_version_from_runtime() {
     echo "Getting PX Version to access Container Registry"
-    get_iam_token
-    echo "https://${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions"
     PX_VERSION=$(curl -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
     echo "Retrieved px-runtime digest = $PX_VERSION"
 }
 
 get_all_px_versions_from_runtime() {
     echo "Getting PX Version to access Container Registry"
-    get_iam_token
-    echo "https://${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions"
     PX_VERSIONS_RESPONSE=$(curl -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions")
     PX_VERSION_PAIRS=$(printf "%s" "${PX_VERSIONS_RESPONSE}" | jq -r '.versions[] | "\(.px_runtime_version)(\(.image_digests.px_runtime))"')
 
@@ -775,14 +771,14 @@ cleanup_docker_network() {
 get_iam_token() {
 
     IAM_URL="${IAM_URL%/}"
-    IAM_URL="${IAM_URL}/identity/token"
+    IAM_URL="${IAM_URL%/identity/token}"
 
     _iam_response=$(curl -sS -X POST \
                 -H 'Content-Type: application/x-www-form-urlencoded' \
                 -H 'Accept: application/json' \
                 --data-urlencode 'grant_type=urn:ibm:params:oauth:grant-type:apikey' \
                 --data-urlencode "apikey=${IAM_APIKEY}" \
-                "${IAM_URL}")
+                "${IAM_URL}/identity/token")
     IAM_TOKEN=$(printf "%s" ${_iam_response} | jq -r .access_token | tr -d '"')
 
     if [[ -z "${IAM_TOKEN}" || "${IAM_TOKEN}" == "null" ]]; then
@@ -1356,6 +1352,9 @@ if [[ ${ACTION} == "start" ]]; then
         exit 0
     fi
 
+    # IAM Token will be needed to retrieve latest digest, and make other api calls
+    echo "Getting IAM token"
+    get_iam_token
     # check if the runtime image exists, if not, then download
     print_header "Checking docker images ..."
     if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
@@ -1393,9 +1392,6 @@ if [[ ${ACTION} == "start" ]]; then
     # ---------------------
 
     print_header "Finalizing Remote Engine instance '${REMOTE_ENGINE_NAME}'..."
-
-    echo "Getting IAM token"
-    get_iam_token
 
     echo "Confirming Remote Engine registration ..."
     get_remote_engine_id
