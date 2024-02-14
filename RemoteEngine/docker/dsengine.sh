@@ -22,6 +22,7 @@ TOOL_SHORTNAME='DataStage Remote Engine'
 # image information
 DOCKER_REGISTRY='icr.io/datastage'
 PX_VERSION='latest'
+SELECT_PX_VERSION='false'
 
 # container names
 PXRUNTIME_IMAGE_NAME='ds-px-runtime'
@@ -57,13 +58,14 @@ STR_PROD_APIKEY='  -p, --prod-apikey           IBM Cloud Production APIKey for i
 STR_DSNEXT_SEC_KEY='  -e, --encryption key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            DataPlatform Project ID'
-STR_DSTAGE_HOME='  --home                      IBM DataStage enviroment: [ys1dev, ypqa, ypprod (default), frprod]'
-STR_VOLUMES="  --volume-dir                Directory for persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
+STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod]'
+STR_VOLUMES="  --volume-dir                Specify a directory for persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
+STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
 # STR_VERSION='  --version                   Version of the remote engine to use'
-STR_MEMORY='  --memory                    Memory allocated to the docker container (default is 4G).'
-STR_CPUS='  --cpus                      CPU allocated to the docker container (default is 2 cores).'
-STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, else use a container registry apikey (default is false)'
+STR_MEMORY='  --memory                    Specify memory allocated to the docker container (default is 4G).'
+STR_CPUS='  --cpus                      Specify CPU allocated to the docker container (default is 2 cores).'
+STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, else use a container registry apikey (default is false).'
 STR_HELP='  help, --help                Print usage information'
 
 #######################################################################
@@ -154,9 +156,9 @@ print_usage() {
         echo "${STR_MEMORY}"
         echo "${STR_CPUS}"
         echo "${STR_VOLUMES}"
+        echo "${STR_SELECT_PX_VERSION}"
         # echo "${STR_USE_ENT_KEY}"
         # echo "${STR_PLATFORM}"
-        # echo "${STR_VERSION}"
     fi
 
     echo "${STR_HELP}"
@@ -221,10 +223,14 @@ function start() {
         #     shift
         #     PLATFORM="$1"
         #     ;;
-        # --version)
-        #     shift
-        #     PX_VERSION="$1"
-        #     ;;
+        --select-version)
+            shift
+            if [[ "${1}" == 'true' || "${1}" == 'false' ]]; then
+                SELECT_PX_VERSION="${1}"
+            else
+                echo_error_and_exit 'Incorrect option specified for flag "--select-version". Acceptable values are: [true, false]'
+            fi
+            ;;
         --use-entitlement-key)
             shift
             if [[ "${1}" == 'true' ]]; then
@@ -437,10 +443,29 @@ retrieve_latest_px_version() {
 
 retrieve_latest_px_version_from_runtime() {
     echo "Getting PX Version to access Container Registry"
-    get_iam_token
-    echo "https://${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions"
     PX_VERSION=$(curl -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
     echo "Retrieved px-runtime digest = $PX_VERSION"
+}
+
+get_all_px_versions_from_runtime() {
+    echo "Getting PX Version to access Container Registry"
+    PX_VERSIONS_RESPONSE=$(curl -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions")
+    PX_VERSION_PAIRS=$(printf "%s" "${PX_VERSIONS_RESPONSE}" | jq -r '.versions[] | "\(.px_runtime_version)(\(.image_digests.px_runtime))"')
+
+    echo ''
+    echo 'Choose the remote engine version to use:'
+    PS3="Enter option number: "
+    select version_pair in $PX_VERSION_PAIRS; do
+        if [ -n "$version_pair" ]; then
+            PX_VERSION_NUMBER=$(echo "$version_pair" | cut -d '(' -f 1)
+            PX_VERSION=$(echo "$version_pair" | cut -d '(' -f 2- | tr -d ')' )
+            echo ''
+            echo "Selected $PX_VERSION_NUMBER (digest $PX_VERSION)"
+            break
+        else
+            echo "Invalid option selection, please try again"
+        fi
+    done
 }
 
 check_or_pull_image() {
@@ -746,14 +771,14 @@ cleanup_docker_network() {
 get_iam_token() {
 
     IAM_URL="${IAM_URL%/}"
-    IAM_URL="${IAM_URL}/identity/token"
+    IAM_URL="${IAM_URL%/identity/token}"
 
     _iam_response=$(curl -sS -X POST \
                 -H 'Content-Type: application/x-www-form-urlencoded' \
                 -H 'Accept: application/json' \
                 --data-urlencode 'grant_type=urn:ibm:params:oauth:grant-type:apikey' \
                 --data-urlencode "apikey=${IAM_APIKEY}" \
-                "${IAM_URL}")
+                "${IAM_URL}/identity/token")
     IAM_TOKEN=$(printf "%s" ${_iam_response} | jq -r .access_token | tr -d '"')
 
     if [[ -z "${IAM_TOKEN}" || "${IAM_TOKEN}" == "null" ]]; then
@@ -1327,9 +1352,14 @@ if [[ ${ACTION} == "start" ]]; then
         exit 0
     fi
 
+    # IAM Token will be needed to retrieve latest digest, and make other api calls
+    echo "Getting IAM token"
+    get_iam_token
     # check if the runtime image exists, if not, then download
     print_header "Checking docker images ..."
-    if [[ "${PX_VERSION}" == 'latest' ]]; then
+    if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
+        get_all_px_versions_from_runtime
+    else
         if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
             retrieve_latest_px_version
         else
@@ -1362,9 +1392,6 @@ if [[ ${ACTION} == "start" ]]; then
     # ---------------------
 
     print_header "Finalizing Remote Engine instance '${REMOTE_ENGINE_NAME}'..."
-
-    echo "Getting IAM token"
-    get_iam_token
 
     echo "Confirming Remote Engine registration ..."
     get_remote_engine_id
