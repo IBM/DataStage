@@ -5,6 +5,10 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+
+[4.8.2](#482)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.2.md)
+
 [4.8.1](#481)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.1.md)
 
@@ -34,6 +38,57 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 4.8.2
+
+### Command changes
+
+The following commands have changed:
+
+`run`:
+-   added option `no-logs` to not print logs when waiting to finish the run.
+-  run command now prints the time taken to complete job run from the time job is successfully submitted. This excludes all the time take to prepare the job run. 
+
+Note: When using command line to specify a parameter that start with a `$` user should be aware that shell will try to evaluate it as a shell variable. In order to avoid this parameters starting with $ should be escaped using single quotes or a backward slash. ex: --param '$param=value` or --param \\$param=value. 
+
+`run-pipeline`:
+-   added option `no-logs` to not print logs when waiting to finish the run.
+-  run command now prints the time taken to complete job run from the time job is successfully submitted. This excludes all the time take to prepare the job run. 
+- allows pipeline params of different type definitions, previously supported strings only.
+
+Note: When using command line to specify a parameter that start with a `$` user should be aware that shell will try to evaluate it as a shell variable. In order to avoid this parameters starting with $ should be escaped using single quotes or a backward slash. ex: --parma '$param=value` or --param \$param=value. 
+
+`list-jobruns`:
+-  added option `sort-by-duration` to sort job runs by duration.
+-  added column to display job run duration.
+
+`create-dsparams`:
+-  when a field in DSParams file is encrypted then it is migrated as encrypted type field into PROJDEF, previously it was migrated as string field into PROJDEF.
+
+`git-pull`:
+-  supports `branch` option to pull code from a branch.
+-  added `name` to specify list of assets to pull partial code from git repo.
+
+`migrate`:
+-  added support for  `output json` to output the response from migrate status.
+
+`list-projects`:
+-  added support for  `output json` to output the response in json of project definition.
+
+`list-spaces`:
+-  added support for  `output json` to output the response in json of space definition.
+
+`create-paramset` and `update-paramset`:
+- support type multilinestring for a parameter set field type.
+
+`export-paramset`:
+-  added support to export multiple parameter sets into a zip file. 
+
+
+## Fixes
+ 
+`run-pipeline`: 
+- fixed the parameter parsing logic to allow pipeline parameters of types other than string.
 
 ## 4.8.1
 
@@ -180,7 +235,7 @@ All export-<Component> commands now use unix globbing pattern with wild cards in
 
 `run` command now implements multiple retry loops to accommodate any intermittent errors and ensure completion of job runs in a high number of conncurrent runs.
 
-`jobrunstat` fixed to handle data type changes that was causing marshaling exception. 
+`jobrunstat` fixed to handle data type changes that was causing marshaling exception.
  
 ## 4.7.4
 
