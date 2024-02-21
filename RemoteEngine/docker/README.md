@@ -32,6 +32,7 @@
 
 ## Limitations
 1. The docker images used in Remote Engine are x86 images, hence might not work on Apple M1/M2/M3 processors.
+2. The script is note tested on Windows OS.
 
 ## Usage
 The `dsengine.sh` script can be invoked from the `docker` folder of this project. Note that the name in the below command can be changed form `remote_engine_name_01` to your preferred name.
@@ -71,6 +72,7 @@ While starting a remote engine, following optional flags can be used in addition
     <volume_dir>/<remote_engine_name>_runtime/px-storage
     ```
     Once the remote engine is up and running, additional files and folders will be created inside the above folders as needed by the engine.
+    If you are planning to create multiple engines on the same machine, then they should use different volume directories.
 1. `--home <value>`: Sets the target IBM Cloud enviroment to either `ypprod` (Dallas datacenter - default) or `frprod` (Frankfurt datacenter). The project associated with this engine instance must be in same datacenter.
 1. `--select-version`: Set to true if you want to choose a specific version of remote engine. By default, this flag is set to false and the latest version is used.
 
