@@ -596,6 +596,7 @@ run_px_runtime_docker() {
             --env DS_STORAGE_PATH=/ds-storage:/px-storage
             --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
             --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
+            --env ENABLE_DS_METRICS=false
             -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch
             --user "${CURRENT_USER}"
         )
