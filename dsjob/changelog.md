@@ -6,6 +6,9 @@ The following updates and changes apply to the `dsjob` command-line
 interface.
 
 
+[4.8.3](#483)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.3.md)
+
 [4.8.2](#482)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.2.md)
 
@@ -38,6 +41,36 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 4.8.3
+
+### New commands
+
+The following commands are added to enhance job run analysis.
+
+-   `rename-dataset`  Rename a Data Set.
+-   `rename-fileset`  Rename a File Set.
+    
+### Command changes
+
+The following commands have changed:
+
+`compile`:
+-   added `--skip` option to skip compilation of flows that are not changed and do not need to be compiled again.
+
+
+`list-flows`: 
+- added new option `--with-compiled` to display if the flow is compiled or not, last compile time for the compiled flow, and if the flow needs compilation.
+- added new option `--sort-by-compiled` to sort the flows by last compile time. 
+
+## Fixes
+
+`logsum`:
+ -   line with multiline strings were previously truncated, with the fix the entire string is displayed.
+ 
+`list-jobruns`:
+- fixed command `list-jobruns` to properly handle incorrect job names or ids and incorrect job run names or ids.
+
 
 ## 4.8.2
 
