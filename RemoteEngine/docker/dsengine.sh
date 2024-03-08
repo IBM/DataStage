@@ -1462,7 +1462,7 @@ elif [[ ${ACTION} == "cleanup" ]]; then
 
         stop_px_runtime_docker
         remove_px_runtime_docker
-        # cleanup_docker_network
+        cleanup_docker_network
 
         print_header "Cleaning Remote Engine '${REMOTE_ENGINE_NAME}'..."
 
