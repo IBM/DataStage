@@ -57,6 +57,7 @@ The `dsengine.sh` script can be invoked from the `docker` folder of this project
                       -a "$IBMCLOUD_APIKEY" \
                       --project-id "$PROJECT_ID"
 ```
+Once the script execution has completed, this engine needs to be selected in the project settings by going to the project, navigating to `Manage` > `DataStage` and selecting the appropriate engine under the `Settings` tab > `Remote` environments.
 
 ### Optional start flags
 
