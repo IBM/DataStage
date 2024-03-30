@@ -391,7 +391,7 @@ set_permissions() {
     DIR_PATH=$1
     chmod -R 775 "${DIR_PATH}"
     if [[ "${CONTAINER_USER}" != 'NOT_SET' ]]; then
-        chown -R $(id -u "${CONTAINER_USER}") "${DIR_PATH}"
+        chown -R $(id -u "${CONTAINER_USER}"):$(id -g "${CONTAINER_USER}") "${DIR_PATH}"
     fi
 }
 
@@ -617,7 +617,7 @@ run_px_runtime_docker() {
         )
     fi
 
-    $DOCKER_CMD run "${runtime_docker_opts[@]}" --entrypoint='/bin/bash' $PXRUNTIME_DOCKER_IMAGE -c "/px-storage/init-volume.sh;/opt/ibm/startup.sh"
+    $DOCKER_CMD run "${runtime_docker_opts[@]}" --entrypoint='/bin/bash' $PXRUNTIME_DOCKER_IMAGE -c "/px-storage/init-volume.sh;/px-storage/startup.sh"
     status=$?
     if [ $status -ne 0 ]; then
         echo "docker run return code: $status."
