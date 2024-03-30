@@ -48,6 +48,7 @@ PLATFORM='icp4d'
 PX_MEMORY='4g'
 PX_CPUS='2'
 COMPUTE_COUNT=0
+CONTAINER_USER='NOT_SET'
 
 bold=$(tput bold)
 normal=$(tput sgr0)
@@ -61,6 +62,7 @@ STR_PROJECT_UID='  -d, --project-id            DataPlatform Project ID'
 STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod]'
 STR_VOLUMES="  --volume-dir                Specify a directory for persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
+STR_SET_USER='  --set-user            Specify the username to be used to run the container. If not set, the current user is used.'
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
 # STR_VERSION='  --version                   Version of the remote engine to use'
 STR_MEMORY='  --memory                    Specify memory allocated to the docker container (default is 4G).'
@@ -157,6 +159,7 @@ print_usage() {
         echo "${STR_CPUS}"
         echo "${STR_VOLUMES}"
         echo "${STR_SELECT_PX_VERSION}"
+        echo "${STR_SET_USER}"
         # echo "${STR_USE_ENT_KEY}"
         # echo "${STR_PLATFORM}"
     fi
@@ -230,6 +233,10 @@ function start() {
             else
                 echo_error_and_exit 'Incorrect option specified for flag "--select-version". Acceptable values are: [true, false]'
             fi
+            ;;
+        --set-user)
+            shift
+            CONTAINER_USER="$1"
             ;;
         --use-entitlement-key)
             shift
@@ -585,6 +592,11 @@ run_px_runtime_docker() {
     )
 
     CURRENT_USER=$(id -u)
+    if [[ "${CONTAINER_USER}" != 'NOT_SET' ]]; then
+        CURRENT_USER=$(id -u "${CONTAINER_USER}")
+    fi
+    echo "Using user ${CURRENT_USER} to run the container"
+
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         runtime_docker_opts+=(
             --env WLMON=1
