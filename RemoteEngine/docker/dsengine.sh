@@ -390,6 +390,9 @@ create_dir_if_not_exist() {
 set_permissions() {
     DIR_PATH=$1
     chmod -R 775 "${DIR_PATH}"
+    if [[ "${CONTAINER_USER}" != 'NOT_SET' ]]; then
+        chown -R $(id -u "${CONTAINER_USER}") "${DIR_PATH}"
+    fi
 }
 
 #######################################################################
