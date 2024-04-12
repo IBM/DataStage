@@ -5,6 +5,8 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[4.8.4](#484)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.4.md)
 
 [4.8.3](#483)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.3.md)
@@ -41,6 +43,73 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+
+## 4.8.4
+
+### Command changes
+
+The following commands have changed:
+
+`update-ds-settings`:
+
+-   added validation check to default message handler.
+-   added `--env` and `--env-id` flags to set the default environment. 
+-   command now only allows you to set a valid default environment.
+-   list of environments can no longer be changed by the user directly. Instead, list is displayed from available environments in the project.
+
+`delete-build-stage`,
+`delete-connection`,
+`delete-custom-stage`,
+`delete-dataset`,
+`delete-fileset`,
+`delete-flow`,
+`delete-function-lib`
+`delete-java-library`,
+`delete-job`,
+`delete-match-spec`,
+`delete-paramset`,
+`delete-pipeline`,
+`delete-subflow`,
+`delete-tabledef`,
+`delete-wrapped-stage`,
+`export-datastage-assets`,
+`export-project`,
+`export-zip`,
+`export`,
+`git-commit`,
+`git-pull`,
+`import-zip`,
+`import`,
+`logdetail`,
+`run`,
+`waitforjob`
+  - these commands now return a proper error code to the shell. Previously, all failures would set shell exit code to 1, now the values are set to the status code. Please refer to documentation for all return code types.
+
+
+-   `jobrunclean` added retry logic after a resource is deleted. Checks to see if the resource exists and perform delete as a workaround when framework fails to delete the resource and no error message is returned.
+
+
+### Fixes
+
+`list-job-status`:
+
+-   fixed issue that forces user to enter job name or job id, which is optional.
+-   fixed generating empty report when there are no job runs to display.
+
+`create-message-handler`:
+
+  -  fixed issue with `--default` flag, it now correctly sets the message handler into project settings as a default handler.
+  - fixed issue with runtime errors with message handlers created through dsjob due to missing type information.  
+
+`export-datastage-assets`:
+
+  - exporting an empty project will now display an error properly.
+
+ `run-pipeline` 
+
+  - fixed to properly process `--wait -1` and wait indefinitely for job run completion.
+
 
 ## 4.8.3
 
