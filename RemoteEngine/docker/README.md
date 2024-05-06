@@ -81,12 +81,19 @@ While starting a remote engine, following optional flags can be used in addition
 
 
 ## Upgrade
+
 Upgrade the remote engine instance to the latest version.
+* Note that the `./dsengine.sh cleanup` command will cleanup the persistent storage directories, so its not recommended for an upgrade.
+* The `./dsengine.sh startup` command will check if there is an existing container with the name specified, and if there is, the same container will be started.
+
 1. Stop and remove the Remote engine
 ```bash
 ./dsengine.sh stop -n 'remote_engine_name_01'
+
+# use the respective docker or docker equivalent command to remove the container (eg. podman, etc)
+docker rm 'remote_engine_name_01'
 ```
-2. Create and start local remote engine instance
+2. Run the start command again to create and start the local remote engine instance.
 ```bash
 ./dsengine.sh start -n 'remote_engine_name_01' \
                     -a "$IBMCLOUD_APIKEY" \
