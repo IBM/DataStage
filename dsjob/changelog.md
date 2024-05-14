@@ -5,6 +5,9 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[4.8.5](#485)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.5.md)
+
 [4.8.4](#484)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.4.md)
 
@@ -44,6 +47,27 @@ interface.
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
 
+
+## 4.8.5
+
+### New commands
+
+[](https://github.com/IBM/DataStage/tree/main/dsjob#new-commands)
+
+The following commands are added
+
+-   `list-pipeline-params`  List pipeline parameters.
+-   `export-folder`  Export a folder.
+
+### Command changes
+
+The following commands have changed:
+
+git-commit, git-pull and git-status now support GitLab
+
+### Fixes
+
+None
 
 ## 4.8.4
 
