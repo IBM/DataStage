@@ -1,13 +1,16 @@
 # DataStage command-line tools
+
 CPDCTL and the `dsjob` tool are command-line interfaces (CLI) you can use
 to manage your DataStage resources in CPD.
 
-Use the command-line tools to reuse any DataStage scripts that exist on your system. 
+Use the command-line tools to reuse any DataStage scripts that exist on your system.
 You can use the following command-line
 tools to run DataStage tasks:
+
 - CPDCTL: `cpdctl dsjob` or `cpdctl datastage`
 
-Using the CLI tools, you can work with: 
+Using the CLI tools, you can work with:
+
 - [Projects](#projects)
 - [Jobs](#jobs)
 - [Job logs](#job-logs)
@@ -45,7 +48,6 @@ Using the CLI tools, you can work with:
 - [Folders](#folders)
 - [Git integration](#git-integration)
 
-
 # Resources
 
 For installation, configuration, available commands, supported outputs, and usage scenarios,
@@ -55,7 +57,7 @@ For more information on the CPDCTL command, see [CPDCTL reference](https://githu
 
 For detailed information about installing, configuring, and using the DataStage jobs command-line interface, see [Installation](https://github.com/IBM/cpdctl#installation).
 
-To create a profile and enable `dsjob` use the following scripts. 
+To create a profile and enable `dsjob` use the following scripts.
 
 For CPDaaS:
 ```
@@ -78,10 +80,7 @@ cpdctl config profile set CP4D-profile --url $DSJOB_URL --user CP4D-user
 cpdctl config profile use CP4D-profile
 ```
 
-If you have multiple profiles, you can run a command against a specific profile with either
-`cpdctl project list --profile <PROFILE>` or `CPD_PROFILE=<PROFILE>
-cpdctl project list`. For example, to run multiple commands in a profile without changing
-your default profile, you can run the following commands.
+If you have multiple profiles, you can run a command against a specific profile with either `cpdctl project list --profile <PROFILE>` or `CPD_PROFILE=<PROFILE> cpdctl project list`. For example, to run multiple commands in a profile without changing your default profile, you can run the following commands.
 
 ```
 export CPD_PROFILE=<PROFILE-1>
@@ -93,9 +92,7 @@ cpdctl ....
 unset CPD_PROFILE <go back to default profile>
 ```
 
-
 # Commands
-
 
 To enable the `cpdctl dsjob` commands, you must set the environment variable
 CPDCTL_ENABLE_DSJOB to `true` in the environment where the CPD command-line interface is installed.
@@ -103,28 +100,23 @@ When you set up the `dsjob` command line environment, you must escape any
 special characters ($, ") in your password with a backward slash. For example,
 `myPa$$word` must be written as `myPa\$\$word`.
 
-
-
 ## Projects
 
 ### Listing projects
+
 The following syntax displays a list of all known projects on the specified project:
 ```
 cpdctl dsjob list-projects [--sort|--sort-by-time] [--with-id] [--output json]
 ```
 
 - `with-id` when specified prints the project id and project name.
-- `sort` when specified returns the list of projects sorted in alphabetical order.
-This field is optional.
-- `sort-by-time` when specified sorts the list by create or update time. One of
-`sort` or `sort-by-time` can be specified.
+- `sort` when specified returns the list of projects sorted in alphabetical order. This field is optional.
+- `sort-by-time` when specified sorts the list by create or update time. One of `sort` or `sort-by-time` can be specified.
 - `output`  specifies the format of the output. This field is optional.
-
 
 A list of all the projects is displayed, one per line.
 A status code is printed to the
 output. A status code of 0 indicates successful completion of the command.
-
 
 ### Creating projects
 The following syntax is used to create a project:
@@ -133,47 +125,45 @@ CPD:
 ```
 cpdctl dsjob create-project --name NAME 
 ```
+
 CPDaaS:
 ```
 cpdctl dsjob create-project --name NAME [--storage <STG>] [--storage-type bmcos_object_storage|amazon_s3]
 ```
+
 - `name` is the name of the project that is being created.
 - `storage` is the name of the CRN for cloud, for example:
 `crn:v1:staging:public:cloud-object-storage:global:a/`.
-- `type` is the storage type for cloud. The default value is
-`bmcos_object_storage` and the alternate value is `amazon_s3`.
+- `type` is the storage type for cloud. The default value is `bmcos_object_storage` and the alternate value is `amazon_s3`.
 
 The project ID of the created project is printed to the output.
-A status code is
-printed to the output. A status code of 0 indicates successful completion of the command.
-
+A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
 ### Deleting projects
+
 The following syntax is used to delete a project:
 ```
 cpdctl dsjob delete-project {--project PROJECT | --project-id PROJID}
 ```
+
 - `project` is the name of the project that is being deleted.
-- `project-id` is the id of the project that is being deleted. One of
-`project` or `project-id` must be specified.
+- `project-id` is the id of the project that is being deleted. One of `project` or `project-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion
 of the command.
 
-
 ## Jobs
 
 ### Listing jobs
+
 The following syntax displays a list of all jobs in the specified project:
 ```
 cpdctl dsjob list-jobs {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id] [--sched-info]
 ```
 
 - `project` is the name of the project that contains the jobs to list.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `sort` when specified returns the list of jobs sorted in alphabetical order. This
-field is optional.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `sort` when specified returns the list of jobs sorted in alphabetical order. This field is optional.
 - `with-id` when specified prints the job id along with the name of the job.
 - `sort-by-time` when specified sorts the list by last update time. One of `sort` or `sort-by-time` can be specified.
 - `sched-info` shows schedule information for jobs that are configured to run on a schedule.
@@ -181,75 +171,60 @@ field is optional.
 A status code is printed to the output. A status code of 0 indicates successful completion of the
 command.
 
-
 ### Creating jobs
+
 The following syntax creates a job in the specified project:
 ```
 cpdctl dsjob create-job {--project PROJECT | --project-id PROJID} {--flow NAME | --flow-id ID} [--name NAME] [--description DESCRIPTION] [--schedule-start yyyy-mm-dd:hh:mm] [--schedule-end yyyy-mm-dd:hh:mm] [{--repeat every/hourly/daily/monthly} --minutes (0-59) --hours (0-23) --day-of-week (0-6) --day-of-month (1-31)]
 ```
 
-
-- `project` is the name of the project that the job is created for. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+- `project` is the name of the project that the job is created for.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the job to be created.
-- `description` is the description of the job to be created. This field is
-optional.
+- `description` is the description of the job to be created. This field is optional.
 - `flow` is the name of the flow. This field must be specified.
-- `repeat` indicates frequency of job run. Permitted values are
-`every`, `hourly`, `daily`, `weekly`,
-and `monthly`. The default value is `none`.
-- `minutes` indicates interval in minutes or the minutes at which to run the job.
-Values in the range 0-59 are accepted.
-- `hours` indicates hour of the day at which to run the job. Values in the range
-0-23 are accepted.
-- `day-of-month` repeats on day of the month, works with minutes and hours. Values
-in the range 0-31 are accepted. Ex: 2 (runs on the second of the month).
+- `repeat` indicates frequency of job run. Permitted values are `every`, `hourly`, `daily`, `weekly`, and `monthly`. The default value is `none`.
+- `minutes` indicates interval in minutes or the minutes at which to run the job. Values in the range 0-59 are accepted.
+- `hours` indicates hour of the day at which to run the job. Values in the range 0-23 are accepted.
+- `day-of-month` repeats on day of the month, works with minutes and hours. Values in the range 0-31 are accepted. Ex: 2 (runs on the second of the month).
 - `schedule-start` is the starting time for scheduling a job.
 - `schedule-end` is the ending time for scheduling a job.
-
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Getting jobs
+
 The following syntax fetches a job by name from the specified project:
 ```
 cpdctl dsjob get-job {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata] 
 ```
-- `project` is the name of the project that contains the job. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+
+- `project` is the name of the project that contains the job.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the queried job.
-- `id` is the id of the job. One of `name` or `id`
-must be specified. 
+- `id` is the id of the job. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
-- `file-name` specifies the name of the file to which the output is written. This
-field is optional.
+- `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `with-metadata` when specified adds metadata to the output.
 
 A status code is printed to the output. A status code of 0 indicates successful completion
 of the command.
 
-
 ### Deleting jobs
+
 The following syntax deletes a job by name from the specified project:
 ```
 cpdctl dsjob delete-job {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}...
 ```
-- `project` is the name of the project that contains the job. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+
+- `project` is the name of the project that contains the job.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the job that is being deleted.
-- `id` is the id of the job. One of `name` or `id`
-must be specified. Multiple values can be specified for `name` and
-`id` to delete multiple items, in the format `--name NAME1 --name
-NAME2...`.
+- `id` is the id of the job. One of `name` or `id` must be specified. Multiple values can be specified for `name` and `id` to delete multiple items, in the format `--name NAME1 --name NAME2...`.
 
 A status code is printed to the output. A status code of 0 indicates successful completion
 of the command.
-
 
 ### Listing job status
 
@@ -257,6 +232,7 @@ The following syntax displays a list of all jobs in the specified project and th
 ```
 cpdctl dsjob list-job-status {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--sort | --sort-by-time | --sort-by-state | --sort-by-duration] [--start <YYYY-MM-DD:HH:MM:SS>] [--end <YYYY-MM-DD:HH:MM:SS>] [--with-past-runs]
 ```
+
 - `project`  is the name of the project that contains the jobs to list.
 - `project-id` is the id of the project. One of project or project-id must be specified.
 - `sort` when specified returns the list of jobs sorted in alphabetical order. This field is optional.
@@ -269,35 +245,25 @@ cpdctl dsjob list-job-status {--project PROJECT | --project-id PROJID} {--name n
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
-
 ### Updating jobs
+
 The following syntax updates a job by name from the specified project:
 ```
 cpdctl dsjob update-job {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-name RUNNAME] [--param PARAM] [--param-file FILENAME] [--env ENV] [--paramset NAME]
 ```
 
-
-- `project` is the name of the project that contains the job. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `job` or `name` is the name of the job. 
-- `job-id` or `id` is the id of the job. One of `job` or
-`job-id` must be specified.
-- `run-name` is the name given to the job run. 
-- `param` specifies a parameter value to pass to the job. The value is in the
-format `name=value`, where name is the parameter name and value is the value to be
-set. This flag can be repeated, ex: `--param k1=v1 --param k2=v2`
-- `paramfile` specifies a file that contains the parameter values to pass to the
-job. This field is currently not implemented. 
-- `env` specifies the environment in which the job is run. `env` is
-specified as a key=value pair. Key `env` or `env-id` can be used to choose a runtime environment.
-Example: `--env $APT_DUMP_SCORE=true --env env=ds-px-default`
+- `project` is the name of the project that contains the job.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `job` or `name` is the name of the job.
+- `job-id` or `id` is the id of the job. One of `job` or `job-id` must be specified.
+- `run-name` is the name given to the job run.
+- `param` specifies a parameter value to pass to the job. The value is in the format `name=value`, where name is the parameter name and value is the value to be set. This flag can be repeated, ex: `--param k1=v1 --param k2=v2`
+- `paramfile` specifies a file that contains the parameter values to pass to the job. This field is currently not implemented.
+- `env` specifies the environment in which the job is run. `env` is specified as a key=value pair. Key `env` or `env-id` can be used to choose a runtime environment. Example: `--env $APT_DUMP_SCORE=true --env env=ds-px-default`
 - `paramset` is a list of parameter sets that can be used to overwrite the existing paramset values. ex: --paramset PS1=PROJDEF --paramset PS2. VS2 will override paramset PS1 values from PROJDEF and uses values from valueset VS2 for the paramset PS2.
-
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
-
 
 ### Scheduling jobs
 
@@ -306,103 +272,77 @@ The following syntax schedules a job to run at a specific time or repeatedly in 
 cpdctl dsjob schedule-job {--project PROJECT | --project-id PROJID}  {--job NAME | --name NAME | --job-id ID | --id ID} [--schedule-start yyyy-mm-dd:hh:mm] [--schedule-end yyyy-mm-dd:hh:mm] [--repeat every/hourly/daily/monthly --minutes (0-59) --hours (0-23) --day-of-week (0-6) --day-of-month (1-31)]
 ```
 
--   `project` is the name of the project that the job is scheduled for.
--   `project-id` is the id of the project. One of `project` or `project-id` must be specified.
--   `name` is the name of the job to be scheduled.
--   `id` is the id of the job to be scheduled.
--   `repeat` indicates frequency of job run. Permitted values are `every`, `hourly`, `daily`, `weekly`, and `monthly`. The default value is `none`.
--   `minutes` indicates interval in minutes or the minutes at which to run the job. Values in the range 0-59 are accepted.
--   `hours` indicates hour of the day at which to run the job. Values in the range 0-23 are accepted.
--   `day-of-month` repeats on day of the month, works with minutes and hours. Values in the range 0-31 are accepted. Ex: 2 (runs on the second of the month).
--   `schedule-start` is the starting time for scheduling a job.
--   `schedule-end` is the ending time for scheduling a job.
+- `project` is the name of the project that the job is scheduled for.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `name` is the name of the job to be scheduled.
+- `id` is the id of the job to be scheduled.
+- `repeat` indicates frequency of job run. Permitted values are `every`, `hourly`, `daily`, `weekly`, and `monthly`. The default value is `none`.
+- `minutes` indicates interval in minutes or the minutes at which to run the job. Values in the range 0-59 are accepted.
+- `hours` indicates hour of the day at which to run the job. Values in the range 0-23 are accepted.
+- `day-of-month` repeats on day of the month, works with minutes and hours. Values in the range 0-31 are accepted. Ex: 2 (runs on the second of the month).
+- `schedule-start` is the starting time for scheduling a job.
+- `schedule-end` is the ending time for scheduling a job.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
-
 ### Cleaning up orphaned jobs
+
 The following syntax deletes DataStage jobs that were orphaned by the deletion of their
-corresponding flow :
+corresponding flow:
 ```
 cpdctl dsjob cleanup-jobs [--project PROJECT | --project-id PROJID] [--dry-run]
 ```
 
 - `project` is the name of the project that contains the jobs.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `dry-run` when set to `true`, a trial run is attempted without
-deleting the jobs.
-
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `dry-run` when set to `true`, a trial run is attempted without deleting the jobs.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the
 command.
 
-
 ### Displaying job information
+
 The following syntax displays the available information about a specified job:
 ```
 cpdctl dsjob jobinfo {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--full] [--list-params]
 ```
 
-
-- `project` is the name of the project that contains the job. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `job` or `name` is the name of the job. 
-- `job-id` is the id of the job. One of `job` or
-`job-id` must be specified.
-- `full` displays more detailed information about the job, including information
-about all job runs. This field is optional.
-- `list-params` displays job level configuration/local parameters and environment
-variables.
-
+- `project` is the name of the project that contains the job.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `job` or `name` is the name of the job.
+- `job-id` is the id of the job. One of `job` or `job-id` must be specified.
+- `full` displays more detailed information about the job, including information about all job runs. This field is optional.
+- `list-params` displays job level configuration/local parameters and environment variables.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Running jobs
-You can use the run command to start, stop, validate, and reset jobs. The run operation is
-asynchronous in nature and the status code indicates whether the job run is successfully submitted
-or not except when the --wait option is specified. Please see --wait flag description on how the
-behavior changes.
+
+You can use the run command to start, stop, validate, and reset jobs. The run operation is asynchronous in nature and the status code indicates whether the job run is successfully submitted or not except when the --wait option is specified. Please see --wait flag description on how the behavior changes.
 ```
 cpdctl dsjob run {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-name RUNNAME] [--param PARAM] [--param-file FILENAME] [--env ENVJSON] [--paramset PARAMSET] [--runtime-env <ENVNAME>] [--wait secs] [--warn-limit <n>] [--no-logs] [--language <LANGUAGE>]
 ```
 
-
-- `project` is the name of the project that contains the job. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `job` is the name of the job. 
-- `job-id` is the id of the job. One of `job` or
-`job-id` must be specified.
-- `run-name` is the name given to the job run. 
-- `param` specifies a parameter value to pass to the job. The value is in the
-format `name=value`, where name is the parameter name and value is the value to be
-set. This flag can be repeated, ex: `--param k1=v1 --param k2=v2`
-- `paramfile` specifies a file that contains the parameter values to pass to the
-job. This field is not implemented currently. 
-- `env` specifies the environment in which job is run. `env` is
-specified as a key=value pair. Key `env` or `env-id` can be used to chose a runtime environment.
-Example: `--env $APT_DUMP_SCORE=true --env env=ds-px-default`
-- `paramset` specifies parameter set/value set fields to be passed to the job run.
-There are three variations, 1. `--paramset PS1` sends all fields in parameter set PS1
-as job parameters to the run, 2. `--paramset PS2.VS2` sends value set values as job
-parameters, 3. `--paramset PS1=PROJFDEF` overrides `paramset PS1`
-values from PROJDEF and send values of all fields in parameter set `PS1` as job
-parameters to the run.
+- `project` is the name of the project that contains the job.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `job` is the name of the job.
+- `job-id` is the id of the job. One of `job` or `job-id` must be specified.
+- `run-name` is the name given to the job run.
+- `param` specifies a parameter value to pass to the job. The value is in the format `name=value`, where name is the parameter name and value is the value to be set. This flag can be repeated, ex: `--param k1=v1 --param k2=v2`
+- `paramfile` specifies a file that contains the parameter values to pass to the job. This field is not implemented currently.
+- `env` specifies the environment in which job is run. `env` is specified as a key=value pair. Key `env` or `env-id` can be used to chose a runtime environment. Example: `--env $APT_DUMP_SCORE=true --env env=ds-px-default`
+- `paramset` specifies parameter set/value set fields to be passed to the job run. There are three variations, 1. `--paramset PS1` sends all fields in parameter set PS1 as job parameters to the run, 2. `--paramset PS2.VS2` sends value set values as job parameters, 3. `--paramset PS1=PROJFDEF` overrides `paramset PS1` values from PROJDEF and send values of all fields in parameter set `PS1` as job parameters to the run.
 - `runtime-env` specifies a runtime environment for the job to run in, value can be a name or an id.
 - `wait` the job run waits for the specified amount of time for the job to finish. The job logs are printed to the output until the job is completed or the wait time expires. The return status indicates whether the job has finished, finished with warning, raised an error, or timed out after waiting. For example: `--wait 200` waits for a maximum of 200 secs, polling the job for completion, and if the job does not complete it returns a status code other than zero. You may specify `--wait -1` to wait indefinitely for the job to finish. This field is optional.
-- `warn-limit` specifies the number of warnings after which a job is
-terminated.
+- `warn-limit` specifies the number of warnings after which a job is terminated.
 - `language` is the locale the job run will use, ex: `--language fr`.
-- `no-logs` when specified pipeline run will not produce output logs while waiting for the run to finish 
-
+- `no-logs` when specified pipeline run will not produce output logs while waiting for the run to finish
 
 When the `job` parameter starts with a `$` it will also be
 added as a environment variable.
-A status code is printed to the output. 
+A status code is printed to the output.
+
 - 0: successfully completed
 - 1: completed with warnings
 - 3: completed with error
@@ -410,100 +350,77 @@ A status code is printed to the output.
 - 5: canceled
 - -1: other
 
-
-
 ### Stopping jobs
+
 You can use the stop command to stop or cancel running jobs. The stop operation is asynchronous
-in nature and the status code indicates whether the job stop is successfully submitted or not. 
+in nature and the status code indicates whether the job stop is successfully submitted or not.
 ```
 cpdctl dsjob stop {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID]
 ```
 
-
-- `project` is the name of the project that contains the job. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `job` or `name` is the name of the job. 
-- `job-id` or `id` is the id of the job. One of `job` or
-`job-id` must be specified.
-- `runid` can be specified to cancel or stop an existing job run. If
-`runid` is not specified, the `runid` of the latest job run that is
-not completed is used by default. This field is optional.
-
+- `project` is the name of the project that contains the job.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `job` or `name` is the name of the job.
+- `job-id` or `id` is the id of the job. One of `job` or `job-id` must be specified.
+- `runid` can be specified to cancel or stop an existing job run. If `runid` is not specified, the `runid` of the latest job run that is not completed is used by default. This field is optional.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Wait For Jobs
+
 The following syntax is used to wait for an anticipated job run and obtain status of the job.
 
 ```
 cpdctl dsjob waitforjob {--project PROJECT | --project-id PROJID}  {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID] --wait SEC [--logs] [--since n[s|m]] [--after TIMESTAMP]
 ```
 
--   `project`  is the name of the project that contains the job.
--   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
--   `name`  is the name of the job.
--   `id`  is the id of the job. One of  `job`  or  `job-id`  must be specified.
--  `run-id` is the id of a particular job run.
--  `wait` total wait time to wait for getting status on a job run.
--  `logs` will show logs of a running job while waiting to finish.
--  `since` only wait for job that has started in the last specified amount of time. The value should be number of seconds or minutes.
--  `after` only wait for job that has started after the timestamp specified.
+- `project`  is the name of the project that contains the job.
+- `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
+- `name`  is the name of the job.
+- `id`  is the id of the job. One of  `job`  or  `job-id`  must be specified.
+- `run-id` is the id of a particular job run.
+- `wait` total wait time to wait for getting status on a job run.
+- `logs` will show logs of a running job while waiting to finish.
+- `since` only wait for job that has started in the last specified amount of time. The value should be number of seconds or minutes.
+- `after` only wait for job that has started after the timestamp specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
-
 
 ## Job logs
 
 ### Displaying a specific log entry
+
 The following syntax displays the specified entry in a job log file:
 ```
 cpdctl dsjob logdetail {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID] [--eventrange EVENTRANGE] [--compatible] --follow
 ```
 
-
-- `project` is the name of the project that contains the job with the specified log
-entry. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+- `project` is the name of the project that contains the job with the specified log entry.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `job` or `name` is the name of the job. 
-- `job-id` or `id` is the id of the job. One of `job` or
-`job-id` must be specified.
-- `runid` processes the log entry for a specific `runid`. If
-`runid` is not specified, the latest run is used by default. This field is
-optional.
-- `eventrange` is the range of event numbers that is assigned to the entry that is
-printed to the output. The first entry in the file is 0. If `eventrange` is not
-specified, the full log is processed. For example, if you specify `eventrange 2-4`,
-the third, fourth, and fifth entries from the log are printed.
+- `job-id` or `id` is the id of the job. One of `job` or `job-id` must be specified.
+- `runid` processes the log entry for a specific `runid`. If `runid` is not specified, the latest run is used by default. This field is optional.
+- `eventrange` is the range of event numbers that is assigned to the entry that is printed to the output. The first entry in the file is 0. If `eventrange` is not specified, the full log is processed. For example, if you specify `eventrange 2-4`, the third, fourth, and fifth entries from the log are printed.
 - `compatible` will output logs in the format previously used by DataStage components. This field is optional.
 - `follow` when specified enables log tailing.
-
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Displaying a short log entry
+
 The following syntax displays a summary of entries in a job log file:
 ```
 cpdctl dsjob logsum {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID] [--type TYPE] [--max MAX] [--compatible]
 ```
 
-
-- `project` is the name of the project that contains the job with the log entries
-that are being retrieved. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `job` or `name` is the name of the job. 
-- `job-id` or `id` is the id of the job. One of `job` or
-`job-id` must be specified.
-- `runid` processes the log entry for a specific runid. If `runid`
-is not specified, the latest run is used by default. This field is optional.
-- `type` specifies the type of log entry to retrieve. If `type` is
-not specified, all the entries are retrieved. `type` can be one of the following options:
+- `project` is the name of the project that contains the job with the log entries that are being retrieved.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `job` or `name` is the name of the job.
+- `job-id` or `id` is the id of the job. One of `job` or `job-id` must be specified.
+- `runid` processes the log entry for a specific runid. If `runid` is not specified, the latest run is used by default. This field is optional.
+- `type` specifies the type of log entry to retrieve. If `type` is not specified, all the entries are retrieved. `type` can be one of the following options:
 - INFO: Information
 - WARNING: Warning
 - FATAL: Fatal error
@@ -511,32 +428,25 @@ not specified, all the entries are retrieved. `type` can be one of the following
 - STARTED: All control logs
 - RESET: Job reset
 - BATCH: Batch control
-- ANY: All entries of any type. This option is the default if `type` is not
-specified.
-
-- `compatible` will output logs in the format previously used by DataStage components. This field is optional. 
+- ANY: All entries of any type. This option is the default if `type` is not specified.
+- `compatible` will output logs in the format previously used by DataStage components. This field is optional.
 - `max n` limits the number of entries that are retrieved to
 `n`.
-
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Identifying the newest log entry
+
 The following syntax displays the ID of the newest log entry of the specified type:
 ```
 cpdctl dsjob lognewest {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID] [--type TYPE]
 ```
 
-
-- `project` is the name of the project that contains the job with the log entry
-that is being retrieved. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `job` or `name` is the name of the job. 
-- `job-id` or `id` is the id of the job. One of `job` or
-`job-id` must be specified.
+- `project` is the name of the project that contains the job with the log entry that is being retrieved.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `job` or `name` is the name of the job.
+- `job-id` or `id` is the id of the job. One of `job` or `job-id` must be specified.
 - `type` can be one of the following options:
 - INFO: Information
 - WARNING: Warning
@@ -546,144 +456,112 @@ that is being retrieved.
 - RESET: Job reset
 - BATCH: Batch control
 
-
-
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
-
 
 ## Job runs
 
 ### Getting job run statistics
-The following syntax gets job run statistics for a particular job run in a project: 
+
+The following syntax gets job run statistics for a particular job run in a project:
 ```
 cpdctl dsjob jobrunstat {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  [--run-id RUNID] [--all] [--with-metadata]
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `name` is the name of the job. 
-- `id` is the id of the job. One of `name` or `id`
-must be specified.
-- `run-id` is the run id of the particular job run. This field is optional, if
-omitted the last job run statistics are displayed.
-- `all` causes the statistics for all runs for the job to be displayed. When using
-this flag `run-id` is ignored.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `name` is the name of the job.
+- `id` is the id of the job. One of `name` or `id` must be specified.
+- `run-id` is the run id of the particular job run. This field is optional, if omitted the last job run statistics are displayed.
+- `all` causes the statistics for all runs for the job to be displayed. When using this flag `run-id` is ignored.
 - `with-metadata` when specified adds metadata to the output.
-
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Pruning job runs
-Prune commands can be used to delete the job runs based on age or number of runs. The following
-syntax can be used to prune job runs in a project: 
+
+Prune commands can be used to delete the job runs based on age or number of runs. The following syntax can be used to prune job runs in a project:
 ```
 cpdctl dsjob prune {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--keep-runs NUMRUNS] [--keep-days NUMDAYS] [--threads n] [--dry-run]
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `name` is the name of the job. 
-- `id` is the id of the job. One of `name` or `id`
-must be specified.
-- `keep-runs` specifies the number of latest runs to keep and deletes rest of the
-job runs clearing up space.
-- `keep-days` specifies a number of days and deletes all job runs older than that
-number.
-- `threads` specifies the number of parallel concurrent cleanup routines to run
-with one per job. The value should be in the range 5-20, default value is 5. This field is
-optional.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `name` is the name of the job.
+- `id` is the id of the job. One of `name` or `id` must be specified.
+- `keep-runs` specifies the number of latest runs to keep and deletes rest of the job runs clearing up space.
+- `keep-days` specifies a number of days and deletes all job runs older than that number.
+- `threads` specifies the number of parallel concurrent cleanup routines to run with one per job. The value should be in the range 5-20, default value is 5. This field is optional.
 - `dry-run` does a mock run without deleting the job runs.
-
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Getting job run cleanup
-It is possible to have job runs that never complete and remain stale. These jobs are stuck in a
-starting or running state. The following syntax cleans up job runs in a project: 
+
+It is possible to have job runs that never complete and remain stale. These jobs are stuck in a starting or running state. The following syntax cleans up job runs in a project:
 ```
 cpdctl dsjob jobrunclean {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--run-id RUNID] [--dry-run] [--threads n] [--before TIMESTAMP]
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `name` is the name of the job. 
-- `id` is the id of the job. One of `name` or `id`
-must be specified.
-- `run-id` is the run id of the particular job run to clean up. This field is
-optional.
-- `threads` specifies the number of parallel concurrent cleanup routines to run
-with one per job. The value should be in the range 5-20, default value is 5. This field is
-optional.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `name` is the name of the job.
+- `id` is the id of the job. One of `name` or `id` must be specified.
+- `run-id` is the run id of the particular job run to clean up. This field is optional.
+- `threads` specifies the number of parallel concurrent cleanup routines to run with one per job. The value should be in the range 5-20, default value is 5. This field is optional.
 - `dry-run` does a mock run without deleting the job runs.
 - `before` cleans up all jobs that are before the given timestamp. Format: `YYYY-MM-DD:hh:mm:ss`
-
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Listing job runs
+
 The following syntax lists job runs for the specified job:
 ```
 cpdctl dsjob list-jobruns {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--sort-by-time | --sort-by-runname | --sort-by-duration] [--detail] [--output file|json] [--file-name FILENAME]
 ```
-- `project` is the name of the project. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+
+- `project` is the name of the project.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the job.
-- `id` is the id of the job. One of `name` or `id`
-must be specified. 
+- `id` is the id of the job. One of `name` or `id` must be specified.
 - `sort-by-time` when specified sorts the list by create or update time.
-- `sort-by-runname`  when specified sorts the list by run name of the job run. 
+- `sort-by-runname`  when specified sorts the list by run name of the job run.
 - `sort-by-duration`  when specified sorts the list by run duration of the job run. One of sort-by-runname, sort-by-time, sort-by-duration can be specified.
 - `output` specifies the format of the output. This field is optional.
-- `file-name` specifies the name of the file to which the output is written. This
-field is optional.
+- `file-name` specifies the name of the file to which the output is written. This field is optional.
 
 A status code is printed to the output. A status code of 0 indicates successful completion
 of the command.
 
-
 ### Getting job runs
+
 The following syntax gets job run details from the specified job:
 ```
 cpdctl dsjob get-jobrun {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--run-id RUNID] [--output json|file] [--file-name FILENAME] [--with-metadata]
 ```
-- `project` is the name of the project. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+
+- `project` is the name of the project.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the job.
-- `id` is the id of the job. One of `name` or `id`
-must be specified. 
+- `id` is the id of the job. One of `name` or `id` must be specified.
 - `run-id` is the id of the job run.
-- `output` specifies the format of the output. You can generate a JSON or output to
-a file. This field is optional.
-- `file-name` specifies the name of the file to which the output is written. If not
-specified, the job run id is used as the name.
+- `output` specifies the format of the output. You can generate a JSON or output to a file. This field is optional.
+- `file-name` specifies the name of the file to which the output is written. If not specified, the job run id is used as the name.
 - `with-metadata` when specified adds metadata to the output.
 
 A status code is printed to the output. A status code of 0 indicates successful completion
 of the command.
 
-
 ### Listing active job runs
-The following syntax lists all active job runs, including incomplete, cancelled and failed
-jobs:
+
+The following syntax lists all active job runs, including incomplete, cancelled and failed jobs:
 ```
 cpdctl dsjob list-active-runs [--sort-by-time|--sort-by-jobname|--sort-by-assettype|--sort-by-duration|--sort-by-state] [--output json|file] [--file-name FILENAME]
 ```
-
 
 - `sort-by-time` lists jobs sorted by create or update time.
 - `sort-by-jobname` lists jobs sorted by job name in alphabetical order.
@@ -693,10 +571,8 @@ cpdctl dsjob list-active-runs [--sort-by-time|--sort-by-jobname|--sort-by-assett
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written.
 
-
 A status code is printed to the output. A status code of 0 indicates successful completion of the
 command.
-
 
 ### Listing stages in a flow
 
@@ -706,11 +582,11 @@ The following syntax lists all stages in a flow:
 cpdctl dsjob list-stages {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}
 ```
 
--   `project` is the name of the project.
--   `project-id` is the id of the project. One of `project` or `project-id` must be specified.
--   `name` is the name of the flow.
--   `id` is the id of the flow. One of `name` or  `id` must be specified.
- 
+- `project` is the name of the project.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `name` is the name of the flow.
+- `id` is the id of the flow. One of `name` or  `id` must be specified.
+
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
 ### Listing links associated with a stage in a flow
@@ -721,11 +597,11 @@ The following syntax lists all links associated with a stage in a flow:
 cpdctl dsjob list-links {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  --stage STAGE
 ```
 
--   `project` is the name of the project.
--   `project-id` is the id of the project. One of `project` or `project-id` must be specified.
--   `name` is the name of the flow.
--   `id` is the id of the flow. One of `name` or `id` must be specified.
--   `stage` is the name of a stage in the flow.
+- `project` is the name of the project.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `name` is the name of the flow.
+- `id` is the id of the flow. One of `name` or `id` must be specified.
+- `stage` is the name of a stage in the flow.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -737,16 +613,15 @@ The following syntax can be used to get link information for a stage in a job:
 cpdctl dsjob get-stage-link {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  [--run-id RUNID] --stage STAGE --link LINK
 ```
 
--   `project`  is the name of the project.
--   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
--   `name`  is the name of the job.
--   `id`  is the id of the job. One of  `name`  or  `id`  must be specified.
--   `run-id` is the id of the job run, this field is optional. When not specified, the latest job run is used.
--  `stage` is the name of a stage in the job.
+- `project`  is the name of the project.
+- `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
+- `name`  is the name of the job.
+- `id`  is the id of the job. One of  `name`  or  `id`  must be specified.
+- `run-id` is the id of the job run, this field is optional. When not specified, the latest job run is used.
+- `stage` is the name of a stage in the job.
 - `link` is the name of a link associated with the stage.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
-
 
 ### Get report on a job run
 
@@ -756,326 +631,262 @@ The following syntax generates a report for a job run:
 get-jobrun-report {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--run-id RUNID] [--output json|file] [--file-name FILENAME]
 ```
 
--   `project`  is the name of the project.
--   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
--   `name`  is the name of the job.
--   `id`  is the id of the job. One of  `name`  or  `id`  must be specified.
--   `run-id` is the id of the job run, this field is optional. When not specified, the latest job run is used.
--   `output`  specifies the format of the output. This field is optional.
--   `file-name`  specifies the name of the file to which the output is written. This field is optional.
+- `project`  is the name of the project.
+- `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
+- `name`  is the name of the job.
+- `id`  is the id of the job. One of  `name`  or  `id`  must be specified.
+- `run-id` is the id of the job run, this field is optional. When not specified, the latest job run is used.
+- `output`  specifies the format of the output. This field is optional.
+- `file-name`  specifies the name of the file to which the output is written. This field is optional.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
-
 
 ## Job migration
 
 ### Migrating jobs
+
 The Migrate command can be used to create data flows from an exported ISX file. You can use the
 command to check status or cancel a migration that is in progress.
 ```
 cpdctl dsjob migrate {--project PROJECT | --project-id PROJID} [--on-failure ONFAILURE] [--conflict-resolution CONFLICT-RESOLUTION] [--attachment-type ATTACHMENT-TYPE] [--import-only] [--create-missing] [--enable-local-connection] [--enable-platform-connection] [--enable-dataquality-rule] [--create-connection-paramsets] [--use-dsn-name] [--migrate_hive_impala] [--enable-notifications] [--storage-path STORAGE-PATH]  [--migrate-to-send-email] [--file-name FILENAME] [--status IMPORT-ID --format csv/json] [--stop IMPORT-ID] [--hard-replace] [--wait secs]
 ```
 
-
 - `project` is the name of the project. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `on-failure` indicates what action to taken if the import process fails. Possible
-options are either `continue` or `stop`. This field is optional.
-- `conflict-resolution` specifies the resolution when the data flow to be imported
-has a name conflict with an existing data flow in the project or catalog. Possible resolutions are
-`skip`, `rename`, or `replace`. This field is
-optional.
-- `attachment-type` is the type of attachment. The default attachment type is
-`isx`. This field is optional.
-- `import-only` when specified imports flows without compiling them or creating a
-job.
-- `create-missing` when specified creates missing parameter sets and job
-parameters.
-- `enable-local-connection` enables migrating a connection into a flow as a flow
-connection.
-- `enable-dataquality-rule` when specified migrates a data rule from Information
-Analyzer as a Datahub rule.
-- `create-connection-paramsets` when specified creates parameter sets for missing
-properties in connections.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `on-failure` indicates what action to taken if the import process fails. Possible options are either `continue` or `stop`. This field is optional.
+- `conflict-resolution` specifies the resolution when the data flow to be imported has a name conflict with an existing data flow in the project or catalog. Possible resolutions are `skip`, `rename`, or `replace`. This field is optional.
+- `attachment-type` is the type of attachment. The default attachment type is `isx`. This field is optional.
+- `import-only` when specified imports flows without compiling them or creating a job.
+- `create-missing` when specified creates missing parameter sets and job parameters.
+- `enable-local-connection` enables migrating a connection into a flow as a flow connection.
+- `enable-dataquality-rule` when specified migrates a data rule from Information Analyzer as a Datahub rule.
+- `create-connection-paramsets` when specified creates parameter sets for missing properties in connections.
 - `use-dsn-name` when specified enables migration to use dsn-type names for connections. 
 - `migrate_hive_impala` when true enables Hive Impala for migration.
 - `enable-notifications` when true allows notifications to be sent during migration.
 - `storage-path` directory path on the storage volume for scripts and other data assets. This fields is optional.
 - `migrate-to-send-email` when true, all notification activity stages in sequence job are migrated as send email task nodes.
-- `file-name` is the name of the input file. This field is required for an import
-operation but not with options `-stop` or `-status`.
-- `status` returns the status of a previously submitted import job. A value for
-`importid` must be specified with this option.
-- `stop` cancels an import operation that is in progress. A value for
-`importid` must be specified with this option.
+- `file-name` is the name of the input file. This field is required for an import operation but not with options `-stop` or `-status`.
+- `status` returns the status of a previously submitted import job. A value for `importid` must be specified with this option.
+- `stop` cancels an import operation that is in progress. A value for `importid` must be specified with this option.
 - `hard-replace` If true, fields in parameter sets will be replaced with incoming source field values. This field can be used only when conflict resolution is set to skip or replace.
 - `wait`  specifies the time in seconds to wait for the command to complete. For example, `--wait 200` waits for a maximum of 200 secs, checking status of the migration, and returns an exit code other than zero if it does not complete. You can set `--wait -1` to wait for completion indefinitely.
 
-
 A status code is printed to the output.
--   0: successfully completed
--   1: failed
--   2: completed with error
--   3: timed out
--   4: canceled
 
+- 0: successfully completed
+- 1: failed
+- 2: completed with error
+- 3: timed out
+- 4: canceled
 
 ## Flows
 
 ### Listing flows
-The following syntax displays a list of all flows in the specified project: 
+
+The following syntax displays a list of all flows in the specified project:
 ```
 cpdctl dsjob list-flows {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time | --sort-by-compiled] [--with-id] [--with-compiled]
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `sort` when specified returns the list of flows sorted in alphabetical order.
-This field is optional.
-- `sort-by-time` when specified sorts the list by create or update time. One of
-`sort` or `sort-by-time` can be specified.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `sort` when specified returns the list of flows sorted in alphabetical order. This field is optional.
+- `sort-by-time` when specified sorts the list by create or update time. One of `sort` or `sort-by-time` can be specified.
 - `sort-by-compiled` if true, list will be sorted by most recent compile time.
 - `with-id` when specified prints the flow id along with the name of the flow.
-- `with-compiled` if true, displays compile status, last compile time, and whether flow needs compilation. 
-
+- `with-compiled` if true, displays compile status, last compile time, and whether flow needs compilation.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Creating flows
+
 The following syntax creates a flow in the specified project:
 ```
 cpdctl dsjob create-flow {--project PROJECT | --project-id PROJID} --name NAME [--description DESCRIPTION] --pipeline-file FILENAME
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `name` is the name of the flow that is being created. 
-- `description` is the description of the flow that is being created. This field is
-optional.
-- `pipeline-file` is the name of the file that contains the flow JSON. This field
-must be specified.
-
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `name` is the name of the flow that is being created.
+- `description` is the description of the flow that is being created. This field is optional.
+- `pipeline-file` is the name of the file that contains the flow JSON. This field must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Getting flows
+
 The following syntax fetches a flow by name from the specified project:
 ```
 cpdctl dsjob get-flow {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata]
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the queried flow.
-- `id` is the id of the flow. One of `name` or `id`
-must be specified.
+- `id` is the id of the flow. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
-- `file-name` specifies the name of the file to which the output is written. This
-field is optional.
+- `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `with-metadata` when specified adds metadata to the output.
-
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Deleting flows
+
 The following syntax deletes a flow by name from the specified project:
 ```
 cpdctl dsjob delete-flow {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}...
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the flow.
-- `id` is the id of the flow. One of `name` or `id`
-must be specified. Multiple values can be specified for `name` and
-`id` to delete multiple items, in the format `--name NAME1 --name
-NAME2...`.
-
+- `id` is the id of the flow. One of `name` or `id` must be specified. Multiple values can be specified for `name` and `id` to delete multiple items, in the format `--name NAME1 --name NAME2...`.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Compiling flows
-The following syntax allows you to compile flows in the specified project: 
+
+The following syntax allows you to compile flows in the specified project:
 ```
 cpdctl dsjob compile {--project PROJECT | --project-id PROJID} [{--name NAME | --id ID}...] [--skip] [--osh] [--threads ] [--enable-elt-mode --materialization-policy <POLICY>]
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the flow.
-- `id` is the id of the flow. One of `name` or `id`
-can be specified. Multiple values can be specified for `name` and `id`
-to compile multiple items, in the format `--name NAME1 --name NAME2...`. The name can
-be a valid regular expression, ex: `Flow.*, ^.*THIS.*` If not present, all the flows
-in the project are compiled. 
+- `id` is the id of the flow. One of `name` or `id` can be specified. Multiple values can be specified for `name` and `id` to compile multiple items, in the format `--name NAME1 --name NAME2...`. The name can be a valid regular expression, ex: `Flow.*, ^.*THIS.*` If not present, all the flows in the project are compiled.
 - `skip` when specified, flows that do not need to be recompiled will be skipped.
 - `osh` the output will display compiled 'osh' output. This field is optional.
-- `threads` specifies the number of parallel compilations to run. The value should
-be in the range 5-20, default value is 5. This field is optional.
+- `threads` specifies the number of parallel compilations to run. The value should be in the range 5-20, default value is 5. This field is optional.
 - `enable-elt-mode` compiles DataStage flow into a dbt model and executes the dbt model to perform ELT operations. The default value is false.
 - `materialization-policy` can take values OUTPUT_ONLY, TEMP_TABLES, TEMP_VIEWS, or CARDINALITY_CHANGER_TABLES. This option is used along with `enable-elt-mode`.
-
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-### Listing Parameters for Flows and Pipelines
+## Pipelines
+
+### Listing parameters
+
 The following syntax fetches a flow/pipeline parameters for a given flow/pipeline from the specified project:
 
 ```
 cpdctl dsjob list-params {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--output file|json] [--file-name FILENAME] [--detail]
 ```
--   `project`  is the name of the project that contains the pipeline.
--   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
--   `name`  is the name of the flow or a pipeline.
--   `id`  is the id of the flow or a pipeline. One of  `name`  or  `id`  must be specified.
--   `output`  specifies the format of the output. This field is optional.
--   `file-name`  specifies the name of the file to which the output is written. This field is optional.
--  `detail`  when specified all the pipeline parameter sets are expanded to show their fields definitions.
+
+- `project`  is the name of the project that contains the pipeline.
+- `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
+- `name`  is the name of the flow or a pipeline.
+- `id`  is the id of the flow or a pipeline. One of  `name`  or  `id`  must be specified.
+- `output`  specifies the format of the output. This field is optional.
+- `file-name`  specifies the name of the file to which the output is written. This field is optional.
+- `detail`  when specified all the pipeline parameter sets are expanded to show their fields definitions.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
-## Pipelines
-
 ### Listing pipelines
+
 The following syntax displays a list of all pipelines in the specified project:
+
 ```
 cpdctl dsjob list-pipelines {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
 ```
+
 - `project` is the name of the project that contains the pipelines to list.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified. A list of all the pipelines in the project is
-displayed, one per line.
-- `sort` when specified returns the list of pipelines sorted in alphabetical order.
-This field is optional. 
-- `sort-by-time` when specified the list of pipelines will be sorted by time of
-creation with latest at the top of the list. One of `sort` or
-`sort-by-time` can be specified. 
-- `with-id` when specified prints the pipeline id along with the name of the
-pipeline.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the pipelines in the project is displayed, one per line.
+- `sort` when specified returns the list of pipelines sorted in alphabetical order. This field is optional.
+- `sort-by-time` when specified the list of pipelines will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
+- `with-id` when specified prints the pipeline id along with the name of the pipeline.
 
 A status code is printed to the output. A status code of 0 indicates successful completion
 of the command.
 
-
 ### Getting pipelines
+
 The following syntax fetches a pipeline by name from the specified project:
 ```
 cpdctl dsjob get-pipeline {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--output file|json] [--file-name <name>]
 ```
-- `project` is the name of the project that contains the pipeline. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+
+- `project` is the name of the project that contains the pipeline.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the pipeline.
-- `id` is the id of the pipeline. One of `name` or
-`id` must be specified. 
+- `id` is the id of the pipeline. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
-- `file-name` specifies the name of the file to which the output is written. This
-field is optional.
+- `file-name` specifies the name of the file to which the output is written. This field is optional.
 
 A status code is printed to the output. A status code of 0 indicates successful completion
 of the command.
 
-
 ### Deleting pipelines
+
 The following syntax deletes a pipeline by name from the specified project:
 ```
 cpdctl dsjob delete-pipeline {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}...
 ```
+
 - `project` is the name of the project that contains the pipeline. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the pipeline that is being deleted.
-- `id` is the id of the pipeline. One of `name` or
-`id` must be specified. Multiple values can be specified for `name`
-and `id` to delete multiple items, in the format `--name NAME1 --name
-NAME2...`.
+- `id` is the id of the pipeline. One of `name` or `id` must be specified. Multiple values can be specified for `name` and `id` to delete multiple items, in the format `--name NAME1 --name NAME2...`.
 
 A status code is printed to the output. A status code of 0 indicates successful completion
 of the command.
 
-
 ### Importing pipelines
-The following syntax imports a pipeline into a specified project: 
+
+The following syntax imports a pipeline into a specified project:
 ```
 cpdctl dsjob import-pipeline {--project PROJECT | --project-id PROJID} --name name [description DESCRIPTION] [--volatile] --file-name FILENAME
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `name` is the name of the pipeline. 
-- `description` is the description of the pipeline. 
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `name` is the name of the pipeline.
+- `description` is the description of the pipeline.
 - `volatile` when specified creates a trial version of the pipeline.
 - `file-name` is the name of the file that contains the pipeline JSON. This field
-must be specified. 
-
+must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Exporting pipelines
-The following syntax exports a pipeline from a specified project to a file: 
+
+The following syntax exports a pipeline from a specified project to a file:
 ```
 cpdctl dsjob export-pipeline {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--format TEMPLATE|FLOW|ALL] [--output file] [--file-name <name>]
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `name` is the name of the pipeline. 
-- `id` is the id of the pipeline. One of `name` or
-`id` must be specified. 
-- `format` specifies whether to export the pipeline template, pipeline flow, or
-both.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `name` is the name of the pipeline.
+- `id` is the id of the pipeline. One of `name` or `id` must be specified.
+- `format` specifies whether to export the pipeline template, pipeline flow, or both.
 - `output` specifies the format of the output. This field is optional.
-- `file-name` specifies the name of the file to which the exported pipeline JSON is
-written to. 
-
+- `file-name` specifies the name of the file to which the exported pipeline JSON is written to.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Listing pipeline versions
+
 The following syntax displays a list of all pipeline versions in the specified project:
 ```
 cpdctl dsjob list-pipeline-versions {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--sort-by-time] [--output file] [--file-name ]
 ```
+
 - `project` is the name of the project that contains the pipeline.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified. A list of all the pipeline versions in the project is
-displayed, one per line.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the pipeline versions in the project is displayed, one per line.
 - `name` is the name of the pipeline.
-- `id` is the id of the pipeline. One of `name` or
-`id` must be specified. 
-- `sort` when specified returns the list of pipeline versions sorted in
-alphabetical order. This field is optional. 
-- `sort-by-time` when specified the list of pipeline versions will be sorted by
-time of creation with latest at the top of the list. One of `sort` or
-`sort-by-time` can be specified. 
+- `id` is the id of the pipeline. One of `name` or `id` must be specified.
+- `sort` when specified returns the list of pipeline versions sorted in alphabetical order. This field is optional.
+- `sort-by-time` when specified the list of pipeline versions will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This
 field is optional.
@@ -1083,29 +894,23 @@ field is optional.
 A status code is printed to the output. A status code of 0 indicates successful completion
 of the command.
 
-
 ### Listing pipeline runs
+
 The following syntax displays a list of all pipeline runs in the specified project:
 ```
 cpdctl dsjob list-pipeline-runs {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--sort | --sort-by-time] [--detail]
 ```
+
 - `project` is the name of the project that contains the pipeline.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified. A list of all the pipeline runs in the project is
-displayed, one per line.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the pipeline runs in the project is displayed, one per line.
 - `name` is the name of the pipeline.
-- `id` is the id of the pipeline. One of `name` or
-`id` must be specified. 
-- `sort` when specified returns the list of pipeline runs sorted in alphabetical
-order. This field is optional. 
-- `sort-by-time` when specified the list of pipeline runs will be sorted by time of
-creation with latest at the top of the list. One of `sort` or
-`sort-by-time` can be specified. 
+- `id` is the id of the pipeline. One of `name` or `id` must be specified.
+- `sort` when specified returns the list of pipeline runs sorted in alphabetical order. This field is optional.
+- `sort-by-time` when specified the list of pipeline runs will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `detail` when specified prints the pipeline run details.
 
 A status code is printed to the output. A status code of 0 indicates successful completion
 of the command.
-
 
 ### Creating and scheduling pipeline jobs
 
@@ -1114,55 +919,42 @@ The following syntax creates a pipeline job in the specified project:
 cpdctl dsjob create-pipeline-job {--project PROJECT | --project-id PROJID} {--pipeline NAME | --pipeline-id ID} [--name NAME] [--description DESCRIPTION] [--schedule-start yyyy-mm-dd:hh:mm] [--schedule-end yyyy-mm-dd:hh:mm] [{--repeat every/hourly/daily/monthly} --minutes (0-59) --hours (0-23) --day-of-week (0-6) --day-of-month (1-31)] [--version n]
 ```
 
-
-- `project` is the name of the project that contains the pipeline. 
+- `project` is the name of the project that contains the pipeline.
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
-- `pipeline` is the name of the pipeline. 
+- `pipeline` is the name of the pipeline.
 - `pipeline-id` is the id of the pipeline. One of `pipeline` or
 `pipeline-id` must be specified.
-- `name` is the name of the job to be created or used. This field is optional. 
+- `name` is the name of the job to be created or used. This field is optional.
 - `description` is the description of the job. This field is optional.
 - `schedule-start` is the starting time for scheduling a job.
 - `schedule-end`is the ending time for scheduling a job.
-- `repeat` specifies how frequently the job runs. Permitted values are
-`every`, `hourly`, `daily`, `weekly`,
-and `monthly`. The default value is `none`.
-- `hours` specifies hour of the day at which to run the job. Values in the range
-0-23 are accepted.
-- `day-of-week` repeats on a day of the week, works with minutes and hours. Values
-in the range 0-6 are accepted. Ex: 1,2 (runs on Monday and Tuesday, default all days).
-- `day-of-month` repeats on day of the month, works with minutes and hours. Values
-in the range 0-31 are accepted. Ex: 2 (runs on the second of the month).
+- `repeat` specifies how frequently the job runs. Permitted values are `every`, `hourly`, `daily`, `weekly`, and `monthly`. The default value is `none`.
+- `hours` specifies hour of the day at which to run the job. Values in the range 0-23 are accepted.
+- `day-of-week` repeats on a day of the week, works with minutes and hours. Values in the range 0-6 are accepted. Ex: 1,2 (runs on Monday and Tuesday, default all days).
+- `day-of-month` repeats on day of the month, works with minutes and hours. Values in the range 0-31 are accepted. Ex: 2 (runs on the second of the month).
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Running pipelines
 
-A pipeline run is triggered by creating a job for the pipeline and running it. The following
-syntax runs a pipeline in the specified project:
+A pipeline run is triggered by creating a job for the pipeline and running it. The following syntax runs a pipeline in the specified project:
 ```
 cpdctl dsjob run-pipeline {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--job-name name] [--description description] [--version VERSION] [--run-name RUNNAME] [--param PARAM] [--param-file FILENAME] [--env ENVJSON] [--paramset PARAMSET] [--wait SEC] [--reset-cache] [--no-logs]
 ```
 
-
-- `project` is the name of the project that contains the pipeline. 
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `name` is the name of the pipeline. 
-- `id` is the id of the pipeline. One of `name` or
-`id` must be specified.
+- `project` is the name of the project that contains the pipeline.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `name` is the name of the pipeline.
+- `id` is the id of the pipeline. One of `name` or `id` must be specified.
 - `job-name` is the name of the job to be created or used. This field is optional. 
 - `description` is the description of the job that is run.
 - `version` specifies the version of the pipeline that is run.
 - `run-name` provides a job run name for this pipeline job run.
-- `param` specifies a parameter value to pass to the job. The value is in the
-format `name=value`, where name is the parameter name and value is the value to be
-set. This flag can be repeated, ex: `--param k1=v1 --param k2=v2`
+- `param` specifies a parameter value to pass to the job. The value is in the format `name=value`, where name is the parameter name and value is the value to be set. This flag can be repeated, ex: `--param k1=v1 --param k2=v2`
 - `paramfile` specifies a file that contains the parameter values to pass to the
-job. This field is not implemented currently. 
+job. This field is not implemented currently.
 - `env` specifies the environment in which job is run. `env` is
 specified as a key=value pair. Key `env` or `env-id` can be used to chose a runtime environment.
 Example: `--env $APT_DUMP_SCORE=true --env env=ds-px-default`
@@ -1171,7 +963,8 @@ Example: `--env $APT_DUMP_SCORE=true --env env=ds-px-default`
 - `reset-cache` when set to true, cache is reset before the pipeline run.
 - `no-logs` when this and `wait` are specified, pipeline run will not produce output logs while waiting for the run to finish. This field is optional.
 
-A status code is printed to the output. 
+A status code is printed to the output.
+
 - 0: successfully completed
 - 1: completed with warnings
 - 3: completed with error
@@ -1179,137 +972,116 @@ A status code is printed to the output.
 - 5: canceled
 - -1: other
 
-
-
 ### Printing pipeline run logs
+
 The following syntax fetches run logs of a pipeline run in the specified project:
 ```
 cpdctl dsjob get-pipeline-logs {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--run-id RUNID]
 ```
 
-
-- `project` is the name of the project that contains the pipeline. 
+- `project` is the name of the project that contains the pipeline.
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
-- `name` is the name of the pipeline. 
+- `name` is the name of the pipeline.
 - `id` is the id of the pipeline. One of `name` or
 `id` must be specified.
 - `run-id` if specified, the logs for that run id is printed. If not specified, the
 logs from the latest run are printed.
 
-
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
-
 
 ## Imports and exports
 
 ### Importing
+
 The following syntax imports the specified project to a file:
 ```
 cpdctl dsjob import {--project PROJECT | --project-id PROJID} --import-file FILENAME [--wait secs]
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `import-file` is the name of the file that contains previously exported
-assets.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `import-file` is the name of the file that contains previously exported assets.
 - `wait` specifies the time in seconds to wait for the command to complete. For example, `--wait 200` waits for a maximum of 200 secs, checking status of the import, and returns an exit code other than zero if it does not complete. You can set `--wait -1` to wait for completion indefinitely.
 
+A status code is printed to the output.
 
-A status code is printed to the output. 
 - 0: successfully completed
 - 1: failed
 - 3: timed out
 - 4: canceled
 
-
-
 ### Exporting
+
 The following syntax exports the specified project to a file:
 ```
 cpdctl dsjob export {--project PROJECT | --project-id PROJID} --name NAME [--description DESCRIPTION] [--export-file FILENAME] [--wait secs] [--asset-type TYPE] [--asset <name,type>...] [--all]
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `asset list` is a list of all the asset names to be exported. Format:
 `--asset type=assetname1,assetname2`.
 - `name` is the name of the export.
-- `asset-type` is a list of all asset types to export, ex: `--asset-type
-Connection --asset-type data_flow`.
+- `asset-type` is a list of all asset types to export, ex: `--asset-type Connection --asset-type data_flow`.
 - `description` is a description of the exported assets.
 - `export-file` is the file for assets to be exported to.
 - `wait` specifies the time in seconds to wait for the command to complete. For example, `--wait 200` waits for a maximum of 200 secs, checking status of the export, and returns an exit code other than zero if it does not complete. You can set `--wait -1` to wait for completion indefinitely.
 
+A status code is printed to the output.
 
-A status code is printed to the output. 
 - 0: successfully completed
 - 2: failed
 - 3: timed out
 - 4: canceled
 - 5: deleting
 
-
-
 ### Listing exports
+
 The following syntax displays a list of all exports from the specified project:
+
 ```
 cpdctl dsjob list-exports {--project PROJECT | --project-id PROJID}
 ```
+
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 
-A status code is printed to the output. A status code of 0 indicates successful completion
-of the command.
-
+A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
 ### Saving exports
+
 The following syntax saves an export to a file.
 ```
 cpdctl dsjob save-export {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} --export-file FILENAME 
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `name` is the name of the export. 
-- `id` is the id of the export. One of `name` or `id`
-must be specified.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `name` is the name of the export.
+- `id` is the id of the export. One of `name` or `id` must be specified.
 - `export-file` is the name of the file that the export is saved to.
 
-
-A status code is printed to the output. A status code of 0 indicates successful completion of
-the command.
-
+A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
 ### Deleting exports
+
 The following syntax deletes an export from the specified project:
 ```
 cpdctl dsjob delete-export {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the export. 
 - `id` is the id of the export. One of `name` or `id`
 must be specified.
 
-
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
-### Exporting a DataStage flow 
-
+### Exporting a DataStage flow
 
 The following syntax exports the DataStage components from a specified project to a file:
 
@@ -1317,33 +1089,23 @@ The following syntax exports the DataStage components from a specified project t
 cpdctl dsjob export-project {--project PROJECT | --project-id PROJID} --file-name <PROJECTZIP> [--include-data-assets] [--exclude-datasets-filesets] [--enc-key <ENCODING-KEY>] [--wait secs]
 ```
 
-
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `file-name` is the file for assets to be exported to. This field is used only
-when `wait` is specified and export is completed within specified wait timeout.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `file-name` is the file for assets to be exported to. This field is used only when `wait` is specified and export is completed within specified wait timeout.
 -  `wait` specifies the time in seconds to wait for the command to complete. For example, `--wait 200` waits for a maximum of 200 secs, checking status of the export, and returns an exit code other than zero if it does not complete. You can set `--wait -1` to wait for completion indefinitely.
-- `include-data-assets` includes the project's data assets as part of the
-export.
+- `include-data-assets` includes the project's data assets as part of the export.
 - `exclude-datasets-filesets` when specified, datasets and filesets are exported but the data is excluded.
 - `enc-key` specifies the encryption key used to encrypt exported sensitive data. This key must be a string that will be used during import process to decrypt and must be saved securely.
 
-
-
 A status code is printed to the output.
--   0: successfully completed
--   1: failed
--   2: completed with error
--   3: timed out
--   4: canceled
 
-
-
+- 0: successfully completed
+- 1: failed
+- 2: completed with error
+- 3: timed out
+- 4: canceled
 
 ### Checking flow export status
-
 
 The following syntax gets the status of an export operation in progress.
 
@@ -1351,22 +1113,14 @@ The following syntax gets the status of an export operation in progress.
 cpdctl dsjob get-export-project {--project PROJECT | --project-id PROJID} [--with-metadata]
 ```
 
-
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `with-metadata` when specified adds metadata to the output.
-
-
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the
 command.
 
-
-
 ### Saving export to a file
-
 
 The following syntax saves the export from a specified project to a file:
 
@@ -1374,90 +1128,62 @@ The following syntax saves the export from a specified project to a file:
 cpdctl dsjob save-export-project {--project PROJECT | --project-id PROJID} --file-name FILENAME
 ```
 
-
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `file-name` is the file to which the project export contents are written.
 
-
-
-A status code is printed to the output. A status code of 0 indicates successful completion of the
-command.
-
-
+A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
 ### Canceling an export
 
-
-The following syntax stops the export operation on a specified
-project:
+The following syntax stops the export operation on a specified project:
 ```
 cpdctl dsjob stop-export-project {--project PROJECT | --project-id PROJID}
 ```
 
-
-
 - `project` is the name of the project.
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
-
-
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the
 command.
 
-
-
 ## .ZIP files
 
 ### Importing .zip files
-The following syntax imports DataStage flows from a .zip file into a specified project: 
+
+The following syntax imports DataStage flows from a .zip file into a specified project:
 ```
 cpdctl dsjob import-zip {--project PROJECT | --project-id PROJID} [--on-failure ONFAILURE] [--conflict-resolution CONFLICT-RESOLUTION] [--skip-on-replace LIST] [--hard-replace] [--asset-type LIST] [--no-compile] [--enable-notification] --file-name FILE-NAME [--wait secs] [--enc-key <ENCODING KEY>]
 ```
 
-
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or
-`project-id` must be specified.
-- `on-failure` indicates what action to take if the import fails. This field is
-optional. The default option is continue, the other option is stop.
-- `conflict-resolution` specifies the resolution when the data flow to be imported
-has the same name as an existing data flow in the project or catalog. This field is optional. The
-default option is skip, the others are rename and replace.
-- `skip-on-replace` specifies a list of object types to skip. The following values
-are valid for object types: `connection, data_intg_subflow, data_definition, parameter_set,
-data_asset, ds_message_handler, data_intg_build_stage, data_intg_custom_stage,
-data_intg_wrapped_stage, standardization_rule, ds_xml_schema_library, custom_stage_library,
-function_library, ds_routine, ds_match_specification, data_intg_parallel_function,
-data_intg_java_library, data_quality_rule, data_quality_definition`.
+- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `on-failure` indicates what action to take if the import fails. This field is optional. The default option is continue, the other option is stop.
+- `conflict-resolution` specifies the resolution when the data flow to be imported has the same name as an existing data flow in the project or catalog. This field is optional. The default option is skip, the others are rename and replace.
+- `skip-on-replace` specifies a list of object types to skip. The following values are valid for object types: `connection, data_intg_subflow, data_definition, parameter_set, data_asset, ds_message_handler, data_intg_build_stage, data_intg_custom_stage, data_intg_wrapped_stage, standardization_rule, ds_xml_schema_library, custom_stage_library, function_library, ds_routine, ds_match_specification, data_intg_parallel_function, data_intg_java_library, data_quality_rule, data_quality_definition`.
 - `hard-replace` If true, fields in parameter sets will be replaced with incoming source field values. This field can be used only when conflict resolution is set to skip or replace.
 - `asset-type` if specified only asset types in this list are imported ex: data_intg_subflow.
 - `no-compile` if true, flows imported will not be compiled.
 - `enable-notification` when true, allows notifications to be sent during import.
-- `file-name` is the name of the .zip file that contains all the DataStage flows
-and DataStage components to be imported. This field is mandatory.
--  `wait`  specifies the time in seconds to wait for the command to complete. For example, `--wait 200` waits for a maximum of 200 secs, checking status of the import, and returns an exit code other than zero if it does not complete. You can set `--wait -1` to wait for completion indefinitely.
+- `file-name` is the name of the .zip file that contains all the DataStage flows and DataStage components to be imported. This field is mandatory.
+- `wait`  specifies the time in seconds to wait for the command to complete. For example, `--wait 200` waits for a maximum of 200 secs, checking status of the import, and returns an exit code other than zero if it does not complete. You can set `--wait -1` to wait for completion indefinitely.
 - `enc-key` specifies the encryption key used to encrypt exported sensitive data. This key must be the same string that is used during the export process. To decrypt and import to run successfully, this is is required if export is run with --enc-key option.
 
-
 A status code is printed to the output.
--   0: successfully completed
--   1: failed
--   2: completed with error
--   3: timed out
--   4: canceled
 
-
+- 0: successfully completed
+- 1: failed
+- 2: completed with error
+- 3: timed out
+- 4: canceled
 
 ### Getting status of import requests from .zip files
-The following syntax gets the status of an import request using import-zip: 
+
+The following syntax gets the status of an import request using import-zip:
 ```
 cpdctl dsjob get-import-zip {--project PROJECT | --project-id PROJID} --import-id [--format json|csv] [--file-name FILENAME] 
 ```
-
 
 - `project` is the name of the project.
 - `project-id` is the id of the project. One of `project` or
@@ -1466,20 +1192,18 @@ cpdctl dsjob get-import-zip {--project PROJECT | --project-id PROJID} --import-i
 - `format` specifies the format of the output file. This field is optional. The
 default value is json. The other option is csv.
 - `file-name` specifies the name of the file to which the output is written. This
-field is optional. 
-
+field is optional.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Exporting .zip files
+
 The following syntax exports a DataStage flow and dependent DataStage components to a .zip file
-from a specified project: 
+from a specified project:
 ```
 cpdctl dsjob export-zip {--project PROJECT | --project-id PROJID} {--name FLOW | --id ID}... {--pipeline SEQFLOWNAME | --pipeline-id SEQFLOWID}... {--testcase TESTCASENAME | --testcase-id TESTCASEID}... --file-name FILENAME [--no-secrets] [--no-deps] [--include-data-assets] [--exclude-datasets-filesets] [--enc-key <ENCODING KEY>]
 ```
-
 
 - `project` is the name of the project.
 - `project-id` is the id of the project. One of project or project-id must be specified.
@@ -1496,17 +1220,14 @@ cpdctl dsjob export-zip {--project PROJECT | --project-id PROJID} {--name FLOW |
 - `exclude-datasets-filesets` when specified datasets and filesets are exported but the data is excluded.
 - `enc-key` specifies encryption key used to encrypt exported sensitive data. This key must be a string that will be used during import process to decrypt and must be saved securely.
 
-
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
-
 
 ### Exporting DataStage components
 The following syntax will export all DataStage components in a specified project to a .zip file:
 ```
 cpdctl dsjob export-datastage-assets {--project PROJECT | --project-id PROJID} [--file-name <FILENAME>] [--include-data-assets] [-exclude-datasets-filesets] [--enc-key <ENCODING KEY>]
 ```
-
 
 - `project` is the name of the project.
 - `project-id` is the id of the project. One of `project` or
@@ -1516,23 +1237,22 @@ cpdctl dsjob export-datastage-assets {--project PROJECT | --project-id PROJID} [
 - `exclude-datasets-filesets` when specified datasets and filesets are exported but the data is excluded.
 - `enc-key` specifies encryption key used to encrypt exported sensitive data. This key must be a string that will be used during import process to decrypt and must be saved securely.
 
-
 This call is synchronous and prints out the status of the export progress, as well as a
 summary of independent components written to the output file.
 A status code is printed to the
 output. A status code of 0 indicates successful completion of the command.
 
-
 ## Connections
 
 ### Listing connections
-The following syntax displays a list of all connections in the specified project: 
+
+The following syntax displays a list of all connections in the specified project:
+
 ```
 cpdctl dsjob list-connections {--project PROJECT | --project-id PROJID} [--sort|--sort-by-time] [--with-id]
 ```
 
-
-- `project` is the name of the project that contains the connections to list. 
+- `project` is the name of the project that contains the connections to list.
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified. A list of all the DataStage connections in the project is displayed, one per
 line.
@@ -1543,22 +1263,20 @@ order. This field is optional.
 - `with-id` when specified prints the connection id along with the name of the
 connection.
 
-
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Creating connections
+
 The following syntax creates a flow in the specified project:
 ```
 cpdctl dsjob create-connection {--project PROJECT | --project-id PROJID} --name NAME [--description DESCRIPTION] --datasource-type TYPE [--country COUNTRY] [--no-test] --property-file FILENAME
 ```
 
-
-- `project` is the name of the project. 
+- `project` is the name of the project.
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
-- `name` is the name of the connection being created. 
+- `name` is the name of the connection being created.
 - `description` is the description of the connection being created. This field is
 optional.
 - `datasource-type` is the data source type for the connection ex: MySQL, DB2,
@@ -1568,22 +1286,21 @@ AzureBlobStorage, etc.
 This field must be specified.
 - `no-test` if true, connection is added without validation.
 
-
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Getting connections
+
 The following syntax fetches a connection by name from the specified project:
+
 ```
 cpdctl dsjob get-connection {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata]
 ```
 
-
 - `project` is the name of the project that the connection is fetched from.
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
-- `name` is the name of the queried connection. 
+- `name` is the name of the queried connection.
 - `id` is the id of the connection. One of `name` or
 `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
@@ -1591,17 +1308,16 @@ cpdctl dsjob get-connection {--project PROJECT | --project-id PROJID} {--name NA
 field is optional.
 - `with-metadata` when specified adds metadata to the output.
 
-
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Deleting connections
+
 The following syntax deletes a connection by name from the specified project:
+
 ```
 cpdctl dsjob delete-connection {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}...
 ```
-
 
 - `project` is the name of the project that the connection is deleted from.
 - `project-id` is the id of the project. One of `project` or
@@ -1612,22 +1328,21 @@ cpdctl dsjob delete-connection {--project PROJECT | --project-id PROJID} {--name
 and `id` to delete multiple items, in the format `--name NAME1 --name
 NAME2...`.
 
-
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
 
-
 ### Updating connections
+
 The following syntax updates a connection by name from the specified project:
+
 ```
 cpdctl dsjob update-connection {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--to-name NAME] [--property name=value]... [--file-name PROPERTYFILE] [--make-personal]
 ```
 
-
-- `project` is the name of the project that contains the connection. 
+- `project` is the name of the project that contains the connection.
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
-- `name` is the name of the connection. 
+- `name` is the name of the connection.
 - `id` is the id of the connection. One of `name` or
 `id` must be specified.
 - `to-name` renames the connection to a specified new name.
@@ -1638,7 +1353,6 @@ property and `value` is the value to be set. This flag can be repeated, ex:
 - `file-name` specifies a file that contains the property values to pass to update
 the connection.
 - `make-personal` changes the connection settings from shared to personal.
-
 
 A status code is printed to the output. A status code of 0 indicates successful completion of
 the command.
@@ -2110,6 +1824,7 @@ The following syntax exports parameter sets by name from the specified project. 
 ```
 cpdctl dsjob export-paramset {--project PROJECT | --project-id PROJID} {--name NAME...} --file-name ZIPFile
 ```
+
 -   `project`  is the name of the project.
 -   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 -   `name`  is the name of the parameter set. `name`  can be a regular expression or a list. Example: `--name abc.*` exports all names that start with abc and `--name ps1 --name ps2` will export two parameter sets named `ps1` and `ps2`.
@@ -2592,6 +2307,7 @@ The following syntax lists all environment variables defined in a specified proj
 ```
 cpdctl dsjob list-env-vars {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--type TYPE] [--sort]
 ```
+
 - `project` is the name of the project. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -2610,6 +2326,7 @@ The following syntax updates the environment variables defined in a specified pr
 ```
 cpdctl dsjob update-env-vars {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--type TYPE] [--env k=v...] [--file-name FILENAME]
 ```
+
 - `project` is the name of the project. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -2629,6 +2346,7 @@ The following syntax deletes the environment variables that are defined in a spe
 ```
 cpdctl dsjob delete-env-vars {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--type TYPE] [--env ENV...] [--file-name FILENAME]
 ```
+
 - `project` is the name of the project. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -2685,6 +2403,7 @@ The following syntax lists all datasets in a given project.
 ```
 cpdctl dsjob list-datasets {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id] 
 ```
+
 -   `project`  is the name of the project.
 -   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 -   `sort`  when specified returns the list of datasets sorted in alphabetical order. This field is optional.
@@ -2715,6 +2434,7 @@ The following syntax is used to fetch the asset definition for a dataset.
 ```
 cpdctl dsjob get-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata]
 ```
+
 -   `project`  is the name of the project that contains the dataset.
 -   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 -   `name`  is the name of the dataset.
@@ -2767,9 +2487,9 @@ The following syntax uploads a dataset to a project. The dataset along with sche
 
 ```
 
--   `project`  is the name of the project.
--   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
--   `file-name`  name of the .zip file to which exported content is written.
+- `project`  is the name of the project.
+- `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
+- `file-name`  name of the .zip file to which exported content is written.
 
 The asset id of the newly created dataset is printed to the output.
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
@@ -2795,6 +2515,7 @@ The following syntax renames a dataset in the specified project.
 ```
 cpdctl dsjob rename-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  --to-name NEWNAME
 ```
+
 -   `project`  is the name of the project.
 -   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 -   `name`  is the name of the dataset.
@@ -2808,6 +2529,7 @@ The following syntax provides a description of the fileset schema definition in 
 ```
 cpdctl dsjob describe-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}
 ```
+
 - `project`  is the name of the project.
 - `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 - `name`  is the name of the fileset.
@@ -2821,6 +2543,7 @@ The following syntax provides the metadata and sample data of a fileset in the g
 ```
 cpdctl dsjob view-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}
 ```
+
 - `project`  is the name of the project.
 - `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 - `name`  is the name of the fileset.
@@ -2833,6 +2556,7 @@ The following syntax lists all filesets in a given project.
 ```
 cpdctl dsjob list-filesets {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
 ```
+
 - `project`  is the name of the project.
 - `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 - `sort`  when specified returns the list of filesets sorted in alphabetical order. This field is optional.
@@ -2847,6 +2571,7 @@ The following syntax deletes filesets. Note that currently it only deletes the a
 ```
 cpdctl dsjob delete-fileset {--project PROJECT | --project-id PROJID}  {--name NAME | --id ID}... [--dry-run]
 ```
+
 - `project`  is the name of the project.
 - `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 -   `name`  is the name of the fileset. Name can be repeated multiple times and can be used like a unix style wildcard pattern to match multiple items, ex: `--name *.ds --name myFS*`
@@ -2916,9 +2641,9 @@ The following syntax uploads a fileset to a project. The fileset along with sche
 
 ```
 
--   `project`  is the name of the project.
--   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
--   `file-name`  name of the zip file to which exported content is written.
+- `project`  is the name of the project.
+- `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
+- `file-name`  name of the zip file to which exported content is written.
 
 The asset id of the newly created fileset is printed to the output.
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
@@ -2947,6 +2672,7 @@ The following syntax renames a fileset in the specified project.
 ```
 cpdctl dsjob rename-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  --to-name NEWNAME
 ```
+
 -   `project`  is the name of the project.
 -   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 -   `name`  is the name of the fileset.
@@ -3041,6 +2767,7 @@ The following syntax fetches a build stage by name from the specified project:
 ```
 cpdctl dsjob get-build-stage {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata] 
 ```
+
 - `project` is the name of the project that contains the build stage. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -3061,6 +2788,7 @@ The following syntax deletes a build stage by name from the specified project:
 ```
 cpdctl dsjob delete-build-stage {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}...
 ```
+
 - `project` is the name of the project that contains the build stage. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -3079,6 +2807,7 @@ The following syntax generates and compiles the code for a build stage:
 ```
 cpdctl dsjob generate-build-stage {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}
 ```
+
 - `project` is the name of the project that contains the build stage. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -3156,6 +2885,7 @@ The following syntax fetches a custom stage by name from the specified project:
 ```
 cpdctl dsjob get-custom-stage {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata] 
 ```
+
 - `project` is the name of the project that contains the custom stage. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -3176,6 +2906,7 @@ The following syntax deletes a custom stage by name from the specified project:
 ```
 cpdctl dsjob delete-custom-stage {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}...
 ```
+
 - `project` is the name of the project that contains the custom stage. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -3255,6 +2986,7 @@ The following syntax fetches a wrapped stage by name from the specified project:
 ```
 cpdctl dsjob get-wrapped-stage {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata] 
 ```
+
 - `project` is the name of the project that contains the wrapped stage. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -3275,6 +3007,7 @@ The following syntax deletes a wrapped stage by name from the specified project:
 ```
 cpdctl dsjob delete-wrapped-stage {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}...
 ```
+
 - `project` is the name of the project that contains the wrapped stage. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -3294,6 +3027,7 @@ stage:
 ```
 cpdctl dsjob generate-wrapped-stage {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}
 ```
+
 - `project` is the name of the project that contains the wrapped stage. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -3369,6 +3103,7 @@ The following syntax fetches an attachment by name from the specified project:
 ```
 cpdctl dsjob get-attachment {--project PROJECT | --project-id PROJID} {--asset-name NAME | --asset-id ID} {--name NAME | --id ID} --file-name FILENAME
 ```
+
 - `project` is the name of the project that contains the asset. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -3393,6 +3128,7 @@ The following syntax displays a list of all match specifications in the specifie
 ```
 cpdctl dsjob list-match-specs {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
 ```
+
 - `project` is the name of the project that contains the match specifications to
 list.
 - `project-id` is the id of the project. One of `project` or
@@ -3416,6 +3152,7 @@ The following syntax fetches a match specification by name from the specified pr
 ```
 cpdctl dsjob get-match-spec {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata] 
 ```
+
 - `project` is the name of the project that contains the match specification. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -3436,6 +3173,7 @@ The following syntax deletes a match specification by name from the specified pr
 ```
 cpdctl dsjob delete-match-spec {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}...
 ```
+
 - `project` is the name of the project that contains the match specification. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -3818,6 +3556,7 @@ The following syntax displays a list of all standardization rules in the specifi
 ```
 cpdctl dsjob list-rules {--project PROJECT | --project-id PROJID} [--custom-only]
 ```
+
 - `project` is the name of the project that contains the standardization rules to
 list.
 - `project-id` is the id of the project. One of `project` or
@@ -3855,6 +3594,7 @@ The following syntax fetches a standardization rule by name from the specified p
 ```
 cpdctl dsjob get-rule {--project PROJECT | --project-id PROJID} --name NAME --location LOCATION [--output file|json] [--file-name FILENAME]
 ```
+
 - `project` is the name of the project that contains the standardization rule. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -3873,6 +3613,7 @@ The following syntax deletes a standardization rule by name from the specified p
 ```
 cpdctl dsjob delete-rule {--project PROJECT | --project-id PROJID} --name NAME --location LOCATION
 ```
+
 - `project` is the name of the project that contains the standardization rule. 
 - `project-id` is the id of the project. One of `project` or
 `project-id` must be specified.
@@ -4089,6 +3830,7 @@ cluster:
 ```
 cpdctl dsjob list-volumes [--sort | --sort-by-time | --sort-by-size]
 ```
+
 - `sort` sorts by name of the volume.
 - `sort-by-time` sorts by time of the volume's creation.
 - `sort-by-size` sorts by size of the volume. Only one sort flag may be specified.
@@ -4107,6 +3849,7 @@ volume:
 ```
 cpdctl dsjob create-volume-dir --name VOLNAME --dir-name DIRNAME
 ```
+
 - `name` is the name of the volume.
 - `dir-name` is the name of the directory being created. 
 
@@ -4123,6 +3866,7 @@ volume:
 ```
 cpdctl dsjob delete-volume-dir --name VOLNAME --dir-name DIRNAME
 ```
+
 - `name` is the name of the volume.
 - `dir-name` is the name of the directory being deleted. 
 
@@ -4139,6 +3883,7 @@ volume:
 ```
 cpdctl dsjob list-volume-files -- name VOLNAME [--path DIRPATH]
 ```
+
 - `name` is the name of the volume.
 - `path` is a path on the volume. This field is optional. 
 
@@ -4155,6 +3900,7 @@ volume:
 ```
 cpdctl dsjob upload-volume-files --name VOLNAME --path DIRPATH --file-name LOCALFILENAME [--to-file TARGETFILENAME] [--extract]
 ```
+
 - `name` is the name of the volume.
 - `path` is a path on the volume. This field is optional. 
 - `file-name` is the name of the file to upload.
@@ -4172,6 +3918,7 @@ volume:
 ```
 cpdctl dsjob download-volume-files -- name VOLNAME [--path DIRPATH] [--file-name <FILETODOWNLOAD>] [--output-file <OUTPUTFILE>]
 ```
+
 - `name` is the name of the volume.
 - `path` is a path on the volume. This field is optional. 
 - `file-name` is the name of the file to download.
@@ -4371,6 +4118,7 @@ The following syntax deletes a CFF Schema by name from the specified project:
 ```
 cpdctl dsjob delete-cff-schema {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}...
 ```
+
 -   `project`  is the name of the project that contains the CFF Schema.
 -   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 -   `name`  is the name of the CFF Schema that is being deleted.
@@ -4464,6 +4212,7 @@ The following syntax deletes a folder by name from the specified project:
 ```
 cpdctl dsjob delete-folder {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--include-content]
 ```
+
 -   `project`  is the name of the project that contains the folder.
 -   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 -   `name`  is the name of the folder that is being deleted.
@@ -4488,19 +4237,20 @@ cpdctl dsjob move-folder {--project PROJECT | --project-id PROJID} {--name NAME 
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
-### Export assets in a Folder
+### Exporting folders
+
 The following syntax exports folder assets and optionally all subfolders into a zip file that can be imported into a project.
 
 ```
 cpdctl dsjob export-folder {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  [--deep] [--file-name <EXPORTFILE>]
 ```
 
--   `project`  is the name of the project.
--   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
--   `name`  is the name of the asset.
--   `id`  is the id of the asset. One of  `name`  or  `id`  must be specified.
--   `file-name`  specifies the name of the file to which the output is written.
--  `deep` If true, exports all objects under the folder and its subfolders, recursively. Default value is false. 
+- `project`  is the name of the project.
+- `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
+- `name`  is the name of the asset.
+- `id`  is the id of the asset. One of  `name`  or  `id`  must be specified.
+- `file-name`  specifies the name of the file to which the output is written.
+- `deep` If true, exports all objects under the folder and its subfolders, recursively. Default value is false. 
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command. 
 
@@ -4529,6 +4279,7 @@ The following command exports an existing projects and persists to a git repo.
 ```
 cpdctl dsjob git-commit {--project PROJECT | --project-id PROJID} [--repo <REPONAME>] [--branch <BRANCH>] [--in-folder <FOLDERNAME>] [--commit-message <MSG>] [--use-zip] <ZIPFILE>] [--include-data-assets] [--exclude-datasets-filesets] [--enc-key <ENCODING KEY>]
 ```
+
 -   `project`  is the name of the project.
 -   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 -  `repo` name of the git repo.
@@ -4546,6 +4297,7 @@ The following command imports content from a git repo into a project.
 ```
 cpdctl dsjob git-pull {--project PROJECT | --project-id PROJID} [--repo <REPONAME>] [--in-folder <FOLDERNAME>] [--branch <BRANCH>] [--name ASSETNAME | --id ASSETID]... [--on-failure ONFAILURE] [--conflict-resolution CONFLICT-RESOLUTION]
 ```
+
 -   `project`  is the name of the project.
 -   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 -  `repo` name of the git repo.
@@ -4561,6 +4313,7 @@ The following command can be used to obtain status on what has changed between y
 ```
 cpdctl dsjob git-status {--project PROJECT | --project-id PROJID} [--repo <REPONAME>] [--in-folder <FOLDERNAME>] 
 ```
+
 -   `project`  is the name of the project.
 -   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 -  `repo` name of the git repo.
@@ -4571,4 +4324,5 @@ The following command can be used to encrypt a plain text string or a legacy enc
 ```
 cpdctl dsjob encrypt {--text <input>} 
 ```
+
 -   `text` is any text that is plain or encoded, the input will be converted to an encoded string that can be used on the cluster you are connected to. 
