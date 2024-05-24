@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=0.0.1
+TOOL_VERSION=0.0.2
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -70,16 +70,16 @@ STR_CPUS='  --cpus                      Specify CPU allocated to the docker cont
 STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, else use a container registry apikey (default is false).'
 STR_HELP='  help, --help                Print usage information'
 
+
 #######################################################################
 # cli functions
 #######################################################################
 
 help_header() {
     script_name=$(basename "${0}")
-    echo ""
     print_tool_name_version
     echo "This tool manages manages IBM DataStage remote engine instances."
-    echo "Find more information at: https://dataplatform.cloud.ibm.com/cli-docs"
+    echo "Find more information at: https://github.com/IBM/DataStage/blob/main/RemoteEngine"
     echo ""
 }
 
@@ -93,6 +93,7 @@ print_help() {
     echo "${bold}commands:${normal}"
     echo "    start           start a remote engine instance"
     echo "    stop            stop a remote engine instance"
+    echo "    update          update a remote engine instance"
     echo "    cleanup         cleanup a remote engine instance"
     echo "    help, --help    Print usage information"
     echo ""
@@ -110,7 +111,7 @@ function main(){
     fi
 
     case ${1} in
-        start | stop | cleanup | help)
+        start | stop | update | cleanup | help)
             $1 "${@:2}";
         ;;
         * )
@@ -125,7 +126,9 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--use-entitlement-key]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--volume-dir]\n                         [--select-version] [--set-user] [--help]"
+    elif [[ "${ACTION}" == 'update' ]]; then
+        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -143,10 +146,12 @@ print_usage() {
         echo "${STR_IAM_APIKEY}"
     fi
 
-    if [[ "${ACTION}" == 'start' ]]; then
+    if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
         echo "${STR_PROD_APIKEY}"
-        echo "${STR_DSNEXT_SEC_KEY}"
-        echo "${STR_IVSPEC}"
+        if [[ "${ACTION}" == 'start' ]]; then
+            echo "${STR_DSNEXT_SEC_KEY}"
+            echo "${STR_IVSPEC}"
+        fi
     fi
 
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'cleanup' ]]; then
@@ -154,18 +159,39 @@ print_usage() {
         echo "${STR_DSTAGE_HOME}"
     fi
 
-    if [[ "${ACTION}" == 'start' ]]; then
-        echo "${STR_MEMORY}"
-        echo "${STR_CPUS}"
-        echo "${STR_VOLUMES}"
+    if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
+        if [[ "${ACTION}" == 'start' ]]; then
+            echo "${STR_MEMORY}"
+            echo "${STR_CPUS}"
+            echo "${STR_VOLUMES}"
+            echo "${STR_SET_USER}"
+        fi
         echo "${STR_SELECT_PX_VERSION}"
-        echo "${STR_SET_USER}"
         # echo "${STR_USE_ENT_KEY}"
         # echo "${STR_PLATFORM}"
     fi
 
     echo "${STR_HELP}"
     echo ""
+}
+
+function set_container_registry() {
+    if [[ "${1}" == 'true' ]]; then
+        DOCKER_REGISTRY='cp.icr.io/cp'
+        echo_error_and_exit 'Setting --use-entitlement-key to true is currently not supported. Aborting.'
+    elif [[ "${1}" == 'false' ]]; then
+        DOCKER_REGISTRY='icr.io/datastage'
+    else
+        echo_error_and_exit 'Incorrect option specified for flag "--use-entitlement-key". Acceptable values are: [true, false]'
+    fi
+}
+
+function handle_select_version() {
+    if [[ "${1}" == 'true' || "${1}" == 'false' ]]; then
+        SELECT_PX_VERSION="${1}"
+    else
+        echo_error_and_exit 'Incorrect option specified for flag "--select-version". Acceptable values are: [true, false]'
+    fi
 }
 
 function start() {
@@ -228,11 +254,7 @@ function start() {
         #     ;;
         --select-version)
             shift
-            if [[ "${1}" == 'true' || "${1}" == 'false' ]]; then
-                SELECT_PX_VERSION="${1}"
-            else
-                echo_error_and_exit 'Incorrect option specified for flag "--select-version". Acceptable values are: [true, false]'
-            fi
+            handle_select_version "${1}"
             ;;
         --set-user)
             shift
@@ -240,14 +262,51 @@ function start() {
             ;;
         --use-entitlement-key)
             shift
-            if [[ "${1}" == 'true' ]]; then
-                DOCKER_REGISTRY='cp.icr.io/cp'
-                echo_error_and_exit 'Setting --use-entitlement-key to true is currently not supported. Aborting.'
-            elif [[ "${1}" == 'false' ]]; then
-                DOCKER_REGISTRY='icr.io/datastage'
-            else
-                echo_error_and_exit 'Incorrect option specified for flag "--use-entitlement-key". Acceptable values are: [true, false]'
-            fi
+            set_container_registry "${1}"
+            ;;
+        -h | --help | help)
+            print_usage
+            exit 1
+            ;;
+        *)
+            echo "Unknown option specified: $1"
+            print_usage
+            exit 1
+            ;;
+        esac
+        shift
+    done
+}
+
+function update() {
+    ACTION='update'
+    if [[ "${#}" == 0 ]]; then
+        print_usage
+        exit 1
+    fi
+
+    # process options
+    while [[ "$1" != "" ]]; do
+        case "$1" in
+        -n | --remote-engine-name)
+            shift
+            REMOTE_ENGINE_NAME="$1"
+            ;;
+        -a | --apikey)
+            shift
+            IAM_APIKEY="$1"
+            ;;
+        -p | --prod-apikey)
+            shift
+            IAM_APIKEY_PROD="$1"
+            ;;
+        --select-version)
+            shift
+            handle_select_version "${1}"
+            ;;
+        --use-entitlement-key)
+            shift
+            set_container_registry "${1}"
             ;;
         -h | --help | help)
             print_usage
@@ -566,8 +625,8 @@ remove_px_runtime_docker() {
 
 run_px_runtime_docker() {
     echo "Running container '${PXRUNTIME_CONTAINER_NAME}' ..."
-    end_port_1=$(( 10000 + ${COMPUTE_COUNT} ))
-    end_port_2=$(( 11000 + ${COMPUTE_COUNT} ))
+    # end_port_1=$(( 10000 + ${COMPUTE_COUNT} ))
+    # end_port_2=$(( 11000 + ${COMPUTE_COUNT} ))
     # -p 10000-${end_port_1}:10000-${end_port_1} -p 11000-${end_port_2}:11000-${end_port_2} -p 9443:9443 \
 
     runtime_docker_opts=(
@@ -658,7 +717,7 @@ wait_readiness_px_runtime()
             while (true); do
                 count=$(( $count + 1 ))
                 sleep 5
-                echo "  waiting for ${PXRUNTIME_CONTAINER_NAME} to start ... time elapsed: $(( $count * $WAIT_DURATION )) seconds"
+                echo "  waiting for ${PXRUNTIME_CONTAINER_NAME} to start... time elapsed: $(( $count * $WAIT_DURATION )) seconds"
                 if $DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" bash -c "curl -ks ${PXRUNTIME_VERSION_ENDPOINT}" | grep -q '"status":"ok"'; then
                     $DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" bash -c "curl -ks ${PXRUNTIME_VERSION_ENDPOINT}"
                     echo ""
@@ -1011,6 +1070,10 @@ validate_action_arguments() {
         [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify an IBM Cloud IAM APIKey (-a | --apikey) for the respective environment. Aborting."
     fi
 
+    if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
+        [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify a valid IBM Cloud Container Registry APIKey (-p | --prod-apikey). Aborting."
+    fi
+
     if [[ "${ACTION}" == 'start' ]]; then
         [ -z $DSNEXT_SEC_KEY ] && echo_error_and_exit "Please specify an encryption key (-e | --encryption-key. Aborting."
         [ -z $IVSPEC ] && echo_error_and_exit "Please specify the initialization vector for the encryption key (-i | --ivspec). Aborting."
@@ -1028,15 +1091,17 @@ validate_action_arguments() {
     check_docker_daemon
 
     # print in the console
-    echo "DATASTAGE_HOME=${DATASTAGE_HOME}"
-    echo "GATEWAY_URL=${GATEWAY_URL}"
-    echo "PROJECT_ID=${PROJECT_ID}"
-    echo "REMOTE_ENGINE_PREFIX=${REMOTE_ENGINE_NAME}"
-    echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
-    echo "CONTAINER_MEMORY=${PX_MEMORY}"
-    echo "CONTAINER_CPUS=${PX_CPUS}"
-    echo "DOCKER_VOLUMES_DIR=${DOCKER_VOLUMES_DIR}"
-    echo ""
+    if [[ "${ACTION}" == 'start' ]]; then
+        echo "DATASTAGE_HOME=${DATASTAGE_HOME}"
+        echo "GATEWAY_URL=${GATEWAY_URL}"
+        echo "PROJECT_ID=${PROJECT_ID}"
+        echo "REMOTE_ENGINE_PREFIX=${REMOTE_ENGINE_NAME}"
+        echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
+        echo "CONTAINER_MEMORY=${PX_MEMORY}"
+        echo "CONTAINER_CPUS=${PX_CPUS}"
+        echo "DOCKER_VOLUMES_DIR=${DOCKER_VOLUMES_DIR}"
+        echo ""
+    fi
 
     # finalize constants if all arguments are valid
     PXRUNTIME_CONTAINER_NAME="${REMOTE_ENGINE_NAME//[ ]/_}_runtime"
@@ -1398,7 +1463,6 @@ if [[ ${ACTION} == "start" ]]; then
 
     # docker run
     # ---------------------
-    TIMESTAMP=$(date +"%Y-%m-%d-%H-%M-%S")
     print_header "Starting instance '${REMOTE_ENGINE_NAME}' ..."
     run_px_runtime_docker
     wait_readiness_px_runtime
@@ -1460,18 +1524,109 @@ if [[ ${ACTION} == "start" ]]; then
     echo 'Remote engine is setup. You can navigate to the project settings and select this engine to be used by the project.'
     print_header "Remote Engine setup completed."
 
-elif [[ ${ACTION} == "stop" ]]; then
+elif [[ ${ACTION} == "update" ]]; then
 
+    # check if this container is present and running. If so then exit with a prompt
+    echo "Checking for existing container '${PXRUNTIME_CONTAINER_NAME}'"
+    if [[ $(check_pxruntime_container_exists_and_running) != "true" ]]; then
+        echo_error_and_exit "Container '${PXRUNTIME_CONTAINER_NAME}' not found or not running, aborting update."
+    fi
+
+    echo "Gathering variables required for update from the current container"
+    DSNEXT_SEC_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep DSNEXT_SEC_KEY | cut -d'=' -f2)
+    IVSPEC=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IVSPEC | cut -d'=' -f2)
+    PX_MEMORY=$(($($DOCKER_CMD inspect --format='{{.HostConfig.Memory}}' "${PXRUNTIME_CONTAINER_NAME}")/(1024*1024*1024))) # in GB
+    PX_CPUS=$(($($DOCKER_CMD inspect --format='{{.HostConfig.NanoCpus}}' "${PXRUNTIME_CONTAINER_NAME}")/(1000*1000*1000))) # in cores
+    GATEWAY_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
+    IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_URL | cut -d'=' -f2)
+    IAM_APIKEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+    DS_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/ds-storage") | .Source')
+    PX_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/px-storage") | .Source')
+    SCRATCH_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/opt/ibm/PXService/Server/scratch") | .Source')
+    CONTAINER_USER=$($DOCKER_CMD inspect --format='{{.Config.User}}' "${PXRUNTIME_CONTAINER_NAME}")
+    DOCKER_VOLUMES_DIR=$(dirname "$SCRATCH_DIR")
+
+    PX_MEMORY="${PX_MEMORY}G"
+    MASKED_DSNEXT_SEC_KEY="${DSNEXT_SEC_KEY:0:1}******${DSNEXT_SEC_KEY: -1}"
+    MASKED_IVSPEC="${IVSPEC:0:1}******${IVSPEC: -1}"
+    MASKED_IAM_APIKEY="${IAM_APIKEY:0:1}******${IAM_APIKEY: -1}"
+    # validate
+    [ -z $DSNEXT_SEC_KEY ] && "Could not retrieve DSNEXT_SEC_KEY from container ${PXRUNTIME_CONTAINER_NAME}."
+    [ -z $IVSPEC ] && "Could not retrieve IVSPEC from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $PX_MEMORY ] && "Could not retrieve PX_MEMORY from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $PX_CPUS ] && "Could not retrieve PX_CPUS from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $GATEWAY_URL ] && "Could not retrieve GATEWAY_URL from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $IAM_URL ] && "Could not retrieve IAM_URL from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $IAM_APIKEY ] && "Could not retrieve IAM_APIKEY from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $DS_STORAGE_HOST_DIR ] && "Could not retrieve DS_STORAGE_HOST_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $PX_STORAGE_HOST_DIR ] && "Could not retrieve PX_STORAGE_HOST_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $SCRATCH_DIR ] && "Could not retrieve SCRATCH_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $DOCKER_VOLUMES_DIR ] && "Could not retrieve DOCKER_VOLUMES_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $CONTAINER_USER ] && "Could not retrieve CONTAINER_USER from container ${PXRUNTIME_CONTAINER_NAME}"
+
+    echo "DSNEXT_SEC_KEY = ${MASKED_DSNEXT_SEC_KEY}"
+    echo "IVSPEC = ${MASKED_IVSPEC}"
+    echo "GATEWAY_URL = ${GATEWAY_URL}"
+    echo "CONTAINER_MEMORY = ${PX_MEMORY}"
+    echo "CONTAINER_CPUS = ${PX_CPUS}"
+    echo "IAM_URL = ${IAM_URL}"
+    echo "IAM_APIKEY = ${MASKED_IAM_APIKEY}"
+    echo "DS_STORAGE_HOST_DIR = ${DS_STORAGE_HOST_DIR}"
+    echo "PX_STORAGE_HOST_DIR = ${PX_STORAGE_HOST_DIR}"
+    echo "SCRATCH_DIR = ${SCRATCH_DIR}"
+    echo "CONTAINER_USER = ${CONTAINER_USER}"
+    echo "DOCKER_VOLUMES_DIR = ${DOCKER_VOLUMES_DIR}"
+
+    echo ""
     stop_px_runtime_docker
     remove_px_runtime_docker
 
-    print_header "Remote Engine container stopped and removed."
+    # IAM Token will be needed to retrieve latest digest, and make other api calls
+    echo "Getting IAM token"
+    get_iam_token
+    # check if the runtime image exists, if not, then download
+    print_header "Checking docker images ..."
+    if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
+        get_all_px_versions_from_runtime
+    else
+        if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
+            retrieve_latest_px_version
+        else
+            retrieve_latest_px_version_from_runtime
+        fi
+    fi
+
+    PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
+    # update the image variables to use the PX_VERSION version
+    if [[ "$PX_VERSION" == "latest" || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
+    else
+        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
+    fi
+    check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
+    print_header "Initializing ${TOOL_SHORTNAME} Runtime environment with name '${REMOTE_ENGINE_NAME}' ..."
+    echo "Setting up docker environment"
+
+    initialize_docker_network
+
+    print_header "Starting instance '${REMOTE_ENGINE_NAME}' ..."
+    run_px_runtime_docker
+    wait_readiness_px_runtime
+
+    print_header "Remote Engine container updated."
+
+elif [[ ${ACTION} == "stop" ]]; then
+
+    stop_px_runtime_docker
+    print_header "Remote Engine container stopped."
 
 elif [[ ${ACTION} == "cleanup" ]]; then
-    echo "WARNING: This will remove the docker container and also remove the persistent storage used with this instance:"
+    echo "WARNING: This will remove the docker container, de-register the engine and remove the persistent storage used with this engine instance:"
     echo " - ${CONTAINER_HOST_DIR}"
     echo "You may backup this directory to any other location."
-    read -p "Are you sure you want to proceed with the cleanup [y/n]? "
+    echo "NOTE: If you want to update this remote engine, you do not need to remove/uninstall it. In that case please abort this command and run the update command: , "
+    echo "      OR remove the container for this engine: '${DOCKER_CMD} rm ${PXRUNTIME_CONTAINER_NAME}'; and rerun the start command with the same name: '${REMOTE_ENGINE_NAME}'."
+    read -p "Are you sure you want to proceed with the uninstall [y/n]? "
     echo    # (optional) move to a new line
     if [[ $REPLY =~ ^[Yy]$ ]]; then
 

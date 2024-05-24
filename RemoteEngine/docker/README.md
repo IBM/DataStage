@@ -36,30 +36,22 @@
 1. IBM Cloud Container Registry API Key. This apikey will be used to download the images needed to run Remote Engine. Currently there is no way to generate this, so it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport
 
 ## Usage
-The `dsengine.sh` script can be invoked from the `docker` folder of this project. Note that the name in the below command can be changed form `remote_engine_name_01` to your preferred name.
+
+### 1. Start an engine
+The `dsengine.sh` script can be invoked from the `docker` folder of this project. Note that the name in the below command can be changed form `my_remote_engine_01` to your preferred name.
 ```bash
 # create/start a local remote engine instance
-./dsengine.sh start -n 'remote_engine_name_01' \
+./dsengine.sh start -n 'my_remote_engine_01' \
                     -a "$IBMCLOUD_APIKEY" \
                     -e "$ENCRYPTION_KEY" \
                     -i "$ENCRYPTION_IV" \
                     -p "$IBMCLOUD_CONTAINER_REGISTRY_APIKEY" \
                     --project-id "$PROJECT_ID"
 
-# stop a local remote engine instance
-./dsengine.sh stop -n 'remote_engine_name_01'
-
-# restart a local remote engine instance
-./dsengine.sh restart -n 'remote_engine_name_01'
-
-# cleanup a remote engine instance and its registration with DataPlatform
-./dsengine.sh cleanup -n 'remote_engine_name_01' \
-                      -a "$IBMCLOUD_APIKEY" \
-                      --project-id "$PROJECT_ID"
 ```
 Once the script execution has completed, this engine needs to be selected in the project settings by going to the project, navigating to `Manage` > `DataStage` and selecting the appropriate engine under the `Settings` tab > `Remote` environments.
 
-### Optional start flags
+#### Optional start flags
 
 While starting a remote engine, following optional flags can be used in addition to the ones shown above. These can be seen via the help flag on the start subcommand: `./dsengine.sh start --help`.
 
@@ -80,18 +72,39 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--set-user <username>`: Specify the username to be used to run the container. If not set, the current user is used.
 
 
-## Upgrade
-Upgrade the remote engine instance to the latest version.
-1. Stop and remove the Remote engine
+
+### 2. Update an engine
+
+Update the remote engine instance to a new version. The update command gathers information from the existing docker container, then stops the existing container, removes it and spins up a new container with the same name. Hence a container must be running prior to running the the update command. You can simply re-run the start command that you started the container with.
+
 ```bash
-./dsengine.sh stop -n 'remote_engine_name_01'
+# this will update the container with name 'my_remote_engine_01'
+./dsengine.sh update -n "my_remote_engine_01" \
+                     -p "$IBMCLOUD_CONTAINER_REGISTRY_APIKEY"
 ```
-2. Create and start local remote engine instance
+
+#### Optional update flags
+
+While updating a remote engine, following optional flags can be used in addition to the ones shown above. These can be seen via the help flag on the start subcommand: `./dsengine.sh update --help`.
+
+1. `--select-version`: Set to true if you want to choose a specific version of remote engine. By default, this flag is set to false and the latest version is used.
+
+
+### 3. Stop an engine
+
+Stop the remote engine container.
 ```bash
-./dsengine.sh start -n 'remote_engine_name_01' \
-                    -a "$IBMCLOUD_APIKEY" \
-                    -e "$ENCRYPTION_KEY" \
-                    -i "$ENCRYPTION_IV" \
-                    -p "$IBMCLOUD_CONTAINER_REGISTRY_APIKEY" \
-                    --project-id "$PROJECT_ID"
+# stop a local remote engine instance with name 'my_remote_engine_01'
+./dsengine.sh stop -n 'my_remote_engine_01'
+
+```
+Note that if the `./dsengine.sh start` is used when a container is stopped, the script will simply start the stopped container.
+
+### 4. Cleanup/Uninstall a remote engine
+This is NOT needed use this if you want to update the engine. This is only needed if you want to completely remove the engine container, delete the volume directories and deregister the remote engine from the associated project.
+```bash
+# cleanup a remote engine instance with name 'my_remote_engine_01'
+./dsengine.sh cleanup -n 'my_remote_engine_01' \
+                      -a "$IBMCLOUD_APIKEY" \
+                      --project-id "$PROJECT_ID"
 ```
