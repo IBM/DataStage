@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=0.0.2
+TOOL_VERSION=0.0.3
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -34,6 +34,7 @@ if ! [ -x "$(command -v docker)" ] && [ -x "$(command -v podman)" ]; then
     DOCKER_CMD='podman'
 fi
 DOCKER_VOLUMES_DIR='/tmp/docker/volumes'
+MOUNT_DIRS=()
 
 # env constnats
 GATEWAY_DOMAIN_YS1DEV='dataplatform.dev.cloud.ibm.com'
@@ -60,7 +61,8 @@ STR_DSNEXT_SEC_KEY='  -e, --encryption key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            DataPlatform Project ID'
 STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod]'
-STR_VOLUMES="  --volume-dir                Specify a directory for persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
+STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
+STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
 STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
 STR_SET_USER='  --set-user                  Specify the username to be used to run the container. If not set, the current user is used.'
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
@@ -164,6 +166,7 @@ print_usage() {
             echo "${STR_MEMORY}"
             echo "${STR_CPUS}"
             echo "${STR_VOLUMES}"
+            echo "${STR_MOUNT_DIR}"
             echo "${STR_SET_USER}"
         fi
         echo "${STR_SELECT_PX_VERSION}"
@@ -247,6 +250,10 @@ function start() {
         --volume-dir)
             shift
             DOCKER_VOLUMES_DIR="$1"
+            ;;
+        --mount-dir)
+            shift
+            MOUNT_DIRS+=("$1")
             ;;
         # --platform)
         #     shift
@@ -658,6 +665,16 @@ run_px_runtime_docker() {
         CURRENT_USER=$(id -u "${CONTAINER_USER}")
     fi
     echo "Using user ${CURRENT_USER} to run the container"
+
+    if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
+        for mount in "${MOUNT_DIRS[@]}"; do
+            if [[ -n "$mount" && -v mount && ! -z $mount ]]; then
+                runtime_docker_opts+=(
+                    -v "${mount}"
+                )
+            fi
+        done
+    fi
 
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         runtime_docker_opts+=(
@@ -1100,6 +1117,14 @@ validate_action_arguments() {
         echo "CONTAINER_MEMORY=${PX_MEMORY}"
         echo "CONTAINER_CPUS=${PX_CPUS}"
         echo "DOCKER_VOLUMES_DIR=${DOCKER_VOLUMES_DIR}"
+        if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
+            echo "MOUNT_DIRS=${MOUNT_DIRS[@]}"
+            for mount in "${MOUNT_DIRS[@]}"; do
+                if [[ -n "$mount" && -v mount && ! -z $mount ]]; then
+                    echo "${mount}"
+                fi
+            done
+        fi
         echo ""
     fi
 
@@ -1543,6 +1568,12 @@ elif [[ ${ACTION} == "update" ]]; then
     DS_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/ds-storage") | .Source')
     PX_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/px-storage") | .Source')
     SCRATCH_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/opt/ibm/PXService/Server/scratch") | .Source')
+    # MOUNT_DIRS=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | "\(.Source):\(.Destination)"' | tr '\n' ' ')
+    SAVEIFS=$IFS
+    IFS=$'\n'
+    MOUNT_DIRS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | "\(.Source):\(.Destination)"' | while read object; do echo "$object"; done)
+    MOUNT_DIRS=($MOUNT_DIRS_STR)
+    IFS=$SAVEIFS
     CONTAINER_USER=$($DOCKER_CMD inspect --format='{{.Config.User}}' "${PXRUNTIME_CONTAINER_NAME}")
     DOCKER_VOLUMES_DIR=$(dirname "$SCRATCH_DIR")
 
@@ -1576,6 +1607,9 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "SCRATCH_DIR = ${SCRATCH_DIR}"
     echo "CONTAINER_USER = ${CONTAINER_USER}"
     echo "DOCKER_VOLUMES_DIR = ${DOCKER_VOLUMES_DIR}"
+    if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
+        echo "MOUNT_DIRS=${MOUNT_DIRS[@]}"
+    fi
 
     echo ""
     stop_px_runtime_docker
