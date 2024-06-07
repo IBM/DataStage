@@ -70,6 +70,7 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--home <value>`: Sets the target IBM Cloud enviroment to either `ypprod` (Dallas datacenter - default) or `frprod` (Frankfurt datacenter). The project associated with this engine instance must be in same datacenter.
 1. `--select-version`: Set to true if you want to choose a specific version of remote engine. By default, this flag is set to false and the latest version is used.
 1. `--set-user <username>`: Specify the username to be used to run the container. If not set, the current user is used.
+1. `--mount-dir "</path/to/local_dir:/path/on/container>"`: Specify folder you want to mount on the container. This flag can be specified multiple times.
 
 
 
