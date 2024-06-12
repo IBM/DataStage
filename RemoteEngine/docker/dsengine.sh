@@ -35,6 +35,7 @@ if ! [ -x "$(command -v docker)" ] && [ -x "$(command -v podman)" ]; then
 fi
 DOCKER_VOLUMES_DIR='/tmp/docker/volumes'
 MOUNT_DIRS=()
+SCRATCH_DIR_OVERRIDE='false'
 
 # env constnats
 GATEWAY_DOMAIN_YS1DEV='dataplatform.dev.cloud.ibm.com'
@@ -669,11 +670,23 @@ run_px_runtime_docker() {
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
         for mount in "${MOUNT_DIRS[@]}"; do
             if [[ -n "$mount" && -v mount && ! -z $mount ]]; then
+                if [[ "${mount}" == *':/opt/ibm/PXService/Server/scratch' ]]; then
+                    echo "Scratch directory set to: ${mount}"
+                    SCRATCH_DIR_OVERRIDE='true'
+                fi
                 runtime_docker_opts+=(
                     -v "${mount}"
                 )
             fi
         done
+    fi
+
+    if [[ "${SCRATCH_DIR_OVERRIDE}" == 'false' ]]; then
+        create_dir_if_not_exist "${SCRATCH_DIR}"
+        set_permissions "${DOCKER_VOLUMES_DIR}"
+        runtime_docker_opts+=(
+            -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch
+        )
     fi
 
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
@@ -688,7 +701,6 @@ run_px_runtime_docker() {
             --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
             --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
             --env ENABLE_DS_METRICS=false
-            -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch
             --user "${CURRENT_USER}"
         )
     fi
@@ -1148,7 +1160,6 @@ setup_docker_volumes() {
             create_dir_if_not_exist "${DS_STORAGE_HOST_DIR}"
             create_dir_if_not_exist "${PX_STORAGE_HOST_DIR}"
             create_dir_if_not_exist "${PX_STORAGE_WLM_DIR}"
-            create_dir_if_not_exist "${SCRATCH_DIR}"
             set_permissions "${DOCKER_VOLUMES_DIR}"
         fi
 
@@ -1575,7 +1586,13 @@ elif [[ ${ACTION} == "update" ]]; then
     MOUNT_DIRS=($MOUNT_DIRS_STR)
     IFS=$SAVEIFS
     CONTAINER_USER=$($DOCKER_CMD inspect --format='{{.Config.User}}' "${PXRUNTIME_CONTAINER_NAME}")
-    DOCKER_VOLUMES_DIR=$(dirname "$SCRATCH_DIR")
+    DOCKER_VOLUMES_DIR=$(dirname "$DS_STORAGE_HOST_DIR")
+    SCRATCH_BASE_DIR=$(dirname "$SCRATCH_DIR")
+
+    # if scratch directory was overriden, put it back in MOUNT_DIRS
+    if [[ "${SCRATCH_BASE_DIR}" != "${DOCKER_VOLUMES_DIR}" ]]; then
+        MOUNT_DIRS+=("$SCRATCH_DIR:/opt/ibm/PXService/Server/scratch")
+    fi
 
     PX_MEMORY="${PX_MEMORY}G"
     MASKED_DSNEXT_SEC_KEY="${DSNEXT_SEC_KEY:0:1}******${DSNEXT_SEC_KEY: -1}"
