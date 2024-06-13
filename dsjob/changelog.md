@@ -46,6 +46,14 @@ interface.
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
 
+## 4.8.5.2
+
+### Fixes
+- `dsjob run` will not allow env variable ENABLE_IIS_EXITCODE=1 to generate exit codes that match IIS exit codes 
+  ref: https://github.ibm.com/DataStage/tracker/issues/36815
+- `list-dependencies` and `list-usage` will allow users to specify `--output json` option to generate output as json.
+  ref: https://github.ibm.com/DataStage/tracker/issues/37629
+
 ## 4.8.5.1
 
 ### Fixes
