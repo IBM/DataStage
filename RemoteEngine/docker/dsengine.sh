@@ -1181,6 +1181,8 @@ generate_startup_script() {
     if [ ! -f "${STARTUP_FILE}" ]; then
 cat <<EOL > "${STARTUP_FILE}"
 #!/bin/sh
+set -x
+
 secretDir="/etc/secrets"
 iterateSecrets() {
    for filename in \${secretDir}/*; do
@@ -1313,6 +1315,7 @@ generate_init_volume_script() {
     if [ ! -f "${INIT_VOL_FILE}" ]; then
 cat <<EOL > "${INIT_VOL_FILE}"
 #! /bin/bash
+set -x
 
 cp "/px-storage/startup.sh" /opt/ibm/startup.sh
 
