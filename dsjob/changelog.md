@@ -4,6 +4,9 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.0.0](#500)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.0.md)
+
 [4.8.5](#485)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.8.5.md)
 
@@ -46,26 +49,83 @@ interface.
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
 
+## 5.0.0
+
+### New commands
+
+The following commands are added:
+
+- `list-params` List flow/pipeline parameters.
+- `export-folder` Export a folder.
+
+### Command changes
+
+The following commands have changed:
+
+`jobrunstat`:
+
+- now reports start and end timestamps for the job runs.
+
+`run` and `pipeline-run`:
+
+- are enhanced to produce IIS exit codes for run status using environment variable `ENABLE_IIS_EXITCODE=1`.
+
+`list-dependencies` and `list-usage`:
+
+- are enhanced to produce json output using `--output json` option.
+
+`git-pull`:
+
+- supports `-skip-on-replace` and `--hard-replace` to selectively skip on certain assets such as connections, parameter sets.
+
+`list-connections`:
+
+- updated to reflect changes in the backend API to list all connections properly.
+
+`list-jobruns`:
+
+- now takes `--start` and `--end` times and `--state` to filter job runs.
+
+`schedule-job`:
+
+- takes a new option `--remove-schedule` to turn of scheduling on a job.
+
+`import-zip`,
+`export-zip`,
+`export-project`,
+`export-datastage-assets`:
+
+- are modified to add new option `--import-binaries` to include compiled binaries of assets such as build stages.
+
+### Fixes
+
+`list-usage`:
+
+- fixed to show all dependent assets correctly. Before this fix list-assets would not identify all dependent assets and prints a partial list.
+
+`compile`:
+
+- properly handles gateway timeouts and 500 errors without crashing.
+
 ## 4.8.5.2
 
 ### Fixes
-- `dsjob run` will not allow env variable ENABLE_IIS_EXITCODE=1 to generate exit codes that match IIS exit codes 
+- `dsjob run` will now allow env variable ENABLE_IIS_EXITCODE=1 to generate exit codes that match IIS exit codes 
   ref: https://github.ibm.com/DataStage/tracker/issues/36815
 - `list-dependencies` and `list-usage` will allow users to specify `--output json` option to generate output as json.
   ref: https://github.ibm.com/DataStage/tracker/issues/37629
 
 ## 4.8.5.1
 
-### Fixes
+ ### Fixes
+ 
+ - `list-params`. When volatile pipelines contain nodes with parameters, the parameters are not marshalled correctly. This is fixed in this release.
+  ref: https://github.ibm.com/DataStage/tracker/issues/37608
+       https://github.ibm.com/DataStage/tracker/issues/37215#issuecomment-79646374
 
-Fixed issues reported with `list-params`.
-When volatile pipelines contain nodes with parameters, the parameters are not marshalled correctly. This is fixed in this release.
-ref: https://github.ibm.com/DataStage/tracker/issues/37608
-     https://github.ibm.com/DataStage/tracker/issues/37215#issuecomment-79646374
-
-Fixed `jobrunstat` to report start and end timestamps for the job runs.
-This is an enhancement to make jobrunstat and now reports start and end timestamps whether the job is run successfully or not.
-ref: https://github.ibm.com/DataStage/tracker/issues/36232
+- `jobrunstat` to report start and end timestamps for the job runs.
+  This is an enhancement to make jobrunstat and now reports start and end timestamps whether the job is run successfully or not.
+  ref: https://github.ibm.com/DataStage/tracker/issues/36232
 
 
 ## 4.8.5
