@@ -980,6 +980,47 @@ get_environment_id() {
     # present else we create a new one
 }
 
+patch_environment() {
+    _project_env_patch_response=$(curl -sSi -X 'PATCH' "${GATEWAY_URL}/v2/environments/${PROJECT_ENV_ASSET_ID}?project_id=${PROJECT_ID}" \
+        -H 'accept: application/json' \
+        -H "Authorization: Bearer $IAM_TOKEN" \
+        -H 'Content-Type: application/json' \
+        -d "{
+  \"/entity/environment/hardware_specification\": {
+    \"datastage\": {
+      \"num_conductors\": 1,
+      \"num_computes\": 0,
+      \"conductor\": {
+        \"cpu\": {
+          \"units\": \"${PX_CPUS}\",
+          \"model\": \"\"
+        },
+        \"mem\": {
+          \"size\": \"${PX_MEMORY}\"
+        }
+      },
+      \"compute\": {
+        \"cpu\": {
+          \"units\": \"1\",
+          \"model\": \"\"
+        },
+        \"mem\": {
+          \"size\": \"4G\"
+        }
+      }
+    }
+  }
+}"
+        )
+    _project_env_patch_response_status="$(echo $_project_env_patch_response | head -n 1 | cut -d' ' -f2)"
+    if [[ -z "${_project_env_patch_response_status}" || "${_project_env_patch_response_status}" != "200" ]]; then
+        echo "Response: ${_project_env_patch_response}"
+        echo ""
+        echo_error_and_exit "Failed to patch environment with id: ${PROJECT_ENV_ASSET_ID}."
+    fi
+    echo "Patched environment runtime with id: ${PROJECT_ENV_ASSET_ID}"
+}
+
 
 create_environment() {
     _project_env_create_response=$(curl -sS -X 'POST' "${GATEWAY_URL}/v2/environments?project_id=${PROJECT_ID}" \
@@ -1523,6 +1564,7 @@ if [[ ${ACTION} == "start" ]]; then
         create_environment
     else
         echo "Found existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} with id: ${PROJECT_ENV_ASSET_ID}"
+        patch_environment
     fi
     echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is registered."
 
