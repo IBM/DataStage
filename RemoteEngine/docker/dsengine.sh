@@ -1653,6 +1653,7 @@ elif [[ ${ACTION} == "update" ]]; then
     CONTAINER_USER=$($DOCKER_CMD inspect --format='{{.Config.User}}' "${PXRUNTIME_CONTAINER_NAME}")
     DOCKER_VOLUMES_DIR=$(dirname "$DS_STORAGE_HOST_DIR")
     SCRATCH_BASE_DIR=$(dirname "$SCRATCH_DIR")
+    PX_MEMORY="${PX_MEMORY}G"
 
     # if scratch directory was overriden, put it back in MOUNT_DIRS
     if [[ "${SCRATCH_BASE_DIR}" != "${DOCKER_VOLUMES_DIR}" ]]; then
@@ -1664,8 +1665,6 @@ elif [[ ${ACTION} == "update" ]]; then
         if [[ "${PX_MEMORY_OVERRIDE}" != '0g' ]]; then
             echo "Container memory allocation changed from ${PX_MEMORY} to ${PX_MEMORY_OVERRIDE}"
             PX_MEMORY="${PX_MEMORY_OVERRIDE}"
-        else
-            PX_MEMORY="${PX_MEMORY}G"
         fi
 
         if [[ "${PX_CPUS_OVERRIDE}" != '0' ]]; then
