@@ -1175,7 +1175,7 @@ validate_action_arguments() {
     if [[ "${ACTION}" == 'update' ]]; then
         if [[ "${PX_MEMORY_OVERRIDE}" != "0g" || "${PX_CPUS_OVERRIDE}" != "0" ]]; then
             if [[ "${PROJECT_ID}" == 'None' ]]; then
-                echo_error_and_exit "Please specify the project ID (-p | --prod-apikey) if you want to change resource allocation. Aborting."
+                echo_error_and_exit "Please specify the project ID (-d | --project-id) if you want to change resource allocation. Aborting."
             fi
         fi
     fi
