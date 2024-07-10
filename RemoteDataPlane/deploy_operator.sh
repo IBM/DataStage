@@ -2,7 +2,9 @@ OPERATOR_REGISTRY="icr.io/cpopen"
 OPERATOR_DIGEST="sha256:c0af884eca4c68411f53a00dfb4bd486092c99977e161ef47ac1ed0602fb5e20"
 kubernetesCLI="oc"
 
-supportedVersions="5.0.0"
+supportedVersions="5.0.0 5.0.1"
+assetVersions="500 501"
+imageDigests="sha256:c0af884eca4c68411f53a00dfb4bd486092c99977e161ef47ac1ed0602fb5e20 sha256:f3021b662bc497100f157ea3e3c29debc859756b1c79f153a673fc7490be0913"
 version="5.0.0"
 
 verify_args() {
@@ -26,9 +28,63 @@ verify_args() {
   fi
 
   # TODO set digest based on version in subsequent release
-  if [ $version != "5.0.0" ]; then
+  if [[ ! $supportedVersions =~ (^|[[:space:]])$version($|[[:space:]]) ]]; then
     echo "Unsupported version ${version}. Supported versions: ${supportedVersions}"
     exit 3
+  fi
+}
+
+check_version() {
+  if [ -z $skipVersionCheck ]; then
+    hub_url=`oc -n $namespace get cm physical-location-info-cm -o jsonpath='{.data.CPD_HUB_URL}'`
+    if [ -z $hub_url ]; then
+      echo "Unable to retrieve version from control plane. Defaulting version to ${version}".
+      return 0
+    fi
+    asset_version=`curl -ks https://${hub_url}/data_intg/v3/assets/version`
+    
+    versionsArray=(${supportedVersions})
+    assetVersionsArray=(${assetVersions})
+    digestsArray=(${imageDigests})
+
+    if [ ${#versionsArray[@]} -ne ${#assetVersionsArray[@]} ]; then
+      echo "Mismatch size for '${supportedVersions}' and '${assetVersions}'"
+      exit 1
+    fi
+    arraylength=${#versionsArray[@]}
+
+    for (( i=0; i<${arraylength}; i++ ));
+    do
+      assetVersion="${assetVersionsArray[$i]}\.[0-9]+\.[0-9]+"
+      echo "${asset_version}" | grep -E "${assetVersion}" &> /dev/null
+      if [[ $? -eq 0 ]]; then
+        version="${versionsArray[$i]}"
+        OPERATOR_DIGEST="${digestsArray[$i]}"
+        echo "Version determined from control plane: $version"
+        echo "OPERATOR_DIGEST: ${OPERATOR_DIGEST}"
+        break;
+      fi 
+    done
+  else
+    versionsArray=(${supportedVersions})
+    digestsArray=(${imageDigests})
+    for (( i=0; i<${arraylength}; i++ ));
+    do
+      ventry=${versionsArray[$i]}
+      if [ "$ventry" == "$version" ]; then
+        OPERATOR_DIGEST="${digestsArray[$i]}"
+        break;
+      fi
+    done
+  fi
+}
+
+upgrade_pxruntimes() {
+  # upgrade pxruntime instaces to the same version
+  instance_count=`oc -n $namespace get pxruntime 2> /dev/null | wc -l | tr -d ' '`
+  if [ $instance_count -gt 0 ]; then
+    echo "Updating PXRuntime instances in $namespace to version ${version}"
+    oc -n ${namespace} get pxruntime 2> /dev/null | awk 'NR>1 { print $1 }' | xargs -I % oc -n ${namespace} patch pxruntime % --type=merge -p "{\"spec\":{\"version\": \"${version}\"}}"
   fi
 }
 
@@ -389,6 +445,7 @@ do
         --version)
             shift
             version="${1}"
+            skipVersionCheck="true"
             ;;
         *)
             echo "Unknown parameter '${1}'"
@@ -406,6 +463,7 @@ if [[ -z $namespace ]]; then
 fi
 
 verify_args
+check_version
 create_pxruntime_crd
 create_service_account
 create_role
@@ -413,3 +471,4 @@ create_role_binding
 create_operator_deployment
 create_cr_role
 create_cr_role_binging
+upgrade_pxruntimes
