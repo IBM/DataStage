@@ -1167,12 +1167,16 @@ validate_action_arguments() {
     if [[ "${ACTION}" == 'start' ]]; then
         [ -z $DSNEXT_SEC_KEY ] && echo_error_and_exit "Please specify an encryption key (-e | --encryption-key. Aborting."
         [ -z $IVSPEC ] && echo_error_and_exit "Please specify the initialization vector for the encryption key (-i | --ivspec). Aborting."
-        [ -z $PROJECT_ID ] && echo_error_and_exit "Please specify the project ID (-p | --prod-apikey) in which you want to create the Remote Engine environment. Aborting."
+        if [[ "${PROJECT_ID}" == 'None' ]]; then
+            echo_error_and_exit "Please specify the project ID (-p | --prod-apikey) in which you want to create the Remote Engine environment. Aborting."
+        fi
     fi
 
     if [[ "${ACTION}" == 'update' ]]; then
         if [[ "${PX_MEMORY_OVERRIDE}" != "0g" || "${PX_CPUS_OVERRIDE}" != "0" ]]; then
-            [ -z $PROJECT_ID ] && echo_error_and_exit "Please specify the project ID (-p | --prod-apikey) if you want to change resource allocation. Aborting."
+            if [[ "${PROJECT_ID}" == 'None' ]]; then
+                echo_error_and_exit "Please specify the project ID (-p | --prod-apikey) if you want to change resource allocation. Aborting."
+            fi
         fi
     fi
 
