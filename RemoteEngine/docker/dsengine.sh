@@ -36,6 +36,7 @@ fi
 DOCKER_VOLUMES_DIR='/tmp/docker/volumes'
 MOUNT_DIRS=()
 SCRATCH_DIR_OVERRIDE='false'
+PROJECT_ID='None'
 
 # env constnats
 GATEWAY_DOMAIN_YS1DEV='dataplatform.dev.cloud.ibm.com'
@@ -49,6 +50,8 @@ IAM_URL='https://iam.cloud.ibm.com'
 PLATFORM='icp4d'
 PX_MEMORY='4g'
 PX_CPUS='2'
+PX_MEMORY_OVERRIDE='0g'
+PX_CPUS_OVERRIDE='0'
 COMPUTE_COUNT=0
 CONTAINER_USER='NOT_SET'
 
@@ -70,6 +73,8 @@ STR_SET_USER='  --set-user                  Specify the username to be used to r
 # STR_VERSION='  --version                   Version of the remote engine to use'
 STR_MEMORY='  --memory                    Specify memory allocated to the docker container (default is 4G).'
 STR_CPUS='  --cpus                      Specify CPU allocated to the docker container (default is 2 cores).'
+STR_MEMORY_UPDATE='  --memory                    Update memory allocated to the docker container. Needs Project ID to be specified (-d | --project-id)'
+STR_CPUS_UPDATE='  --cpus                      Update CPU allocated to the docker container. Needs Project ID to be specified (-d | --project-id)'
 STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, else use a container registry apikey (default is false).'
 STR_HELP='  help, --help                Print usage information'
 
@@ -131,7 +136,7 @@ print_usage() {
     if [[ "${ACTION}" == 'start' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--volume-dir]\n                         [--select-version] [--set-user] [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] \n                          [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] \n                          [--memory] [--cpus] [-d | --project-id] [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -157,7 +162,7 @@ print_usage() {
         fi
     fi
 
-    if [[ "${ACTION}" == 'start' || "${ACTION}" == 'cleanup' ]]; then
+    if [[ "${ACTION}" == 'start' ||  "${ACTION}" == 'update' || "${ACTION}" == 'cleanup' ]]; then
         echo "${STR_PROJECT_UID}"
         echo "${STR_DSTAGE_HOME}"
     fi
@@ -169,6 +174,9 @@ print_usage() {
             echo "${STR_VOLUMES}"
             echo "${STR_MOUNT_DIR}"
             echo "${STR_SET_USER}"
+        elif [[ "${ACTION}" == 'update' ]]; then
+            echo "${STR_MEMORY_UPDATE}"
+            echo "${STR_CPUS_UPDATE}"
         fi
         echo "${STR_SELECT_PX_VERSION}"
         # echo "${STR_USE_ENT_KEY}"
@@ -307,6 +315,18 @@ function update() {
         -p | --prod-apikey)
             shift
             IAM_APIKEY_PROD="$1"
+            ;;
+        -d | --project-id)
+            shift
+            PROJECT_ID="$1"
+            ;;
+        --memory)
+            shift
+            PX_MEMORY_OVERRIDE="$1"
+            ;;
+        --cpus)
+            shift
+            PX_CPUS_OVERRIDE="$1"
             ;;
         --select-version)
             shift
@@ -1639,7 +1659,22 @@ elif [[ ${ACTION} == "update" ]]; then
         MOUNT_DIRS+=("$SCRATCH_DIR:/opt/ibm/PXService/Server/scratch")
     fi
 
-    PX_MEMORY="${PX_MEMORY}G"
+    if [[ "${PROJECT_ID}" != 'None' ]]; then
+
+        if [[ "${PX_MEMORY_OVERRIDE}" != '0g' ]]; then
+            echo "Container memory allocation changed from ${PX_MEMORY} to ${PX_MEMORY_OVERRIDE}"
+            PX_MEMORY="${PX_MEMORY_OVERRIDE}"
+        else
+            PX_MEMORY="${PX_MEMORY}G"
+        fi
+
+        if [[ "${PX_CPUS_OVERRIDE}" != '0' ]]; then
+            echo "Container cpu allocation changed from ${PX_CPUS} to ${PX_CPUS_OVERRIDE}"
+            PX_CPUS="${PX_CPUS_OVERRIDE}"
+        fi
+
+    fi
+
     MASKED_DSNEXT_SEC_KEY="${DSNEXT_SEC_KEY:0:1}******${DSNEXT_SEC_KEY: -1}"
     MASKED_IVSPEC="${IVSPEC:0:1}******${IVSPEC: -1}"
     MASKED_IAM_APIKEY="${IAM_APIKEY:0:1}******${IAM_APIKEY: -1}"
@@ -1709,7 +1744,32 @@ elif [[ ${ACTION} == "update" ]]; then
     run_px_runtime_docker
     wait_readiness_px_runtime
 
-    print_header "Remote Engine container updated."
+    if [[ "${PROJECT_ID}" != 'None' ]]; then
+        if [[ "${PX_MEMORY_OVERRIDE}" != '0g' || "${PX_CPUS_OVERRIDE}" != '0' ]]; then
+            echo "Fetching Remote Engine registration ..."
+            get_remote_engine_id
+            echo "Fetching runtime environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} ..."
+            get_environment_id
+            if [[ -z "${PROJECT_ENV_ASSET_ID}" || "${PROJECT_ENV_ASSET_ID}" == "" ]]; then
+                echo_error_and_exit 'Could not retrieve environment id'
+            fi
+            echo "Patching existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} with id: ${PROJECT_ENV_ASSET_ID}"
+            patch_environment
+        fi
+    fi
+
+    PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
+    echo ""
+    echo "Update complete"
+    echo ""
+    echo "Project settings:"
+    echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=cpdaas"
+    echo ""
+    echo "Project assets:"
+    echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
+
+    echo ''
+    print_header "Remote Engine update completed."
 
 elif [[ ${ACTION} == "stop" ]]; then
 
