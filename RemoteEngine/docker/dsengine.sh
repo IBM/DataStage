@@ -51,6 +51,8 @@ PX_MEMORY='4g'
 PX_CPUS='2'
 COMPUTE_COUNT=0
 CONTAINER_USER='NOT_SET'
+PROXY_URL='NOT_SET'
+CURL_CMD="curl"
 
 bold=$(tput bold)
 normal=$(tput sgr0)
@@ -70,6 +72,7 @@ STR_SET_USER='  --set-user                  Specify the username to be used to r
 # STR_VERSION='  --version                   Version of the remote engine to use'
 STR_MEMORY='  --memory                    Specify memory allocated to the docker container (default is 4G).'
 STR_CPUS='  --cpus                      Specify CPU allocated to the docker container (default is 2 cores).'
+STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>).'
 STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, else use a container registry apikey (default is false).'
 STR_HELP='  help, --help                Print usage information'
 
@@ -129,7 +132,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--volume-dir]\n                         [--select-version] [--set-user] [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--proxy] [--volume-dir]\n                         [--select-version] [--set-user] [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
@@ -169,6 +172,7 @@ print_usage() {
             echo "${STR_VOLUMES}"
             echo "${STR_MOUNT_DIR}"
             echo "${STR_SET_USER}"
+            echo "${STR_PROXY}"
         fi
         echo "${STR_SELECT_PX_VERSION}"
         # echo "${STR_USE_ENT_KEY}"
@@ -267,6 +271,10 @@ function start() {
         --set-user)
             shift
             CONTAINER_USER="$1"
+            ;;
+        --proxy)
+            shift
+            PROXY_URL="$1"
             ;;
         --use-entitlement-key)
             shift
@@ -513,20 +521,20 @@ docker_login_cpd() {
 retrieve_latest_px_version() {
     echo "Getting IAM token to access Container Registry"
     get_cr_iam_token
-    icr_response=$(curl -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $CR_IAM_TOKEN" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${PXRUNTIME_IMAGE_NAME}")
+    icr_response=$($CURL_CMD -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $CR_IAM_TOKEN" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${PXRUNTIME_IMAGE_NAME}")
     PX_VERSION=$(echo "${icr_response}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"')
     echo "Retrieved px-runtime digest = $PX_VERSION"
 }
 
 retrieve_latest_px_version_from_runtime() {
     echo "Getting PX Version to access Container Registry"
-    PX_VERSION=$(curl -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
+    PX_VERSION=$($CURL_CMD -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
     echo "Retrieved px-runtime digest = $PX_VERSION"
 }
 
 get_all_px_versions_from_runtime() {
     echo "Getting PX Version to access Container Registry"
-    PX_VERSIONS_RESPONSE=$(curl -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions")
+    PX_VERSIONS_RESPONSE=$($CURL_CMD -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions")
     PX_VERSION_PAIRS=$(printf "%s" "${PX_VERSIONS_RESPONSE}" | jq -r '.versions[] | "\(.px_runtime_version)(\(.image_digests.px_runtime))"')
 
     echo ''
@@ -660,6 +668,13 @@ run_px_runtime_docker() {
         --env WLM_JOB_COUNT=5
         --network=${PXRUNTIME_CONTAINER_NAME}
     )
+
+    if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
+        echo "Proxy URL specified, setting container env ..."
+        runtime_docker_opts+=(
+            --env REMOTE_HTTPS_PROXY="${PROXY_URL}"
+        )
+    fi
 
     CURRENT_USER=$(id -u)
     if [[ "${CONTAINER_USER}" != 'NOT_SET' ]]; then
@@ -877,7 +892,7 @@ get_iam_token() {
     IAM_URL="${IAM_URL%/}"
     IAM_URL="${IAM_URL%/identity/token}"
 
-    _iam_response=$(curl -sS -X POST \
+    _iam_response=$($CURL_CMD -sS -X POST \
                 -H 'Content-Type: application/x-www-form-urlencoded' \
                 -H 'Accept: application/json' \
                 --data-urlencode 'grant_type=urn:ibm:params:oauth:grant-type:apikey' \
@@ -895,7 +910,7 @@ get_iam_token() {
 }
 
 get_cr_iam_token() {
-    _iam_response=$(curl -sS -X POST \
+    _iam_response=$($CURL_CMD -sS -X POST \
                 -H 'Content-Type: application/x-www-form-urlencoded' \
                 -H 'Accept: application/json' \
                 --data-urlencode 'grant_type=urn:ibm:params:oauth:grant-type:apikey' \
@@ -930,7 +945,7 @@ get_bss_id_from_token() {
 # -----------------------------
 
 get_remote_engine_id() {
-    _engine_register_response=$(curl -sS -X 'GET' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/register?type=singular" \
+    _engine_register_response=$($CURL_CMD -sS -X 'GET' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/register?type=singular" \
         -H 'accept: application/json;charset=utf-8' \
         -H "Authorization: Bearer $IAM_TOKEN")
 
@@ -949,7 +964,7 @@ get_remote_engine_id() {
 }
 
 remove_remote_engine () {
-    _engine_delete_response=$(curl -sS -X 'DELETE' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/register?engine_id=${REMOTE_ENGINE_ID}" \
+    _engine_delete_response=$($CURL_CMD -sS -X 'DELETE' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/register?engine_id=${REMOTE_ENGINE_ID}" \
         -H 'accept: */*' \
         -H "Authorization: Bearer $IAM_TOKEN")
     echo "Deleted remote engine with id: ${REMOTE_ENGINE_ID}"
@@ -960,7 +975,7 @@ remove_remote_engine () {
 # -----------------------------
 
 get_environment_id() {
-    _project_env_get_response=$(curl -sS -X 'GET' "${GATEWAY_URL}/v2/environments?project_id=${PROJECT_ID}" \
+    _project_env_get_response=$($CURL_CMD -sS -X 'GET' "${GATEWAY_URL}/v2/environments?project_id=${PROJECT_ID}" \
         -H 'accept: application/json' \
         -H "Authorization: Bearer $IAM_TOKEN")
 
@@ -981,7 +996,7 @@ get_environment_id() {
 }
 
 patch_environment() {
-    _project_env_patch_response=$(curl -sSi -X 'PATCH' "${GATEWAY_URL}/v2/environments/${PROJECT_ENV_ASSET_ID}?project_id=${PROJECT_ID}" \
+    _project_env_patch_response=$($CURL_CMD -sSi -X 'PATCH' "${GATEWAY_URL}/v2/environments/${PROJECT_ENV_ASSET_ID}?project_id=${PROJECT_ID}" \
         -H 'accept: application/json' \
         -H "Authorization: Bearer $IAM_TOKEN" \
         -H 'Content-Type: application/json' \
@@ -1023,7 +1038,7 @@ patch_environment() {
 
 
 create_environment() {
-    _project_env_create_response=$(curl -sS -X 'POST' "${GATEWAY_URL}/v2/environments?project_id=${PROJECT_ID}" \
+    _project_env_create_response=$($CURL_CMD -sS -X 'POST' "${GATEWAY_URL}/v2/environments?project_id=${PROJECT_ID}" \
         -H 'accept: application/json' \
         -H "Authorization: Bearer $IAM_TOKEN" \
         -H 'Content-Type: application/json' \
@@ -1089,7 +1104,7 @@ create_environment() {
 }
 
 remove_environment() {
-    _project_env_delete_response=$(curl -sS -X 'DELETE' "${GATEWAY_URL}/v2/environments/${PROJECT_ENV_ASSET_ID}?project_id=${PROJECT_ID}" \
+    _project_env_delete_response=$($CURL_CMD -sS -X 'DELETE' "${GATEWAY_URL}/v2/environments/${PROJECT_ENV_ASSET_ID}?project_id=${PROJECT_ID}" \
         -H 'accept: */*' \
         -H "Authorization: Bearer $IAM_TOKEN")
     echo "Deleted environment runtime with id: ${PROJECT_ENV_ASSET_ID}"
@@ -1491,6 +1506,10 @@ echo ""
 
 validate_action_arguments
 setup_docker_volumes
+
+if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
+    CURL_CMD="curl --proxy ${PROXY_URL}"
+fi
 
 if [[ ${ACTION} == "start" ]]; then
 
