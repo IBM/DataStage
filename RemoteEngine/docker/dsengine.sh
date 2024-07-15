@@ -1258,6 +1258,7 @@ startContainer() {
   #   #px-runtime
   #   /opt/ibm/initScripts/startcontainer.sh
   # fi
+  umask 0002
   /opt/ibm/initScripts/startcontainer.sh
 }
 startCassandraSQLENgine() {
@@ -1486,8 +1487,6 @@ EOL
 #######################################################################
 get_uname
 main "$@";
-
-umask 0002
 
 print_tool_name_version
 echo ""
