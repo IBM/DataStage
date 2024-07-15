@@ -145,3 +145,13 @@ spec:
   - mount_path: /data2
     pvc_name: <pvc-2-name>
 ```
+
+## Modifying ephemeral-storage limit:
+
+Note that if the limit is raised higher than the amount of ephemeral storage available on the worker nodes, a worker node may run out of storage and cause stability issues.
+
+To increase the ephemeral storage limit to the target size, eg. 20GB, use the following command.
+
+```
+oc patch pxre <cr-name> --patch '{"spec":{"ephemeralStorageLimit": "20Gi"}}' --type=merge
+```
