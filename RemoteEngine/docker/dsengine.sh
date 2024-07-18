@@ -644,6 +644,7 @@ run_px_runtime_docker() {
         --memory=${PX_MEMORY}
         --cpus=${PX_CPUS}
         --env COMPONENT_ID=ds-px-runtime
+        --env WLP_SKIP_UMASK=true
         --env ENVIRONMENT_TYPE=CLOUD
         --env ENVIRONMENT_NAME=${PLATFORM}
         --env ICP4D_URL=""
@@ -1257,6 +1258,7 @@ startContainer() {
   #   #px-runtime
   #   /opt/ibm/initScripts/startcontainer.sh
   # fi
+  umask 0002
   /opt/ibm/initScripts/startcontainer.sh
 }
 startCassandraSQLENgine() {
