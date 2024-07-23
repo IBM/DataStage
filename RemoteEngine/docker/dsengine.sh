@@ -134,7 +134,7 @@ print_usage() {
     if [[ "${ACTION}" == 'start' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--proxy] [--volume-dir]\n                         [--select-version] [--set-user] [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] \n                          [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -172,8 +172,8 @@ print_usage() {
             echo "${STR_VOLUMES}"
             echo "${STR_MOUNT_DIR}"
             echo "${STR_SET_USER}"
-            echo "${STR_PROXY}"
         fi
+        echo "${STR_PROXY}"
         echo "${STR_SELECT_PX_VERSION}"
         # echo "${STR_USE_ENT_KEY}"
         # echo "${STR_PLATFORM}"
@@ -319,6 +319,10 @@ function update() {
         --select-version)
             shift
             handle_select_version "${1}"
+            ;;
+        --proxy)
+            shift
+            PROXY_URL="$1"
             ;;
         --use-entitlement-key)
             shift
@@ -652,6 +656,7 @@ run_px_runtime_docker() {
         --memory=${PX_MEMORY}
         --cpus=${PX_CPUS}
         --env COMPONENT_ID=ds-px-runtime
+        --env WLP_SKIP_UMASK=true
         --env ENVIRONMENT_TYPE=CLOUD
         --env ENVIRONMENT_NAME=${PLATFORM}
         --env ICP4D_URL=""
@@ -1272,6 +1277,7 @@ startContainer() {
   #   #px-runtime
   #   /opt/ibm/initScripts/startcontainer.sh
   # fi
+  umask 0002
   /opt/ibm/initScripts/startcontainer.sh
 }
 startCassandraSQLENgine() {
@@ -1508,6 +1514,7 @@ validate_action_arguments
 setup_docker_volumes
 
 if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
+    echo 'proxy url is provided'
     CURL_CMD="curl --proxy ${PROXY_URL}"
 fi
 
