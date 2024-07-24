@@ -72,7 +72,7 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--set-user <username>`: Specify the username to be used to run the container. If not set, the current user is used.
 1. `--mount-dir "</path/to/local_dir:/path/on/container>"`: Specify folder you want to mount on the container. This flag can be specified multiple times.
     * Note: This flag can be used to mount a scratch directory using `--mount-dir "</path/to/local_dir>:/opt/ibm/PXService/Server/scratch"`. This will override the default scratch directory that is either created in  `/tmp` or in the directory specified for `--volume-dir`.
-
+1. `--proxy http://<username>:<password>@<proxy_ip>:<port>`: Specify a proxy URL. The username and password can be skipped based on how the proxy is configured.
 
 
 ### 2. Update an engine
@@ -90,6 +90,7 @@ Update the remote engine instance to a new version. The update command gathers i
 While updating a remote engine, following optional flags can be used in addition to the ones shown above. These can be seen via the help flag on the start subcommand: `./dsengine.sh update --help`.
 
 1. `--select-version`: Set to true if you want to choose a specific version of remote engine. By default, this flag is set to false and the latest version is used.
+1. `--proxy http://<username>:<password>@<proxy_ip>:<port>`: Specify a proxy URL. The username and password can be skipped based on how the proxy is configured.
 
 
 ### 3. Stop an engine
