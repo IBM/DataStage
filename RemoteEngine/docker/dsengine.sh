@@ -1514,7 +1514,7 @@ validate_action_arguments
 setup_docker_volumes
 
 if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
-    echo 'proxy url is provided'
+    echo 'Found proxy url in arguments, will use curl with proxy ...'
     CURL_CMD="curl --proxy ${PROXY_URL}"
 fi
 
