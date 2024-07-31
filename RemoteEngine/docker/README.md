@@ -12,6 +12,7 @@
 1. Software that must be installed on the system.
     1. `docker` or `podman`
     1. `jq`
+1. You must have atleast 50GB of free space in `/var` in order to deploy the engine container. 200GB of free space is recommended.
 
 ## Requirements
 1. Clone this repo: `git clone https://github.com/IBM/DataStage.git`.
