@@ -13,6 +13,7 @@
     1. `docker` or `podman`
     1. `jq`
 1. You must have atleast 50GB of free space in `/var` in order to deploy the engine container. 200GB of free space is recommended.
+1. Recommended OS: Red Hat Enterprise Linux (RHEL 8.8, 8.10, 9.2 and 9.4), Ubuntu (20.04, 22.04, 24.04).
 
 ## Requirements
 1. Clone this repo: `git clone https://github.com/IBM/DataStage.git`.
@@ -112,3 +113,28 @@ This is NOT needed use this if you want to update the engine. This is only neede
                       -a "$IBMCLOUD_APIKEY" \
                       --project-id "$PROJECT_ID"
 ```
+
+### Troubleshooting
+If the script finishes succesfully, and you are able to see the engine in your project but the run still fails, you can check if container hosts file contains the host IP address. If so, you can remove the host IP address mapping so that the container uses 127.0.0.1 to resolve the hostname. This issue has been seen primarily when using podman.
+
+You can edit this file using the below steps
+1. Find the running container name or id using
+   ```bash
+   docker ps
+   # OR
+   podman ps
+   ```
+1. Exec into the container:
+   ```bash
+   docker exec -it <container-name-or-id> bash
+   # OR
+   podman exec -it <container-name-or-id> bash
+   ```
+1. Edit the hosts file inside the container
+   ```bash
+   nano /etc/hosts
+   ```
+1. Remove the line that contains the IP address of the host and the host name
+1. Press `ctrl + x` to save and press `y` to exit from nano.
+1. Retry the flow.
+Note that this fix will need to be re-applied whenever the current container is removed, eg. updating to a new image.
