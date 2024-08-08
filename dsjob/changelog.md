@@ -4,6 +4,9 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.0.1](#501)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.1.md)
+
 [5.0.0](#500)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.0.md)
 
@@ -48,6 +51,41 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 5.0.1
+
+### New commands
+
+The following commands are added:
+
+-   `reset-pipeline-cache`  Reset a pipeline's cache.
+-   `clear-vault-cache`  Clear a vault cache.
+
+### Command changes
+
+
+The following commands have changed:
+
+`schedule-job`:
+
+-   you can now remove schedule information from the job.
+
+`migrate`
+
+- added two flags to allow annotation styling and math operation migrations.
+
+`update-metrics` 
+
+- allows additional parameters to use certificates for authentication.
+
+### Fixes
+
+
+`view-dataset`:
+`view-fileset`:
+
+-   fixed issue with truncating the first two rows.
+
 
 ## 5.0.0
 
@@ -126,7 +164,6 @@ The following commands have changed:
 - `jobrunstat` to report start and end timestamps for the job runs.
   This is an enhancement to make jobrunstat and now reports start and end timestamps whether the job is run successfully or not.
   ref: https://github.ibm.com/DataStage/tracker/issues/36232
-
 
 ## 4.8.5
 
