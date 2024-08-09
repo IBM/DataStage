@@ -4,7 +4,7 @@ kubernetesCLI="oc"
 
 supportedVersions="5.0.0 5.0.1"
 assetVersions="500 501"
-imageDigests="sha256:c0af884eca4c68411f53a00dfb4bd486092c99977e161ef47ac1ed0602fb5e20 sha256:f3021b662bc497100f157ea3e3c29debc859756b1c79f153a673fc7490be0913"
+imageDigests="sha256:c0af884eca4c68411f53a00dfb4bd486092c99977e161ef47ac1ed0602fb5e20 sha256:e21e3503e6f7e212109d104a4ef5a505ee0ca172d77eda9f65174bb104b8be07"
 version="5.0.0"
 
 verify_args() {
