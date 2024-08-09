@@ -2,9 +2,9 @@ OPERATOR_REGISTRY="icr.io/cpopen"
 OPERATOR_DIGEST="sha256:c0af884eca4c68411f53a00dfb4bd486092c99977e161ef47ac1ed0602fb5e20"
 kubernetesCLI="oc"
 
-supportedVersions="5.0.0 5.0.1"
-assetVersions="500 501"
-imageDigests="sha256:c0af884eca4c68411f53a00dfb4bd486092c99977e161ef47ac1ed0602fb5e20 sha256:e21e3503e6f7e212109d104a4ef5a505ee0ca172d77eda9f65174bb104b8be07"
+supportedVersions="5.0.0 5.0.1 5.0.2"
+assetVersions="500 501 502"
+imageDigests="sha256:c0af884eca4c68411f53a00dfb4bd486092c99977e161ef47ac1ed0602fb5e20 sha256:e21e3503e6f7e212109d104a4ef5a505ee0ca172d77eda9f65174bb104b8be07 sha256:0e872119d746c061b4894ca2c99f29fe8267115956bf1c870dbd31f6563c8bd5"
 version="5.0.0"
 
 verify_args() {
