@@ -83,6 +83,7 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--mount-dir "</path/to/local_dir:/path/on/container>"`: Specify folder you want to mount on the container. This flag can be specified multiple times.
     * Note: This flag can be used to mount a scratch directory using `--mount-dir "</path/to/local_dir>:/opt/ibm/PXService/Server/scratch"`. This will override the default scratch directory that is either created in  `/tmp` or in the directory specified for `--volume-dir`.
 1. `--proxy http://<username>:<password>@<proxy_ip>:<port>`: Specify a proxy URL. The username and password can be skipped based on how the proxy is configured.
+1. `--force-renew`: Set to true if you want to remove the existing remote engine container. By default, this flag is set to false and if a stopped existing container is found, it is restarted or if a running existing container is found, the script is aborted.
 
 
 ### 2. Update an engine
