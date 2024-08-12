@@ -53,6 +53,7 @@ COMPUTE_COUNT=0
 CONTAINER_USER='NOT_SET'
 PROXY_URL='NOT_SET'
 CURL_CMD="curl"
+FORCE_RENEW='false'
 
 bold=$(tput bold)
 normal=$(tput sgr0)
@@ -73,6 +74,7 @@ STR_SET_USER='  --set-user                  Specify the username to be used to r
 STR_MEMORY='  --memory                    Specify memory allocated to the docker container (default is 4G).'
 STR_CPUS='  --cpus                      Specify CPU allocated to the docker container (default is 2 cores).'
 STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>).'
+STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
 STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, else use a container registry apikey (default is false).'
 STR_HELP='  help, --help                Print usage information'
 
@@ -132,7 +134,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--proxy] [--volume-dir]\n                         [--select-version] [--set-user] [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--set-user] [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
@@ -172,6 +174,7 @@ print_usage() {
             echo "${STR_VOLUMES}"
             echo "${STR_MOUNT_DIR}"
             echo "${STR_SET_USER}"
+            echo "${STR_FORCE_RENEW}"
         fi
         echo "${STR_PROXY}"
         echo "${STR_SELECT_PX_VERSION}"
@@ -199,6 +202,14 @@ function handle_select_version() {
         SELECT_PX_VERSION="${1}"
     else
         echo_error_and_exit 'Incorrect option specified for flag "--select-version". Acceptable values are: [true, false]'
+    fi
+}
+
+function handle_force_renew() {
+    if [[ "${1}" == 'true' || "${1}" == 'false' ]]; then
+        FORCE_RENEW="${1}"
+    else
+        echo_error_and_exit 'Incorrect option specified for flag "--force-renew". Acceptable values are: [true, false]'
     fi
 }
 
@@ -271,6 +282,10 @@ function start() {
         --set-user)
             shift
             CONTAINER_USER="$1"
+            ;;
+        --force-renew)
+            shift
+            handle_force_renew "${1}"
             ;;
         --proxy)
             shift
@@ -1523,20 +1538,31 @@ if [[ ${ACTION} == "start" ]]; then
     # check if this container is present and running. If so then exit with a prompt
     echo "Checking for existing container '${PXRUNTIME_CONTAINER_NAME}'"
     if [[ $(check_pxruntime_container_exists_and_running) == "true" ]]; then
-        echo_error_and_exit "Container '${PXRUNTIME_CONTAINER_NAME}' is already running. Aborting."
+        if [[ ${FORCE_RENEW} == "true" ]]; then
+            echo "Will remove the existing container as --force-renew is specified"
+            stop_px_runtime_docker
+            remove_px_runtime_docker
+        else
+            echo_error_and_exit "Container '${PXRUNTIME_CONTAINER_NAME}' is already running. Aborting."
+        fi
     fi
 
 
     # check if this container is present but not running. Restart the container
     if [[ $(check_pxruntime_container_exists) == "true" ]]; then
         echo "Existing container ${PXRUNTIME_CONTAINER_NAME} found in a stopped state"
-        start_px_runtime_docker
-        wait_readiness_px_runtime
+        if [[ ${FORCE_RENEW} == "true" ]]; then
+            echo "Will remove the existing container as --force-renew is specified"
+            remove_px_runtime_docker
+        else
+            start_px_runtime_docker
+            wait_readiness_px_runtime
 
-        echo ""
-        echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is available, and can be used to run DataStage flows"
+            echo ""
+            echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is available, and can be used to run DataStage flows"
 
-        exit 0
+            exit 0
+        fi
     fi
 
     # IAM Token will be needed to retrieve latest digest, and make other api calls
