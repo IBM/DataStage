@@ -14,6 +14,7 @@
     1. `jq`
     1. `git` (optional)
 1. You must have atleast 50GB of free space in `/var` in order to deploy the engine container. 200GB of free space is recommended.
+1. You must have at least 2 cores and 4 GB memory, recommended is 4 cores and 8 GB memory, or more.
 1. Recommended OS: Red Hat Enterprise Linux (RHEL 8.8, 8.10, 9.2 and 9.4), Ubuntu (20.04, 22.04, 24.04).
 1. Ensure that the virtual machine allows outbound traffic to the following URLs:
     1. icr.io
@@ -66,7 +67,7 @@ Once the script execution has completed, this engine needs to be selected in the
 While starting a remote engine, following optional flags can be used in addition to the ones shown above. These can be seen via the help flag on the start subcommand: `./dsengine.sh start --help`.
 
 1. `--memory <value>`: Sets the maximum amount of memory the engine can use. The value takes a positive integer, followed by a suffix of m/M, g/G, to indicate megabytes or gigabytes. Default is `4G`.
-1. `--cpu <value>`: Sets the maximum amount of cpu resources the engine can use. The value takes a positive number. Default is `2` cores.
+1. `--cpus <value>`: Sets the maximum amount of cpu resources the engine can use. The value takes a positive number. Default is `2` cores.
 1. `--volume-dir <value>`: Sets the directory to be used as the volume directory for persistent storage. Default location is `/tmp/docker/volumes`. The volume directory will be updated with the following top level file structure:
 
     ```
