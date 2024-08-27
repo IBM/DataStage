@@ -19,8 +19,8 @@
 1. Ensure that the virtual machine allows outbound traffic to the following URLs:
     1. icr.io
     1. iam.cloud.ibm.com
-    1. dataplatform.cloud.ibm.com or, if using the Frankfurt data center, eu-de.dataplatform.cloud.ibm.com
-    1. api.dataplatform.cloud.ibm.comor, if using the Frankfurt data center, api.eu-de.dataplatform.cloud.ibm.com
+    1. dataplatform.cloud.ibm.com and api.dataplatform.cloud.ibm.com - if using Dallas datacenter
+    1. eu-de.dataplatform.cloud.ibm.com and api.dataplatform.cloud.ibm.com - if using the Frankfurt data center
 
 
 ## Requirements
