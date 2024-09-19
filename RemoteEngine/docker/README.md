@@ -21,6 +21,7 @@
     1. iam.cloud.ibm.com
     1. dataplatform.cloud.ibm.com and api.dataplatform.cloud.ibm.com - if using Dallas datacenter
     1. eu-de.dataplatform.cloud.ibm.com and api.dataplatform.cloud.ibm.com - if using the Frankfurt data center
+    1. cloud-object-storage.appdomain.cloud (the url could have a prefixed region eg. <region>.s3.cloud-object-store.appdomain.cloud), so recommendation is to allow `*.cloud-object-storage.appdomain.cloud` to accomodate such variations.
 
 
 ## Requirements
@@ -125,26 +126,42 @@ This is NOT needed use this if you want to update the engine. This is only neede
 ```
 
 ### Troubleshooting
-If the script finishes succesfully, and you are able to see the engine in your project but the run still fails, you can check if container hosts file contains the host IP address. If so, you can remove the host IP address mapping so that the container uses 127.0.0.1 to resolve the hostname. This issue has been seen primarily when using podman.
 
-You can edit this file using the below steps
-1. Find the running container name or id using
-   ```bash
-   docker ps
-   # OR
-   podman ps
-   ```
-1. Exec into the container:
-   ```bash
-   docker exec -it <container-name-or-id> bash
-   # OR
-   podman exec -it <container-name-or-id> bash
-   ```
-1. Edit the hosts file inside the container
-   ```bash
-   nano /etc/hosts
-   ```
-1. Remove the line that contains the IP address of the host and the host name
-1. Press `ctrl + x` to save and press `y` to exit from nano.
-1. Retry the flow.
+1. Flow execution fails with incorrect host or IP Address in the log
+If the script finishes succesfully, and you are able to see the engine in your project but the run still fails, you can check if container hosts file contains the host IP address. If so, you can remove the host IP address mapping so that the container uses 127.0.0.1 to resolve the hostname. This issue has been seen primarily when using podman. You can edit this file using the below steps
+    1. Find the running container name or id using
+       ```bash
+       docker ps
+       # OR
+       podman ps
+       ```
+    1. Exec into the container:
+       ```bash
+       docker exec -it <container-name-or-id> bash
+       # OR
+       podman exec -it <container-name-or-id> bash
+       ```
+    1. Edit the hosts file inside the container
+       ```bash
+       nano /etc/hosts
+       ```
+    1. Remove the line that contains the IP address of the host and the host name
+    1. Press `ctrl + x` to save and press `y` to exit from nano.
+    1. Retry the flow.
 Note that this fix will need to be re-applied whenever the current container is removed, eg. updating to a new image.
+
+2. Making sure the URLs are allowlisted
+For URLs mentioned in the [pre-requisites](https://github.com/IBM/DataStage/blob/main/RemoteEngine/docker/README.md#pre-requisites) section above, you can use ping from the host vm to make sure the URLs are accessible. Eg.
+    ```
+    $ ping api.dataplatform.cloud.ibm.com
+    PING api.dataplatform.cloud.ibm.com (172.66.129.176) 56(84) bytes of data.
+    64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=1 ttl=53 time=6.66 ms
+    64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=2 ttl=53 time=6.90 ms
+    64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=3 ttl=53 time=6.82 ms
+    64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=4 ttl=53 time=6.79 ms
+    64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=5 ttl=53 time=6.87 ms
+    ^C
+    --- api.dataplatform.cloud.ibm.com ping statistics ---
+    5 packets transmitted, 5 received, 0% packet loss, time 4007ms
+    rtt min/avg/max/mdev = 6.662/6.806/6.898/0.081 ms
+    ```
