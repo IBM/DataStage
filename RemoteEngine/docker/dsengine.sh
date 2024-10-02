@@ -43,6 +43,10 @@ GATEWAY_DOMAIN_YPQA='dataplatform.test.cloud.ibm.com'
 GATEWAY_DOMAIN_YPPROD='dataplatform.cloud.ibm.com'
 GATEWAY_DOMAIN_FRPROD='eu-de.dataplatform.cloud.ibm.com'
 
+# cp4d constants
+BEDROCK_URL='dummybrurl'
+ZEN_URL='dummyzenurl'
+
 # Defaults
 DATASTAGE_HOME="https://${GATEWAY_DOMAIN_YPPROD}"
 IAM_URL='https://iam.cloud.ibm.com'
@@ -77,6 +81,13 @@ STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<user
 STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
 STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, else use a container registry apikey (default is false).'
 STR_HELP='  help, --help                Print usage information'
+STR_BEDROCK_URL='  --bedrock-url               CP4D bedrock url (required if --home is used with "CP4D")'
+STR_ZEN_URL='  --zen-url                   CP4D zen url (required if --home is used with "CP4D")'
+STR_CP4D_USER='  --cp4d-user                 CP4D username (required if --home is used with "CP4D")'
+STR_CP4D_PWD='  --cp4d-password             CP4D password url (required if --home is used with "CP4D")'
+STR_CP4D_APIKEY='  --cp4d-apikey             CP4D apikey (required if --home is used with "CP4D")'
+STR_PROD_APIKEY_USER='  --prod-apikey-user           DataStage Artifactory token'
+
 
 
 #######################################################################
@@ -134,7 +145,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--set-user] [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--set-user] \n                         [--bedrock-url] [--zen-url] [--cp4d-user] [--cp4d-password] [--cp4d-apikey] [--prod-apikey-user]\n                         [--help|help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
@@ -156,6 +167,9 @@ print_usage() {
 
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
         echo "${STR_PROD_APIKEY}"
+        if [[ "${DATASTAGE_HOME}" == 'cp4d' || "${DATASTAGE_HOME}" == 'CP4D' ]]; then
+            echo "${STR_PROD_APIKEY_USER}"
+        fi
         if [[ "${ACTION}" == 'start' ]]; then
             echo "${STR_DSNEXT_SEC_KEY}"
             echo "${STR_IVSPEC}"
@@ -175,6 +189,11 @@ print_usage() {
             echo "${STR_MOUNT_DIR}"
             echo "${STR_SET_USER}"
             echo "${STR_FORCE_RENEW}"
+            echo "${STR_BEDROCK_URL}"
+            echo "${STR_ZEN_URL}"
+            echo "${STR_CP4D_USER}"
+            echo "${STR_CP4D_PWD}"
+            echo "${STR_CP4D_APIKEY}"
         fi
         echo "${STR_PROXY}"
         echo "${STR_SELECT_PX_VERSION}"
@@ -294,6 +313,30 @@ function start() {
         --use-entitlement-key)
             shift
             set_container_registry "${1}"
+            ;;
+        --bedrock-url)
+            shift
+            BEDROCK_URL="$1"
+            ;;
+        --zen-url)
+            shift
+            ZEN_URL="$1"
+            ;;
+        --cp4d-user)
+            shift
+            CP4D_USER="$1"
+            ;;
+        --cp4d-password)
+            shift
+            CP4D_PWD="$1"
+            ;;
+        --cp4d-apikey)
+            shift
+            CP4D_API_KEY="$1"
+            ;;
+        --prod-apikey-user)
+            shift
+            IAM_APIKEY_PROD_USER="$1"
             ;;
         -h | --help | help)
             print_usage
@@ -502,10 +545,14 @@ check_docker_daemon() {
 # docker login
 
 docker_login() {
-    if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
-        docker_login_datastage
+    if [[ "${DATASTAGE_HOME}" == 'CP4D' || "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        docker_login_datastage_artifactory
     else
-        docker_login_cpd
+        if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
+            docker_login_datastage
+        else
+            docker_login_cpd
+        fi
     fi
 }
 
@@ -514,6 +561,22 @@ docker_login_datastage() {
     [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify DataStage Container Registry IAM APIKey (-p | --prod-apikey). Aborting."
     DELAY=5
     until $DOCKER_CMD login -u iamapikey -p $IAM_APIKEY_PROD $DOCKER_REGISTRY  || [ $DELAY -eq 10 ]; do
+        sleep $(( DELAY++ ))
+    done
+    status=$?
+    if [ $status -ne 0 ]; then
+        echo "docker login return code: $status."
+        echo_error_and_exit "Aborting setup."
+    fi
+}
+
+docker_login_datastage_artifactory() {
+    echo ""
+    [ -z $IAM_APIKEY_PROD_USER ] && echo_error_and_exit "Please specify DataStage Artifactory user (-p | --prod-user). Aborting."
+    [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify DataStage Artifactory token (-p | --prod-apikey). Aborting."
+    DELAY=5
+
+    until $DOCKER_CMD login -u "${IAM_APIKEY_PROD_USER}" -p "${IAM_APIKEY_PROD}" $DOCKER_REGISTRY  || [ $DELAY -eq 10 ]; do
         sleep $(( DELAY++ ))
     done
     status=$?
@@ -679,8 +742,6 @@ run_px_runtime_docker() {
         --env USE_EXTERNAL_SERVICE=true
         --env WLP_SKIP_MAXPERMSIZE=true
         --env GATEWAY_URL=${GATEWAY_URL}
-        --env IAM_URL=${IAM_URL}
-        --env SERVICE_API_KEY=${IAM_APIKEY}
         --env REMOTE_ENGINE_NAME=${REMOTE_ENGINE_NAME}
         --env DSNEXT_SEC_KEY=${DSNEXT_SEC_KEY}
         --env IVSPEC=${IVSPEC}
@@ -688,6 +749,21 @@ run_px_runtime_docker() {
         --env WLM_JOB_COUNT=5
         --network=${PXRUNTIME_CONTAINER_NAME}
     )
+
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' || "${DATASTAGE_HOME}" == 'CP4D' ]]; then
+        GATEWAY=$(printf %s "$GATEWAY_URL" | cut -d'/' -f3-)
+        runtime_docker_opts+=(
+            --env REMOTE_CONTROLPLANE_ENV=${PLATFORM}
+            --env SERVICE_ID=${CP4D_USER}
+            --env SERVICE_API_KEY=${CP4D_API_KEY}
+            --env GATEWAY=${GATEWAY}
+        )
+    else
+        runtime_docker_opts+=(
+            --env IAM_URL=${IAM_URL}
+            --env SERVICE_API_KEY=${IAM_APIKEY}
+        )
+    fi
 
     if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
         echo "Proxy URL specified, setting container env ..."
@@ -957,6 +1033,50 @@ get_bss_id_from_token() {
 }
 
 #######################################################################
+# CP4D functions
+#######################################################################
+
+get_cp4d_bedrock_token() {
+
+    BEDROCK_URL="${BEDROCK_URL%/}"
+    BEDROCK_URL="${BEDROCK_URL%/idprovider/v1/auth/identitytoken}"
+
+    _bedrock_response=$($CURL_CMD -skS -X POST \
+                -H 'Content-Type: application/x-www-form-urlencoded;charset=UTF-8' \
+                -d "grant_type=password&username=${CP4D_USER}&password=${CP4D_PWD}&scope=openid" \
+                "${BEDROCK_URL}/idprovider/v1/auth/identitytoken")
+    BEDROCK_TOKEN=$(printf "%s" ${_bedrock_response} | jq -r .access_token | tr -d '"')
+
+    if [[ -z "${BEDROCK_TOKEN}" || "${BEDROCK_TOKEN}" == "null" ]]; then
+        echo ""
+        if [[ "$_bedrock_response" ]]; then
+            echo "Response = ${_bedrock_response}"
+        fi
+        echo_error_and_exit "Failed to get Bedrock Token, please try again ..."
+    fi
+}
+
+get_cp4d_zen_token() {
+
+    get_cp4d_bedrock_token
+
+    ZEN_URL="${ZEN_URL%/}"
+    ZEN_URL="${ZEN_URL%/v1/preauth/validateAuth}"
+
+    _zen_response=$($CURL_CMD -skS -X GET -H "username: ${CP4D_USER}" -H "iam-token: ${BEDROCK_TOKEN}" \
+                "${ZEN_URL}/v1/preauth/validateAuth")
+    IAM_TOKEN=$(printf "%s" ${_zen_response} | jq -r .accessToken | tr -d '"')
+
+    if [[ -z "${IAM_TOKEN}" || "${IAM_TOKEN}" == "null" ]]; then
+        echo ""
+        if [[ "$_zen_response" ]]; then
+            echo "Response = ${_zen_response}"
+        fi
+        echo_error_and_exit "Failed to get Bedrock Token, please try again ..."
+    fi
+}
+
+#######################################################################
 # DataStage functions
 #######################################################################
 
@@ -1151,6 +1271,10 @@ check_datastage_home() {
     elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_FRPROD}" || "$DATASTAGE_HOME" == "frprod" ]]; then
         UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_FRPROD}"
         GATEWAY_URL="https://api.${GATEWAY_DOMAIN_FRPROD}"
+
+    elif [[ "$DATASTAGE_HOME" == 'CP4D' || "$DATASTAGE_HOME" == 'cp4d' ]]; then
+        UI_GATEWAY_URL="${ZEN_URL}"
+        GATEWAY_URL="${ZEN_URL}"
 
     else
         echo_error_and_exit "Incorrect value specified: '--home ${DATASTAGE_HOME}', aborting. Use one of the allowed values:
@@ -1528,9 +1652,14 @@ echo ""
 validate_action_arguments
 setup_docker_volumes
 
+if [[ "${DATASTAGE_HOME}" == 'cp4d' || "${DATASTAGE_HOME}" == 'CP4D' ]]; then
+    echo 'CP4D environment found, curl will be used without ssl validation ...'
+    CURL_CMD="curl -k"
+fi
+
 if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
     echo 'Found proxy url in arguments, will use curl with proxy ...'
-    CURL_CMD="curl --proxy ${PROXY_URL}"
+    CURL_CMD="${CURL_CMD} --proxy ${PROXY_URL}"
 fi
 
 if [[ ${ACTION} == "start" ]]; then
@@ -1565,24 +1694,35 @@ if [[ ${ACTION} == "start" ]]; then
         fi
     fi
 
-    # IAM Token will be needed to retrieve latest digest, and make other api calls
-    echo "Getting IAM token"
-    get_iam_token
-    # check if the runtime image exists, if not, then download
-    print_header "Checking docker images ..."
-    if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
-        get_all_px_versions_from_runtime
+    if [[ "${DATASTAGE_HOME}" == 'CP4D' || "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        echo "Getting zen token"
+        get_cp4d_zen_token
+
+        # TODO - remove hardcoding and use ds-runtime api once its ready
+        DOCKER_REGISTRY='docker-na-public.artifactory.swg-devops.com/wcp-datastage-team-docker-local/ubi'
+        PX_VERSION="latest-amd64"
     else
-        if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
-            retrieve_latest_px_version
+
+        # IAM Token will be needed to retrieve latest digest, and make other api calls
+        echo "Getting IAM token"
+        get_iam_token
+        # check if the runtime image exists, if not, then download
+        print_header "Checking docker images ..."
+        if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
+            get_all_px_versions_from_runtime
         else
-            retrieve_latest_px_version_from_runtime
+            if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
+                retrieve_latest_px_version
+            else
+                retrieve_latest_px_version_from_runtime
+            fi
         fi
+
     fi
 
     PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
     # update the image variables to use the PX_VERSION version
-    if [[ "$PX_VERSION" == "latest" || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    if [[ "$PX_VERSION" == "latest"* || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
     else
         PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
@@ -1598,7 +1738,6 @@ if [[ ${ACTION} == "start" ]]; then
     print_header "Starting instance '${REMOTE_ENGINE_NAME}' ..."
     run_px_runtime_docker
     wait_readiness_px_runtime
-
 
     # datastage api calls
     # ---------------------
