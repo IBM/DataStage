@@ -54,6 +54,13 @@ interface.
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
 
+## 5.0.2.1
+
+### Fixes
+ 
+ - `reset-pipeline-cache`. This command is now behind a toggle `ENABLE_DSJOB_RESETPIPELINECACHE`. This is to make sure that user must use the official `
+
+
 ## 5.0.2
 
 ### New commands
