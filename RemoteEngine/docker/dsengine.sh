@@ -189,7 +189,7 @@ print_usage() {
             echo "${STR_FORCE_RENEW}"
             echo "${STR_BEDROCK_URL}"
             echo "${STR_ZEN_URL}"
-            if [[ ]]; then
+            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
                 echo "${STR_CP4D_USER}"
                 echo "${STR_CP4D_PWD}"
                 echo "${STR_CP4D_APIKEY}"
