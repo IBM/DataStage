@@ -1299,11 +1299,12 @@ check_platform() {
 validate_action_arguments() {
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'cleanup' ]]; then
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify CP4D User (--cp4d-user) for the respective environment. Aborting."
-            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify CP4D Password (--cp4d-password) for the respective environment. Aborting."
-            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify CP4D Bedrock URL (--bedrock-url) for the respective environment. Aborting."
-            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify CP4D Zen URL (--zen-url) for the respective environment. Aborting."
-            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify CP4D APIKey (--cp4d-apikey) for the respective environment. Aborting."
+            [ -z $CP4D_USER ] && echo_error_and_exit "Please specify CP4D User (--cp4d-user) for the respective environment. Aborting."
+            [ -z $CP4D_PWD ] && echo_error_and_exit "Please specify CP4D Password (--cp4d-password) for the respective environment. Aborting."
+            [ -z $CP4D_API_KEY ] && echo_error_and_exit "Please specify CP4D APIKey (--cp4d-apikey) for the respective environment. Aborting."
+            [ -z $BEDROCK_URL ] && echo_error_and_exit "Please specify CP4D Bedrock URL (--bedrock-url) for the respective environment. Aborting."
+            [ -z $ZEN_URL ] && echo_error_and_exit "Please specify CP4D Zen URL (--zen-url) for the respective environment. Aborting."
+            [ -z $IAM_APIKEY_PROD_USER ] && echo_error_and_exit "Please docker repositry login user(--prod-apikey-user) for the respective environment. Aborting."
         else
             [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify an IBM Cloud IAM APIKey (-a | --apikey) for the respective environment. Aborting."
         fi
