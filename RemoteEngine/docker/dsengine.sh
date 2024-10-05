@@ -68,7 +68,7 @@ STR_PROD_APIKEY='  -p, --prod-apikey           IBM Cloud Production APIKey for i
 STR_DSNEXT_SEC_KEY='  -e, --encryption key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            DataPlatform Project ID'
-STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod]'
+STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, cp4d]'
 STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
 STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
@@ -81,11 +81,11 @@ STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<user
 STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
 STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, else use a container registry apikey (default is false).'
 STR_HELP='  help, --help                Print usage information'
-STR_BEDROCK_URL='  --bedrock-url               CP4D bedrock url (required if --home is used with "CP4D")'
-STR_ZEN_URL='  --zen-url                   CP4D zen url (required if --home is used with "CP4D")'
-STR_CP4D_USER='  --cp4d-user                 CP4D username (required if --home is used with "CP4D")'
-STR_CP4D_PWD='  --cp4d-password             CP4D password url (required if --home is used with "CP4D")'
-STR_CP4D_APIKEY='  --cp4d-apikey             CP4D apikey (required if --home is used with "CP4D")'
+STR_BEDROCK_URL='  --bedrock-url               CP4D bedrock url (required if --home is used with "cp4d")'
+STR_ZEN_URL='  --zen-url                   CP4D zen url (required if --home is used with "cp4d")'
+STR_CP4D_USER='  --cp4d-user                 CP4D username (required if --home is used with "cp4d")'
+STR_CP4D_PWD='  --cp4d-password             CP4D password url (required if --home is used with "cp4d")'
+STR_CP4D_APIKEY='  --cp4d-apikey             CP4D apikey (required if --home is used with "cp4d")'
 STR_PROD_APIKEY_USER='  --prod-apikey-user           DataStage Artifactory token'
 
 
@@ -167,9 +167,7 @@ print_usage() {
 
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
         echo "${STR_PROD_APIKEY}"
-        if [[ "${DATASTAGE_HOME}" == 'cp4d' || "${DATASTAGE_HOME}" == 'CP4D' ]]; then
-            echo "${STR_PROD_APIKEY_USER}"
-        fi
+        echo "${STR_PROD_APIKEY_USER}"
         if [[ "${ACTION}" == 'start' ]]; then
             echo "${STR_DSNEXT_SEC_KEY}"
             echo "${STR_IVSPEC}"
@@ -191,9 +189,11 @@ print_usage() {
             echo "${STR_FORCE_RENEW}"
             echo "${STR_BEDROCK_URL}"
             echo "${STR_ZEN_URL}"
-            echo "${STR_CP4D_USER}"
-            echo "${STR_CP4D_PWD}"
-            echo "${STR_CP4D_APIKEY}"
+            if [[ ]]; then
+                echo "${STR_CP4D_USER}"
+                echo "${STR_CP4D_PWD}"
+                echo "${STR_CP4D_APIKEY}"
+            fi
         fi
         echo "${STR_PROXY}"
         echo "${STR_SELECT_PX_VERSION}"
@@ -545,7 +545,7 @@ check_docker_daemon() {
 # docker login
 
 docker_login() {
-    if [[ "${DATASTAGE_HOME}" == 'CP4D' || "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
         docker_login_datastage_artifactory
     else
         if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
@@ -750,7 +750,7 @@ run_px_runtime_docker() {
         --network=${PXRUNTIME_CONTAINER_NAME}
     )
 
-    if [[ "${DATASTAGE_HOME}" == 'cp4d' || "${DATASTAGE_HOME}" == 'CP4D' ]]; then
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
         GATEWAY=$(printf %s "$GATEWAY_URL" | cut -d'/' -f3-)
         runtime_docker_opts+=(
             --env REMOTE_CONTROLPLANE_ENV=${PLATFORM}
@@ -1272,7 +1272,8 @@ check_datastage_home() {
         UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_FRPROD}"
         GATEWAY_URL="https://api.${GATEWAY_DOMAIN_FRPROD}"
 
-    elif [[ "$DATASTAGE_HOME" == 'CP4D' || "$DATASTAGE_HOME" == 'cp4d' ]]; then
+    elif [[ "$DATASTAGE_HOME" == 'CP4D' || "$DATASTAGE_HOME" == 'cp4d' || "$DATASTAGE_HOME" == 'Cp4d' ]]; then
+        DATASTAGE_HOME='cp4d'
         UI_GATEWAY_URL="${ZEN_URL}"
         GATEWAY_URL="${ZEN_URL}"
 
@@ -1281,7 +1282,8 @@ check_datastage_home() {
         - https://api.${GATEWAY_DOMAIN_YS1DEV}
         - https://api.${GATEWAY_DOMAIN_YPQA}
         - https://api.${GATEWAY_DOMAIN_YPPROD} (default)
-        - https://api.${GATEWAY_DOMAIN_FRPROD}"
+        - https://api.${GATEWAY_DOMAIN_FRPROD}
+        - cp4d"
     fi
 
 }
@@ -1296,7 +1298,15 @@ check_platform() {
 
 validate_action_arguments() {
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'cleanup' ]]; then
-        [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify an IBM Cloud IAM APIKey (-a | --apikey) for the respective environment. Aborting."
+        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify CP4D User (--cp4d-user) for the respective environment. Aborting."
+            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify CP4D Password (--cp4d-password) for the respective environment. Aborting."
+            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify CP4D Bedrock URL (--bedrock-url) for the respective environment. Aborting."
+            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify CP4D Zen URL (--zen-url) for the respective environment. Aborting."
+            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify CP4D APIKey (--cp4d-apikey) for the respective environment. Aborting."
+        else
+            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify an IBM Cloud IAM APIKey (-a | --apikey) for the respective environment. Aborting."
+        fi
     fi
 
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
@@ -1652,7 +1662,7 @@ echo ""
 validate_action_arguments
 setup_docker_volumes
 
-if [[ "${DATASTAGE_HOME}" == 'cp4d' || "${DATASTAGE_HOME}" == 'CP4D' ]]; then
+if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
     echo 'CP4D environment found, curl will be used without ssl validation ...'
     CURL_CMD="curl -k"
 fi
@@ -1694,7 +1704,7 @@ if [[ ${ACTION} == "start" ]]; then
         fi
     fi
 
-    if [[ "${DATASTAGE_HOME}" == 'CP4D' || "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
         echo "Getting zen token"
         get_cp4d_zen_token
 
