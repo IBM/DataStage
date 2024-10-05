@@ -4,6 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 kubernetesCLI="oc"
+curlCMD="curl"
 scriptName=$(basename "$0")
 scriptDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 filesDir="${scriptDir}/files"
@@ -35,6 +36,12 @@ username="iamapikey"
 
 storage_size="10"
 size="small"
+
+set_curl_cmd() {
+  if [ -z $proxy_url ]; then
+    curlCMD="${curlCMD} --proxy ${proxy_url}"
+  fi
+}
 
 determine_cli() {
   which kubectl
@@ -698,11 +705,11 @@ check_jq_installation() {
 
 generate_access_token() {
   apikey="${password}"
-  access_token=`curl -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$apikey" "https://iam.ng.bluemix.net/identity/token" | jq .access_token | cut -d\" -f2`
+  access_token=`$curlCMD -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$apikey" "https://iam.ng.bluemix.net/identity/token" | jq .access_token | cut -d\" -f2`
   if [[ -z $access_token ]]; then
     echo "Unable to retrieve access token".
     # rerun command without silent flag
-    curl -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$apikey" "https://iam.ng.bluemix.net/identity/token"
+    $curlCMD -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$apikey" "https://iam.ng.bluemix.net/identity/token"
     exit 1
   fi
 }
@@ -714,15 +721,15 @@ retrieve_px_image_digests() {
     api_key=`$kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET -o=jsonpath="{.data.api-key}" | base64 -d`
   fi
   if [ $DS_GATEWAY = "api.dataplatform.cloud.ibm.com" ]; then
-    cloud_access_token=`curl -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
+    cloud_access_token=`$curlCMD -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
   else 
-    cloud_access_token=`curl -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.test.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
+    cloud_access_token=`$curlCMD -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.test.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
   fi
   if [ -z $cloud_access_token ]; then
     echo "Unable to retrieve access token from IBM Cloud."
     exit 1
   fi
-  image_digests=`curl -s -X GET -H "Authorization: Bearer $cloud_access_token" -H 'accept: application/json;charset=utf-8' https://${DS_GATEWAY}/data_intg/v3/flows_runtime/remote_engine/versions | jq -r '.versions[0].image_digests.px_runtime, .versions[0].image_digests.px_compute'`
+  image_digests=`$curlCMD -s -X GET -H "Authorization: Bearer $cloud_access_token" -H 'accept: application/json;charset=utf-8' https://${DS_GATEWAY}/data_intg/v3/flows_runtime/remote_engine/versions | jq -r '.versions[0].image_digests.px_runtime, .versions[0].image_digests.px_compute'`
   image_digest_array=(${image_digests})
   if [ ${#image_digest_array[@]} -eq 2 ]; then
     px_runtime_digest="${image_digest_array[0]}"
@@ -734,7 +741,7 @@ retrieve_px_image_digests() {
 
 retrieve_latest() {
   image="$1"
-  latest_digest=`curl -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $access_token" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${image}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"'`
+  latest_digest=`$curlCMD -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $access_token" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${image}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"'`
   echo "$latest_digest"
 }
 
@@ -990,6 +997,7 @@ esac
 
 if [ ! -z $inputFile ]; then
   source $inputFile
+  set_curl_cmd
   determine_k8s
   validate_common_args
   retrieve_latest_image_digests

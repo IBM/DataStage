@@ -123,6 +123,9 @@ nfs_server=<dns-name-or-IP>
 # the namespace to deploy the storage class provisioner; will deploy to the same
 # namespace as the remote engine if omitted
 provisioner_namespace=<namespace>
+
+# optional:
+# proxy_url=http://<username>:<password>@<proxy_ip>:<port>
 ```
 
 Running the install script with the input file:
