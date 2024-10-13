@@ -1707,8 +1707,6 @@ if [[ ${ACTION} == "start" ]]; then
         echo ""
         stop_px_runtime_docker
         remove_px_runtime_image
-        echo "EXIT CODE $?"
-        exit 0
         remove_px_runtime_docker
     else
         if [[ $(check_pxruntime_container_exists_and_running) == "true" ]]; then
