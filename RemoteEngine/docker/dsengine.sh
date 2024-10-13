@@ -723,13 +723,14 @@ remove_px_runtime_docker() {
 
 remove_px_runtime_image() {
     echo "Removing image '${PXRUNTIME_DOCKER_IMAGE}' ..."
-    $DOCKER_CMD rmi ${PXRUNTIME_DOCKER_IMAGE}
-
-    # wait until container is removed
-    until [[ $( $DOCKER_CMD images | grep $PXRUNTIME_DOCKER_IMAGE | wc -l ) -eq 0 ]]; do
-        echo '  - Waiting for the container to be removed'
-        sleep 1
-    done
+    if $DOCKER_CMD rmi ${PXRUNTIME_DOCKER_IMAGE}; then
+        echo "Removed '${PXRUNTIME_DOCKER_IMAGE}'"
+    else
+        echo "Failed to remove '${PXRUNTIME_DOCKER_IMAGE}', so re-starting existing container"
+        echo ""
+        start_px_runtime_docker
+        echo_error_and_exit "Failed to remove '${PXRUNTIME_DOCKER_IMAGE}'"
+    fi
 }
 
 run_px_runtime_docker() {
@@ -1704,23 +1705,23 @@ if [[ ${ACTION} == "start" ]]; then
         if [[ "${FORCE_RENEW}" == 'true' ]]; then
             echo "Removing the existing container as --force-renew is specified"
             if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+                stop_px_runtime_docker
                 remove_px_runtime_image
             fi
         fi
-    fi
-
-    # check if this container is present and running. If so then exit with a prompt
-    echo "Checking for existing container '${PXRUNTIME_CONTAINER_NAME}'"
-    if [[ $(check_pxruntime_container_exists_and_running) == "true" ]]; then
-        if [[ "${FORCE_RENEW}" == "true" ]]; then
-            echo "Will remove the existing container as --force-renew is specified"
-            stop_px_runtime_docker
-            remove_px_runtime_docker
-        else
-            echo_error_and_exit "Container '${PXRUNTIME_CONTAINER_NAME}' is already running. Aborting."
+    else
+        # check if this container is present and running. If so then exit with a prompt
+        echo "Checking for existing container '${PXRUNTIME_CONTAINER_NAME}'"
+        if [[ $(check_pxruntime_container_exists_and_running) == "true" ]]; then
+            if [[ "${FORCE_RENEW}" == "true" ]]; then
+                echo "Will remove the existing container as --force-renew is specified"
+                stop_px_runtime_docker
+                remove_px_runtime_docker
+            else
+                echo_error_and_exit "Container '${PXRUNTIME_CONTAINER_NAME}' is already running. Aborting."
+            fi
         fi
     fi
-
 
     # check if this container is present but not running. Restart the container
     if [[ $(check_pxruntime_container_exists) == "true" ]]; then
@@ -1728,7 +1729,7 @@ if [[ ${ACTION} == "start" ]]; then
         if [[ "${FORCE_RENEW}" == "true" ]]; then
             echo "Will remove the existing container as --force-renew is specified"
             remove_px_runtime_docker
-        else
+        if [[ "${FORCE_RENEW}" == "true" ]]; then
             start_px_runtime_docker
             wait_readiness_px_runtime
 
