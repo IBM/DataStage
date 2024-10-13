@@ -1709,8 +1709,9 @@ if [[ ${ACTION} == "start" ]]; then
     if [[ "${FORCE_RENEW}" == 'true' ]]; then
         echo "Stopping and removing the existing container as --force-renew is specified"
         echo ""
+        check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
         stop_px_runtime_docker
-        remove_px_runtime_image
+        # remove_px_runtime_image
         remove_px_runtime_docker
     else
         if [[ $(check_pxruntime_container_exists_and_running) == "true" ]]; then
