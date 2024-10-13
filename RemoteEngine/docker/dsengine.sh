@@ -647,6 +647,10 @@ check_or_pull_image() {
             echo_error_and_exit "Could not download specified image, aborting script run."
         fi
     else
+        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+            echo "$DOCKER_CMD pull $IMAGE_NAME"
+            $DOCKER_CMD pull $IMAGE_NAME
+        fi
         echo "Image ${IMAGE_NAME} exists locally"
     fi
 }
