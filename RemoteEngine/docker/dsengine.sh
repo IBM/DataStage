@@ -1697,10 +1697,10 @@ if [[ ${ACTION} == "start" ]]; then
         # TODO - remove hardcoding and use ds-runtime api once its ready
         DOCKER_REGISTRY='docker-na-public.artifactory.swg-devops.com/wcp-datastage-team-docker-local/ubi'
         PX_VERSION="latest-amd64"
-    fi
+        PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
+        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
 
-    # TODO - since we are using latest, right now we remove it on force-remove flag. This should't be needed once runtime-api is in place
-    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        # TODO - since we are using latest, right now we remove it on force-remove flag. This should't be needed once runtime-api is in place
         if [[ "${FORCE_RENEW}" == 'true' ]]; then
             echo "Removing the existing container as --force-renew is specified"
             if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
@@ -1756,14 +1756,14 @@ if [[ ${ACTION} == "start" ]]; then
             fi
         fi
 
-    fi
+        PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
+        # update the image variables to use the PX_VERSION version
+        if [[ "$PX_VERSION" == "latest"* || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
+        else
+            PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
+        fi
 
-    PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
-    # update the image variables to use the PX_VERSION version
-    if [[ "$PX_VERSION" == "latest"* || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
-    else
-        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
     fi
 
     check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
