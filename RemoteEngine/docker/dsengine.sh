@@ -722,7 +722,7 @@ remove_px_runtime_docker() {
 }
 
 remove_px_runtime_image() {
-    echo "Removing image '${PXRUNTIME_IMAGE_NAME}' ..."
+    echo "Removing image '${PXRUNTIME_DOCKER_IMAGE}' ..."
     exit 0
     $DOCKER_CMD rm ${PXRUNTIME_CONTAINER_NAME}
 
