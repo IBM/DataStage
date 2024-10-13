@@ -721,6 +721,18 @@ remove_px_runtime_docker() {
     done
 }
 
+remove_px_runtime_image() {
+    echo "Removing image '${PXRUNTIME_IMAGE_NAME}' ..."
+    exit 0
+    $DOCKER_CMD rm ${PXRUNTIME_CONTAINER_NAME}
+
+    # wait until container is removed
+    until [[ $( $DOCKER_CMD ps -a | grep $PXRUNTIME_CONTAINER_NAME | wc -l ) -eq 0 ]]; do
+        echo '  - Waiting for the container to be removed'
+        sleep 1
+    done
+}
+
 run_px_runtime_docker() {
     echo "Running container '${PXRUNTIME_CONTAINER_NAME}' ..."
     # end_port_1=$(( 10000 + ${COMPUTE_COUNT} ))
@@ -1686,6 +1698,10 @@ if [[ ${ACTION} == "start" ]]; then
             echo "Will remove the existing container as --force-renew is specified"
             stop_px_runtime_docker
             remove_px_runtime_docker
+            # TODO - since we are hardcoding image right now, remove the image to make sure latest is pulled
+            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+
+            fi
         else
             echo_error_and_exit "Container '${PXRUNTIME_CONTAINER_NAME}' is already running. Aborting."
         fi
