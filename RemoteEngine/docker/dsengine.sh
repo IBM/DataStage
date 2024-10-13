@@ -757,6 +757,10 @@ run_px_runtime_docker() {
             --env SERVICE_ID=${CP4D_USER}
             --env SERVICE_API_KEY=${CP4D_API_KEY}
             --env GATEWAY=${GATEWAY}
+            # not required by ds-px-runtime but used for update
+            --env CP4D_PWD=${CP4D_PWD}
+            --env BEDROCK_URL=${BEDROCK_URL}
+            --env IAM_APIKEY_PROD_USER=${IAM_APIKEY_PROD_USER}
         )
     else
         runtime_docker_opts+=(
@@ -1821,8 +1825,17 @@ elif [[ ${ACTION} == "update" ]]; then
     PX_MEMORY=$(($($DOCKER_CMD inspect --format='{{.HostConfig.Memory}}' "${PXRUNTIME_CONTAINER_NAME}")/(1024*1024*1024))) # in GB
     PX_CPUS=$(($($DOCKER_CMD inspect --format='{{.HostConfig.NanoCpus}}' "${PXRUNTIME_CONTAINER_NAME}")/(1000*1000*1000))) # in cores
     GATEWAY_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
-    IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_URL | cut -d'=' -f2)
-    IAM_APIKEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        ZEN_URL=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2))
+        CP4D_USER=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2))
+        CP4D_API_KEY=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2))
+        CP4D_PWD=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep CP4D_PWD | cut -d'=' -f2))
+        BEDROCK_URL=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep BEDROCK_URL | cut -d'=' -f2))
+        IAM_APIKEY_PROD_USER=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_APIKEY_PROD_USER | cut -d'=' -f2))
+    else
+        IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_URL | cut -d'=' -f2)
+        IAM_APIKEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+    fi
     DS_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/ds-storage") | .Source')
     PX_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/px-storage") | .Source')
     SCRATCH_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/opt/ibm/PXService/Server/scratch") | .Source')
@@ -1851,8 +1864,17 @@ elif [[ ${ACTION} == "update" ]]; then
     [ -z $PX_MEMORY ] && "Could not retrieve PX_MEMORY from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $PX_CPUS ] && "Could not retrieve PX_CPUS from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $GATEWAY_URL ] && "Could not retrieve GATEWAY_URL from container ${PXRUNTIME_CONTAINER_NAME}"
-    [ -z $IAM_URL ] && "Could not retrieve IAM_URL from container ${PXRUNTIME_CONTAINER_NAME}"
-    [ -z $IAM_APIKEY ] && "Could not retrieve IAM_APIKEY from container ${PXRUNTIME_CONTAINER_NAME}"
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        [ -z $ZEN_URL ] && "Could not retrieve ZEN_URL from container ${PXRUNTIME_CONTAINER_NAME}."
+        [ -z $CP4D_USER ] && "Could not retrieve CP4D_USER from container ${PXRUNTIME_CONTAINER_NAME}."
+        [ -z $CP4D_API_KEY ] && "Could not retrieve CP4D_API_KEY from container ${PXRUNTIME_CONTAINER_NAME}."
+        [ -z $CP4D_PWD ] && "Could not retrieve CP4D_PWD from container ${PXRUNTIME_CONTAINER_NAME}."
+        [ -z $BEDROCK_URL ] && "Could not retrieve BEDROCK_URL from container ${PXRUNTIME_CONTAINER_NAME}."
+        [ -z $IAM_APIKEY_PROD_USER ] && "Could not retrieve IAM_APIKEY_PROD_USER from container ${PXRUNTIME_CONTAINER_NAME}."
+    else
+        [ -z $IAM_URL ] && "Could not retrieve IAM_URL from container ${PXRUNTIME_CONTAINER_NAME}"
+        [ -z $IAM_APIKEY ] && "Could not retrieve IAM_APIKEY from container ${PXRUNTIME_CONTAINER_NAME}"
+    fi
     [ -z $DS_STORAGE_HOST_DIR ] && "Could not retrieve DS_STORAGE_HOST_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $PX_STORAGE_HOST_DIR ] && "Could not retrieve PX_STORAGE_HOST_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $SCRATCH_DIR ] && "Could not retrieve SCRATCH_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
