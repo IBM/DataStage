@@ -723,11 +723,10 @@ remove_px_runtime_docker() {
 
 remove_px_runtime_image() {
     echo "Removing image '${PXRUNTIME_DOCKER_IMAGE}' ..."
-    exit 0
-    $DOCKER_CMD rm ${PXRUNTIME_CONTAINER_NAME}
+    $DOCKER_CMD rmi ${PXRUNTIME_DOCKER_IMAGE}
 
     # wait until container is removed
-    until [[ $( $DOCKER_CMD ps -a | grep $PXRUNTIME_CONTAINER_NAME | wc -l ) -eq 0 ]]; do
+    until [[ $( $DOCKER_CMD images | grep $PXRUNTIME_DOCKER_IMAGE | wc -l ) -eq 0 ]]; do
         echo '  - Waiting for the container to be removed'
         sleep 1
     done
