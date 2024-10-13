@@ -1694,14 +1694,10 @@ if [[ ${ACTION} == "start" ]]; then
     # check if this container is present and running. If so then exit with a prompt
     echo "Checking for existing container '${PXRUNTIME_CONTAINER_NAME}'"
     if [[ $(check_pxruntime_container_exists_and_running) == "true" ]]; then
-        if [[ ${FORCE_RENEW} == "true" ]]; then
+        if [[ "${FORCE_RENEW}" == "true" ]]; then
             echo "Will remove the existing container as --force-renew is specified"
             stop_px_runtime_docker
             remove_px_runtime_docker
-            # TODO - since we are hardcoding image right now, remove the image to make sure latest is pulled
-            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-                remove_px_runtime_image
-            fi
         else
             echo_error_and_exit "Container '${PXRUNTIME_CONTAINER_NAME}' is already running. Aborting."
         fi
@@ -1711,7 +1707,7 @@ if [[ ${ACTION} == "start" ]]; then
     # check if this container is present but not running. Restart the container
     if [[ $(check_pxruntime_container_exists) == "true" ]]; then
         echo "Existing container ${PXRUNTIME_CONTAINER_NAME} found in a stopped state"
-        if [[ ${FORCE_RENEW} == "true" ]]; then
+        if [[ "${FORCE_RENEW}" == "true" ]]; then
             echo "Will remove the existing container as --force-renew is specified"
             remove_px_runtime_docker
         else
@@ -1758,6 +1754,17 @@ if [[ ${ACTION} == "start" ]]; then
     else
         PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
     fi
+
+    # TODO - since we are using latest, right now we remove it on force-remove flag. This should't be needed once runtime-api is in place
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        if [[ "${FORCE_RENEW}" == 'true' ]]; then
+            echo "Removing the existing container as --force-renew is specified"
+            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+                remove_px_runtime_image
+            fi
+        fi
+    fi
+
     check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
     print_header "Initializing ${TOOL_SHORTNAME} Runtime environment with name '${REMOTE_ENGINE_NAME}' ..."
     echo "Setting up docker environment"
