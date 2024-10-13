@@ -651,7 +651,7 @@ check_or_pull_image() {
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             echo "$DOCKER_CMD pull $IMAGE_NAME"
             if $DOCKER_CMD pull $IMAGE_NAME; then
-                echo ''
+                echo 'Latest digest already exists, or pull is successful'
             else
                 echo "Failed to remove '${PXRUNTIME_DOCKER_IMAGE}', so re-starting existing container"
                 echo ""
