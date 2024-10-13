@@ -650,8 +650,9 @@ check_or_pull_image() {
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             echo "$DOCKER_CMD pull $IMAGE_NAME"
             $DOCKER_CMD pull $IMAGE_NAME
+        else
+            echo "Image ${IMAGE_NAME} exists locally"
         fi
-        echo "Image ${IMAGE_NAME} exists locally"
     fi
 }
 
