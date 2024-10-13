@@ -1713,7 +1713,7 @@ if [[ ${ACTION} == "start" ]]; then
     fi
 
     if [[ "${FORCE_RENEW}" == 'true' ]]; then
-        echo "Stopping and removing the existing container as --force-renew is specified"
+        echo "Flag --force-renew is specified"
         echo ""
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
