@@ -1710,7 +1710,9 @@ if [[ ${ACTION} == "start" ]]; then
     if [[ "${FORCE_RENEW}" == 'true' ]]; then
         echo "Stopping and removing the existing container as --force-renew is specified"
         echo ""
-        check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
+        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+            check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
+        fi
         stop_px_runtime_docker
         # remove_px_runtime_image
         remove_px_runtime_docker
