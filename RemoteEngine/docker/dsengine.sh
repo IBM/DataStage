@@ -1690,6 +1690,25 @@ fi
 
 if [[ ${ACTION} == "start" ]]; then
 
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        echo "Getting zen token"
+        get_cp4d_zen_token
+
+        # TODO - remove hardcoding and use ds-runtime api once its ready
+        DOCKER_REGISTRY='docker-na-public.artifactory.swg-devops.com/wcp-datastage-team-docker-local/ubi'
+        PX_VERSION="latest-amd64"
+    fi
+
+    # TODO - since we are using latest, right now we remove it on force-remove flag. This should't be needed once runtime-api is in place
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        if [[ "${FORCE_RENEW}" == 'true' ]]; then
+            echo "Removing the existing container as --force-renew is specified"
+            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+                remove_px_runtime_image
+            fi
+        fi
+    fi
+
     # check if this container is present and running. If so then exit with a prompt
     echo "Checking for existing container '${PXRUNTIME_CONTAINER_NAME}'"
     if [[ $(check_pxruntime_container_exists_and_running) == "true" ]]; then
@@ -1720,14 +1739,7 @@ if [[ ${ACTION} == "start" ]]; then
         fi
     fi
 
-    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-        echo "Getting zen token"
-        get_cp4d_zen_token
-
-        # TODO - remove hardcoding and use ds-runtime api once its ready
-        DOCKER_REGISTRY='docker-na-public.artifactory.swg-devops.com/wcp-datastage-team-docker-local/ubi'
-        PX_VERSION="latest-amd64"
-    else
+    if [[ "${DATASTAGE_HOME}" != 'cp4d' ]]; then
 
         # IAM Token will be needed to retrieve latest digest, and make other api calls
         echo "Getting IAM token"
@@ -1752,16 +1764,6 @@ if [[ ${ACTION} == "start" ]]; then
         PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
     else
         PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
-    fi
-
-    # TODO - since we are using latest, right now we remove it on force-remove flag. This should't be needed once runtime-api is in place
-    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-        if [[ "${FORCE_RENEW}" == 'true' ]]; then
-            echo "Removing the existing container as --force-renew is specified"
-            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-                remove_px_runtime_image
-            fi
-        fi
     fi
 
     check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
