@@ -1700,7 +1700,7 @@ if [[ ${ACTION} == "start" ]]; then
             remove_px_runtime_docker
             # TODO - since we are hardcoding image right now, remove the image to make sure latest is pulled
             if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-
+                remove_px_runtime_image
             fi
         else
             echo_error_and_exit "Container '${PXRUNTIME_CONTAINER_NAME}' is already running. Aborting."
