@@ -1858,6 +1858,7 @@ elif [[ ${ACTION} == "update" ]]; then
     MASKED_DSNEXT_SEC_KEY="${DSNEXT_SEC_KEY:0:1}******${DSNEXT_SEC_KEY: -1}"
     MASKED_IVSPEC="${IVSPEC:0:1}******${IVSPEC: -1}"
     MASKED_IAM_APIKEY="${IAM_APIKEY:0:1}******${IAM_APIKEY: -1}"
+
     # validate
     [ -z $DSNEXT_SEC_KEY ] && "Could not retrieve DSNEXT_SEC_KEY from container ${PXRUNTIME_CONTAINER_NAME}."
     [ -z $IVSPEC ] && "Could not retrieve IVSPEC from container ${PXRUNTIME_CONTAINER_NAME}"
@@ -1886,8 +1887,19 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "GATEWAY_URL = ${GATEWAY_URL}"
     echo "CONTAINER_MEMORY = ${PX_MEMORY}"
     echo "CONTAINER_CPUS = ${PX_CPUS}"
-    echo "IAM_URL = ${IAM_URL}"
-    echo "IAM_APIKEY = ${MASKED_IAM_APIKEY}"
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        MASKED_CP4D_API_KEY="${CP4D_API_KEY:0:1}******${CP4D_API_KEY: -1}"
+        MASKED_CP4D_PWD="${CP4D_PWD:0:1}******${CP4D_PWD: -1}"
+        echo "CP4D_USER = ${CP4D_USER}"
+        echo "CP4D_API_KEY = ${MASKED_CP4D_API_KEY}"
+        echo "CP4D_PWD = ${MASKED_CP4D_PWD}"
+        echo "ZEN_URL = ${ZEN_URL}"
+        echo "BEDROCK_URL = ${BEDROCK_URL}"
+        echo "IAM_APIKEY_PROD_USER = ${IAM_APIKEY_PROD_USER}"
+    else
+        echo "IAM_URL = ${IAM_URL}"
+        echo "IAM_APIKEY = ${MASKED_IAM_APIKEY}"
+    fi
     echo "DS_STORAGE_HOST_DIR = ${DS_STORAGE_HOST_DIR}"
     echo "PX_STORAGE_HOST_DIR = ${PX_STORAGE_HOST_DIR}"
     echo "SCRATCH_DIR = ${SCRATCH_DIR}"
