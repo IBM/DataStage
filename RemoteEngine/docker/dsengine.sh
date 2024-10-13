@@ -647,9 +647,17 @@ check_or_pull_image() {
             echo_error_and_exit "Could not download specified image, aborting script run."
         fi
     else
+        # TODO - currently we are pulling the latest image, so force renew
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             echo "$DOCKER_CMD pull $IMAGE_NAME"
-            $DOCKER_CMD pull $IMAGE_NAME
+            if $DOCKER_CMD pull $IMAGE_NAME; then
+                echo ''
+            else
+                echo "Failed to remove '${PXRUNTIME_DOCKER_IMAGE}', so re-starting existing container"
+                echo ""
+                start_px_runtime_docker
+                echo_error_and_exit "Failed to remove '${PXRUNTIME_DOCKER_IMAGE}'"
+            fi
         else
             echo "Image ${IMAGE_NAME} exists locally"
         fi
