@@ -1762,7 +1762,11 @@ if [[ ${ACTION} == "start" ]]; then
 
     fi
 
-    check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
+    # This is still needed since cloud version is calculated just above
+    if [[ "${DATASTAGE_HOME}" != 'cp4d' ]]; then
+        check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
+    fi
+
     print_header "Initializing ${TOOL_SHORTNAME} Runtime environment with name '${REMOTE_ENGINE_NAME}' ..."
     echo "Setting up docker environment"
 
