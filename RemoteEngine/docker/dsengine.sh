@@ -1729,6 +1729,8 @@ if [[ ${ACTION} == "start" ]]; then
         if [[ "${FORCE_RENEW}" == "true" ]]; then
             echo "Will remove the existing container as --force-renew is specified"
             remove_px_runtime_docker
+        fi
+
         if [[ "${FORCE_RENEW}" == "true" ]]; then
             start_px_runtime_docker
             wait_readiness_px_runtime
