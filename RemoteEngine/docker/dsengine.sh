@@ -653,10 +653,7 @@ check_or_pull_image() {
             if $DOCKER_CMD pull $IMAGE_NAME; then
                 echo 'Latest image pull is successful (or the latest digest already exists locally)'
             else
-                echo "Failed to remove '${PXRUNTIME_DOCKER_IMAGE}', so re-starting existing container"
-                echo ""
-                start_px_runtime_docker
-                echo_error_and_exit "Failed to remove '${PXRUNTIME_DOCKER_IMAGE}'"
+                echo_error_and_exit "Failed to pull '${PXRUNTIME_DOCKER_IMAGE}', exiting."
             fi
         else
             echo "Image ${IMAGE_NAME} exists locally"
