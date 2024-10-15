@@ -1963,14 +1963,14 @@ elif [[ ${ACTION} == "update" ]]; then
                 retrieve_latest_px_version_from_runtime
             fi
         fi
-    fi
 
-    PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
-    # update the image variables to use the PX_VERSION version
-    if [[ "$PX_VERSION" == "latest" || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
-    else
-        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
+        PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
+        # update the image variables to use the PX_VERSION version
+        if [[ "$PX_VERSION" == "latest" || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
+        else
+            PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
+        fi
     fi
     check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
     print_header "Initializing ${TOOL_SHORTNAME} Runtime environment with name '${REMOTE_ENGINE_NAME}' ..."
