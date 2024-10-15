@@ -1942,13 +1942,26 @@ elif [[ ${ACTION} == "update" ]]; then
     get_iam_token
     # check if the runtime image exists, if not, then download
     print_header "Checking docker images ..."
-    if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
-        get_all_px_versions_from_runtime
+
+    # TODO - select version is not yet supporte don cp4d as we do not have a versioning strategy
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        echo "Getting zen token"
+        get_cp4d_zen_token
+
+        # TODO - remove hardcoding and use ds-runtime api once its ready
+        DOCKER_REGISTRY='docker-na-public.artifactory.swg-devops.com/wcp-datastage-team-docker-local/ubi'
+        PX_VERSION="latest-amd64"
+        PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
+        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
     else
-        if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
-            retrieve_latest_px_version
+        if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
+            get_all_px_versions_from_runtime
         else
-            retrieve_latest_px_version_from_runtime
+            if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
+                retrieve_latest_px_version
+            else
+                retrieve_latest_px_version_from_runtime
+            fi
         fi
     fi
 
