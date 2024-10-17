@@ -1325,12 +1325,14 @@ check_platform() {
 validate_action_arguments() {
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'cleanup' ]]; then
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-            [ -z $CP4D_USER ] && echo_error_and_exit "Please specify CP4D User (--cp4d-user) for the respective environment. Aborting."
-            [ -z $CP4D_PWD ] && echo_error_and_exit "Please specify CP4D Password (--cp4d-password) for the respective environment. Aborting."
-            [ -z $CP4D_API_KEY ] && echo_error_and_exit "Please specify CP4D APIKey (--cp4d-apikey) for the respective environment. Aborting."
-            [ -z $BEDROCK_URL ] && echo_error_and_exit "Please specify CP4D Bedrock URL (--bedrock-url) for the respective environment. Aborting."
-            [ -z $ZEN_URL ] && echo_error_and_exit "Please specify CP4D Zen URL (--zen-url) for the respective environment. Aborting."
-            [ -z $IAM_APIKEY_PROD_USER ] && echo_error_and_exit "Please docker repositry login user(--prod-apikey-user) for the respective environment. Aborting."
+            if [[ "${ACTION}" == 'start' ]]; then
+                [ -z $CP4D_USER ] && echo_error_and_exit "Please specify CP4D User (--cp4d-user) for the respective environment. Aborting."
+                [ -z $CP4D_PWD ] && echo_error_and_exit "Please specify CP4D Password (--cp4d-password) for the respective environment. Aborting."
+                [ -z $CP4D_API_KEY ] && echo_error_and_exit "Please specify CP4D APIKey (--cp4d-apikey) for the respective environment. Aborting."
+                [ -z $BEDROCK_URL ] && echo_error_and_exit "Please specify CP4D Bedrock URL (--bedrock-url) for the respective environment. Aborting."
+                [ -z $ZEN_URL ] && echo_error_and_exit "Please specify CP4D Zen URL (--zen-url) for the respective environment. Aborting."
+                [ -z $IAM_APIKEY_PROD_USER ] && echo_error_and_exit "Please docker repositry login user(--prod-apikey-user) for the respective environment. Aborting."
+            fi
         else
             [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify an IBM Cloud IAM APIKey (-a | --apikey) for the respective environment. Aborting."
         fi
@@ -1857,6 +1859,7 @@ elif [[ ${ACTION} == "update" ]]; then
     CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2)
     CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
     if [[ -v CP4D_USER && -v CP4D_API_KEY && -n "${CP4D_USER}" && -n "${CP4D_API_KEY}" ]]; then
+        echo 'Datastage environment set to cp4d'
         DATASTAGE_HOME='cp4d'
     fi
 
@@ -2008,20 +2011,38 @@ elif [[ ${ACTION} == "cleanup" ]]; then
     echo    # (optional) move to a new line
     if [[ $REPLY =~ ^[Yy]$ ]]; then
 
+        CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2)
+        CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+        if [[ -v CP4D_USER && -v CP4D_API_KEY && -n "${CP4D_USER}" && -n "${CP4D_API_KEY}" ]]; then
+            echo 'Datastage environment set to cp4d'
+            DATASTAGE_HOME='cp4d'
+        fi
+
+        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+            ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
+            CP4D_PWD=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep CP4D_PWD | cut -d'=' -f2)
+            BEDROCK_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep BEDROCK_URL | cut -d'=' -f2)
+            IAM_APIKEY_PROD_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_APIKEY_PROD_USER | cut -d'=' -f2)
+            GATEWAY_URL=$ZEN_URL
+            UI_GATEWAY_URL=$ZEN_URL
+            PROJECT_CONTEXT='icp4data'
+            echo "Getting zen token"
+            get_cp4d_zen_token
+        else
+            PROJECT_CONTEXT='cpdaas'
+            echo "Getting IAM token"
+            get_iam_token
+        fi
+
+        if [ -d "${CONTAINER_HOST_DIR}" ]; then
+            rm -rf "${CONTAINER_HOST_DIR}"
+        fi
+
         stop_px_runtime_docker
         remove_px_runtime_docker
         cleanup_docker_network
 
         print_header "Cleaning Remote Engine '${REMOTE_ENGINE_NAME}'..."
-
-        if [[ "${PLATFORM}" == 'icp4d' ]]; then
-            if [ -d "${CONTAINER_HOST_DIR}" ]; then
-                rm -rf "${CONTAINER_HOST_DIR}"
-            fi
-        fi
-
-        echo "Getting IAM token"
-        get_iam_token
 
         echo "Getting Remote Engine ID ..."
         get_remote_engine_id
@@ -2042,7 +2063,7 @@ elif [[ ${ACTION} == "cleanup" ]]; then
         echo "Cleanup complete"
         echo ""
         echo "Project settings:"
-        echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=cpdaas"
+        echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=${PROJECT_CONTEXT}"
         echo ""
         echo "Project assets:"
         echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
