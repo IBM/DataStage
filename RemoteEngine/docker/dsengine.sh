@@ -1337,7 +1337,10 @@ validate_action_arguments() {
     fi
 
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
-        [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify a valid IBM Cloud Container Registry APIKey (-p | --prod-apikey). Aborting."
+        # TODO - this should be removed once the runtime versioning strategy in place for appropriate validation
+        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+            [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify a valid IBM Cloud Container Registry APIKey (-p | --prod-apikey). Aborting."
+        fi
     fi
 
     if [[ "${ACTION}" == 'start' ]]; then
@@ -1849,6 +1852,14 @@ elif [[ ${ACTION} == "update" ]]; then
     PX_MEMORY=$(($($DOCKER_CMD inspect --format='{{.HostConfig.Memory}}' "${PXRUNTIME_CONTAINER_NAME}")/(1024*1024*1024))) # in GB
     PX_CPUS=$(($($DOCKER_CMD inspect --format='{{.HostConfig.NanoCpus}}' "${PXRUNTIME_CONTAINER_NAME}")/(1000*1000*1000))) # in cores
     GATEWAY_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
+
+    # these 2 env vars should be only set in case of cp4d
+    CP4D_USER=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2))
+    CP4D_API_KEY=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2))
+    if [[ -v CP4D_USER && -v CP4D_API_KEY && -n "${CP4D_USER}" && -n "${CP4D_API_KEY}" ]]; then
+        DATASTAGE_HOME='cp4d'
+    fi
+
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
         ZEN_URL=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2))
         CP4D_USER=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2))
