@@ -1854,19 +1854,19 @@ elif [[ ${ACTION} == "update" ]]; then
     GATEWAY_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
 
     # these 2 env vars should be only set in case of cp4d
-    CP4D_USER=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2))
-    CP4D_API_KEY=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2))
+    CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2)
+    CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
     if [[ -v CP4D_USER && -v CP4D_API_KEY && -n "${CP4D_USER}" && -n "${CP4D_API_KEY}" ]]; then
         DATASTAGE_HOME='cp4d'
     fi
 
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-        ZEN_URL=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2))
-        CP4D_USER=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2))
-        CP4D_API_KEY=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2))
-        CP4D_PWD=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep CP4D_PWD | cut -d'=' -f2))
-        BEDROCK_URL=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep BEDROCK_URL | cut -d'=' -f2))
-        IAM_APIKEY_PROD_USER=$($($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_APIKEY_PROD_USER | cut -d'=' -f2))
+        ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
+        CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2)
+        CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+        CP4D_PWD=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep CP4D_PWD | cut -d'=' -f2)
+        BEDROCK_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep BEDROCK_URL | cut -d'=' -f2)
+        IAM_APIKEY_PROD_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_APIKEY_PROD_USER | cut -d'=' -f2)
     else
         IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_URL | cut -d'=' -f2)
         IAM_APIKEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
