@@ -1862,8 +1862,6 @@ elif [[ ${ACTION} == "update" ]]; then
 
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
         ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
-        CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2)
-        CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
         CP4D_PWD=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep CP4D_PWD | cut -d'=' -f2)
         BEDROCK_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep BEDROCK_URL | cut -d'=' -f2)
         IAM_APIKEY_PROD_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_APIKEY_PROD_USER | cut -d'=' -f2)
@@ -1948,12 +1946,6 @@ elif [[ ${ACTION} == "update" ]]; then
     stop_px_runtime_docker
     remove_px_runtime_docker
 
-    # IAM Token will be needed to retrieve latest digest, and make other api calls
-    echo "Getting IAM token"
-    get_iam_token
-    # check if the runtime image exists, if not, then download
-    print_header "Checking docker images ..."
-
     # TODO - select version is not yet supporte don cp4d as we do not have a versioning strategy
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
         echo "Getting zen token"
@@ -1965,6 +1957,12 @@ elif [[ ${ACTION} == "update" ]]; then
         PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
         PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
     else
+        # IAM Token will be needed to retrieve latest digest, and make other api calls
+        echo "Getting IAM token"
+        get_iam_token
+        # check if the runtime image exists, if not, then download
+        print_header "Checking docker images ..."
+
         if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
             get_all_px_versions_from_runtime
         else
