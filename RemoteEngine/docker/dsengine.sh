@@ -886,7 +886,6 @@ run_px_compute() {
         --env HOSTNAME=ds-px-compute-$i
         # --network=${PXRUNTIME_CONTAINER_NAME}
     )
-    echo "PLATFORM: ${PLATFORM}"
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         compute_docker_opts+=(
             --env WLMON=1
@@ -1437,7 +1436,7 @@ EOL
 }
 
 generate_init_volume_script() {
-        INIT_VOL_FILE="${PX_STORAGE_HOST_DIR}/init-volume.sh"
+    INIT_VOL_FILE="${PX_STORAGE_HOST_DIR}/init-volume.sh"
     if [ ! -f "${INIT_VOL_FILE}" ]; then
 cat <<EOL > "${INIT_VOL_FILE}"
 #! /bin/bash
@@ -1652,7 +1651,7 @@ if [[ ${ACTION} == "start" ]]; then
     # docker run
     # ---------------------
     print_header "Starting instance '${REMOTE_ENGINE_NAME}' ..."
-        run_px_runtime_docker
+    run_px_runtime_docker
     wait_readiness_px_runtime
 
 
