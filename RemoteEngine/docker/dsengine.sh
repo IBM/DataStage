@@ -54,6 +54,7 @@ CONTAINER_USER='NOT_SET'
 PROXY_URL='NOT_SET'
 CURL_CMD="curl"
 FORCE_RENEW='false'
+PROXY_CACERT_LOCATION="/px-storage/proxy.pem"
 
 bold=$(tput bold)
 normal=$(tput sgr0)
@@ -69,11 +70,13 @@ STR_VOLUMES="  --volume-dir                Specify a directory for datastage per
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
 STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
 STR_SET_USER='  --set-user                  Specify the username to be used to run the container. If not set, the current user is used.'
+STR_SET_GROUP='  --set-group                 Specify the group to be used to run the container.'
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
-# STR_VERSION='  --version                   Version of the remote engine to use'
+STR_VERSION='  --version                   Version of the remote engine to use; default will use the latest version.'
 STR_MEMORY='  --memory                    Specify memory allocated to the docker container (default is 4G).'
 STR_CPUS='  --cpus                      Specify CPU allocated to the docker container (default is 2 cores).'
 STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>).'
+STR_PROXY_CACERT='  --proxy-cacert              Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.'             
 STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
 STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, else use a container registry apikey (default is false).'
 STR_HELP='  help, --help                Print usage information'
@@ -174,10 +177,13 @@ print_usage() {
             echo "${STR_VOLUMES}"
             echo "${STR_MOUNT_DIR}"
             echo "${STR_SET_USER}"
+            echo "${STR_SET_GROUP}"
             echo "${STR_FORCE_RENEW}"
         fi
         echo "${STR_PROXY}"
+        echo "${STR_PROXY_CACERT}"
         echo "${STR_SELECT_PX_VERSION}"
+        echo "${STR_VERSION}"
         # echo "${STR_USE_ENT_KEY}"
         # echo "${STR_PLATFORM}"
     fi
@@ -279,9 +285,17 @@ function start() {
             shift
             handle_select_version "${1}"
             ;;
+        --version)
+            shift
+            PX_VERSION="${1}"
+            ;;
         --set-user)
             shift
             CONTAINER_USER="$1"
+            ;;
+        --set-group)
+            shift
+            CONTAINER_GROUP="$1"
             ;;
         --force-renew)
             shift
@@ -290,6 +304,10 @@ function start() {
         --proxy)
             shift
             PROXY_URL="$1"
+            ;;
+        --proxy-cacert)
+            shift
+            PROXY_CACERT="$1"
             ;;
         --use-entitlement-key)
             shift
@@ -574,6 +592,7 @@ get_all_px_versions_from_runtime() {
 
 check_or_pull_image() {
     IMAGE_NAME=$1
+    echo "Checking image ${IMAGE_NAME}"
     if [[ "$($DOCKER_CMD images -q $IMAGE_NAME 2> /dev/null)" == "" ]]; then
         echo "Image ${IMAGE_NAME} does not exist locally, proceeding to download"
         docker_login
@@ -658,6 +677,10 @@ remove_px_runtime_docker() {
     done
 }
 
+getent() {
+    grep "^$2:" /etc/$1
+}
+
 run_px_runtime_docker() {
     echo "Running container '${PXRUNTIME_CONTAINER_NAME}' ..."
     # end_port_1=$(( 10000 + ${COMPUTE_COUNT} ))
@@ -694,14 +717,30 @@ run_px_runtime_docker() {
         runtime_docker_opts+=(
             --env REMOTE_HTTPS_PROXY="${PROXY_URL}"
         )
+        if [ ! -z $PROXY_CACERT ]; then
+            runtime_docker_opts+=(
+                --env REMOTE_PROXY_CERT_LOCATION="${PROXY_CACERT_LOCATION}"
+            )
+            runtime_docker_opts+=(
+                --env AWS_CA_FILE="${PROXY_CACERT_LOCATION}"
+            )
+        fi
     fi
 
     CURRENT_USER=$(id -u)
     if [[ "${CONTAINER_USER}" != 'NOT_SET' ]]; then
         CURRENT_USER=$(id -u "${CONTAINER_USER}")
+        if [[ ! -z $CONTAINER_GROUP ]]; then
+            CURRENT_GROUP=$(getent group "${CONTAINER_GROUP}" | cut -d: -f3)
+            if [ -z $CURRENT_GROUP ]; then
+                echo "Unable to retrieve group ID for ${CONTAINER_GROUP}"
+                exit 1
+            fi
+            CURRENT_USER="${CURRENT_USER}:${CURRENT_GROUP}"
+        fi
     fi
     echo "Using user ${CURRENT_USER} to run the container"
-
+ 
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
         for mount in "${MOUNT_DIRS[@]}"; do
             if [[ -n "$mount" && -v mount && ! -z $mount ]]; then
@@ -847,6 +886,7 @@ run_px_compute() {
         --env HOSTNAME=ds-px-compute-$i
         # --network=${PXRUNTIME_CONTAINER_NAME}
     )
+    echo "PLATFORM: ${PLATFORM}"
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         compute_docker_opts+=(
             --env WLMON=1
@@ -911,7 +951,7 @@ get_iam_token() {
 
     IAM_URL="${IAM_URL%/}"
     IAM_URL="${IAM_URL%/identity/token}"
-
+    
     _iam_response=$($CURL_CMD -sS -X POST \
                 -H 'Content-Type: application/x-www-form-urlencoded' \
                 -H 'Accept: application/json' \
@@ -1249,6 +1289,15 @@ setup_docker_volumes() {
         generate_snc_script
         generate_log_retention_cfg
         generate_init_volume_script
+        copy_proxy_cacert
+    fi
+}
+
+copy_proxy_cacert() {
+    if [ ! -z $PROXY_CACERT ]; then
+        # Java only supports x509 format
+        #cat $PROXY_CACERT | openssl x509 > ${PX_STORAGE_HOST_DIR}/proxy.pem
+        cp $PROXY_CACERT ${PX_STORAGE_HOST_DIR}/proxy.pem
     fi
 }
 
@@ -1388,7 +1437,7 @@ EOL
 }
 
 generate_init_volume_script() {
-    INIT_VOL_FILE="${PX_STORAGE_HOST_DIR}/init-volume.sh"
+        INIT_VOL_FILE="${PX_STORAGE_HOST_DIR}/init-volume.sh"
     if [ ! -f "${INIT_VOL_FILE}" ]; then
 cat <<EOL > "${INIT_VOL_FILE}"
 #! /bin/bash
@@ -1531,6 +1580,11 @@ setup_docker_volumes
 if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
     echo 'Found proxy url in arguments, will use curl with proxy ...'
     CURL_CMD="curl --proxy ${PROXY_URL}"
+    # for some reason only get_remote_engine_id is getting ssl validation failure
+    if [[ ! -z $PROXY_CACERT ]]; then
+       # CURL_CMD="${CURL_CMD} --proxy-cacert ${PROXY_CACERT}"
+       CURL_CMD="${CURL_CMD} --proxy-insecure"
+    fi
 fi
 
 if [[ ${ACTION} == "start" ]]; then
@@ -1570,7 +1624,9 @@ if [[ ${ACTION} == "start" ]]; then
     get_iam_token
     # check if the runtime image exists, if not, then download
     print_header "Checking docker images ..."
-    if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
+    if [[ "${PX_VERSION}" != "latest" ]]; then
+        echo "Using specified version ${PX_VERSION}"
+    elif [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
     else
         if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
@@ -1596,7 +1652,7 @@ if [[ ${ACTION} == "start" ]]; then
     # docker run
     # ---------------------
     print_header "Starting instance '${REMOTE_ENGINE_NAME}' ..."
-    run_px_runtime_docker
+        run_px_runtime_docker
     wait_readiness_px_runtime
 
 
