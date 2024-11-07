@@ -81,10 +81,13 @@ While starting a remote engine, following optional flags can be used in addition
     If you are planning to create multiple engines on the same machine, then they should use different volume directories.
 1. `--home <value>`: Sets the target IBM Cloud enviroment to either `ypprod` (Dallas data center - default) or `frprod` (Frankfurt data center). The project associated with this engine instance must be in same data center.
 1. `--select-version`: Set to true if you want to choose a specific version of remote engine. By default, this flag is set to false and the latest version is used.
+1. `--version`: Version of the remote engine to use; default will use the latest version.
 1. `--set-user <username>`: Specify the username to be used to run the container. If not set, the current user is used.
+1. `--set-group <groupname>`: Specify the group to be used to run the container/
 1. `--mount-dir "</path/to/local_dir:/path/on/container>"`: Specify folder you want to mount on the container. This flag can be specified multiple times.
     * Note: This flag can be used to mount a scratch directory using `--mount-dir "</path/to/local_dir>:/opt/ibm/PXService/Server/scratch"`. This will override the default scratch directory that is either created in  `/tmp` or in the directory specified for `--volume-dir`.
 1. `--proxy http://<username>:<password>@<proxy_ip>:<port>`: Specify a proxy URL. The username and password can be skipped based on how the proxy is configured.
+1. `--proxy-cacert <cacert location>`: Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.
 1. `--force-renew`: Set to true if you want to remove the existing remote engine container. By default, this flag is set to false and if a stopped existing container is found, it is restarted or if a running existing container is found, the script is aborted.
 
 
