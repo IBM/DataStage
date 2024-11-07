@@ -1296,6 +1296,10 @@ copy_proxy_cacert() {
     if [ ! -z $PROXY_CACERT ]; then
         # Java only supports x509 format
         #cat $PROXY_CACERT | openssl x509 > ${PX_STORAGE_HOST_DIR}/proxy.pem
+        if [ ! -f $PROXY_CACERT ]; then
+            echo "The specified proxy certificate $PROXY_CACERT is not found."
+            exit 1
+        fi
         cp $PROXY_CACERT ${PX_STORAGE_HOST_DIR}/proxy.pem
     fi
 }
