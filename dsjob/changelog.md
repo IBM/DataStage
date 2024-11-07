@@ -4,6 +4,8 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.0.2](#502) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.2.md)
+
 [5.0.1](#501)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.1.md)
 
@@ -52,40 +54,112 @@ interface.
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
 
+## 5.0.2.1
+
+### Fixes
+ 
+ - `reset-pipeline-cache`. This command is now behind a toggle `ENABLE_DSJOB_RESETPIPELINECACHE`. This is to make sure that user must use the official `
+
+
+## 5.0.2
+
+### New commands
+
+The following commands are added:
+
+- `list-scheduled-jobs`  List all scheduled jobs.
+
+### Command changes
+
+The following commands have changed:
+
+`list-dependencies`:
+`list-usage`:
+
+- enhanced to support pipeline/orchestration flow dependencies
+
+`view-dataset`:
+`view-fileset`:
+
+- added ability to generate a `orchadmins dump` like output to a file using a record delimiter.
+
+`list-jobruns`:
+
+- if `--run-name` is given, it filters all jobs matching the run-name
+
+`get-job run`:
+
+- added ability to fetch last run of the job with specific run-name  
+
+`list-jobs`
+
+- now works at cluster level, listing all jobs in projects in the cluster
+
+`create-message-handler`:
+
+- enhances to support a json or text file with list of rules that can be used to create the message handler.
+
+`migrate`:
+`import-zip`:
+
+- added new option `--run-job-by-name` to migrate the job using name instead of id.
+
+`validate-job`:
+
+- enhanced to print flow runtime parameters and job parameters if they differ
+- allows to update the job parameters to match flow runtime parameters using the option `--remove-param-overrides`
+
+`send-mail`:
+
+- allows upto three attachments to send in each email.
+
+### Fixes
+
+`list-jobruns`:
+
+- when a project name is specified the output would be compatible to prior version
+- if the command is run on all projects in the cluster then the output column will differ from prior version
+
+`get-jobrun-report`:
+
+- now produces the correct start time for stage and link metrics.
+
+`run-pipeline`:
+`get-pipeline-log`
+
+- log fetching uses new api to reduce data exchange and optimize the run
+
 ## 5.0.1
 
 ### New commands
 
 The following commands are added:
 
--   `reset-pipeline-cache`  Reset a pipeline's cache.
--   `clear-vault-cache`  Clear a vault cache.
+- `reset-pipeline-cache`  Reset a pipeline's cache.
+- `clear-vault-cache`  Clear a vault cache.
 
 ### Command changes
-
 
 The following commands have changed:
 
 `schedule-job`:
 
--   you can now remove schedule information from the job.
+- you can now remove schedule information from the job.
 
 `migrate`
 
 - added two flags to allow annotation styling and math operation migrations.
 
-`update-metrics` 
+`update-metrics`
 
 - allows additional parameters to use certificates for authentication.
 
 ### Fixes
 
-
 `view-dataset`:
 `view-fileset`:
 
--   fixed issue with truncating the first two rows.
-
+- fixed issue with truncating the first two rows.
 
 ## 5.0.0
 
@@ -144,26 +218,6 @@ The following commands have changed:
 `compile`:
 
 - properly handles gateway timeouts and 500 errors without crashing.
-
-## 4.8.5.2
-
-### Fixes
-- `dsjob run` will now allow env variable ENABLE_IIS_EXITCODE=1 to generate exit codes that match IIS exit codes 
-  ref: https://github.ibm.com/DataStage/tracker/issues/36815
-- `list-dependencies` and `list-usage` will allow users to specify `--output json` option to generate output as json.
-  ref: https://github.ibm.com/DataStage/tracker/issues/37629
-
-## 4.8.5.1
-
- ### Fixes
- 
- - `list-params`. When volatile pipelines contain nodes with parameters, the parameters are not marshalled correctly. This is fixed in this release.
-  ref: https://github.ibm.com/DataStage/tracker/issues/37608
-       https://github.ibm.com/DataStage/tracker/issues/37215#issuecomment-79646374
-
-- `jobrunstat` to report start and end timestamps for the job runs.
-  This is an enhancement to make jobrunstat and now reports start and end timestamps whether the job is run successfully or not.
-  ref: https://github.ibm.com/DataStage/tracker/issues/36232
 
 ## 4.8.5
 
