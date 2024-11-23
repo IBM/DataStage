@@ -50,6 +50,8 @@ PLATFORM='icp4d'
 PX_MEMORY='4g'
 PX_CPUS='2'
 COMPUTE_COUNT=0
+CONTAINER_SECURITY_OPT='NOT_SET'
+CONTAINER_CAP_DROP='NOT_SET'
 CONTAINER_USER='NOT_SET'
 PROXY_URL='NOT_SET'
 CURL_CMD="curl"
@@ -69,6 +71,8 @@ STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datace
 STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
 STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
+STR_SECURITY_OPT='  --security-opt                  Specify the security-opt to be used to run the container.'
+STR_CAP_DROP='  --cap-drop                 Specify the cap-drop to be used to run the container.'
 STR_SET_USER='  --set-user                  Specify the username to be used to run the container. If not set, the current user is used.'
 STR_SET_GROUP='  --set-group                 Specify the group to be used to run the container.'
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
@@ -137,7 +141,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--set-user] [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
@@ -176,6 +180,8 @@ print_usage() {
             echo "${STR_CPUS}"
             echo "${STR_VOLUMES}"
             echo "${STR_MOUNT_DIR}"
+            echo "${STR_SECURITY_OPT}"
+            echo "${STR_CAP_DROP}"
             echo "${STR_SET_USER}"
             echo "${STR_SET_GROUP}"
             echo "${STR_FORCE_RENEW}"
@@ -288,6 +294,14 @@ function start() {
         --version)
             shift
             PX_VERSION="${1}"
+            ;;
+        --security-opt)
+            shift
+            CONTAINER_SECURITY_OPT="$1"
+            ;;
+        --cap-drop)
+            shift
+            CONTAINER_CAP_DROP="$1"
             ;;
         --set-user)
             shift
@@ -503,7 +517,16 @@ set_permissions() {
     DIR_PATH=$1
     chmod -R 775 "${DIR_PATH}"
     if [[ "${CONTAINER_USER}" != 'NOT_SET' ]]; then
-        chown -R $(id -u "${CONTAINER_USER}"):$(id -g "${CONTAINER_USER}") "${DIR_PATH}"
+        if [[ ! -z ${CONTAINER_GROUP} ]]; then
+            RETRIEVED_GROUP=$(getent group "${CONTAINER_GROUP}" | cut -d: -f3)
+            if [ -z $RETRIEVED_GROUP ]; then
+                echo "Unable to retrieve group ID for ${CONTAINER_GROUP}"
+                exit 1
+            fi
+            chown -R $(id -u "${CONTAINER_USER}"):${RETRIEVED_GROUP} "${DIR_PATH}"
+        else
+            chown -R $(id -u "${CONTAINER_USER}"):$(id -g "${CONTAINER_USER}") "${DIR_PATH}"
+        fi
     fi
 }
 
@@ -687,6 +710,20 @@ run_px_runtime_docker() {
     # end_port_2=$(( 11000 + ${COMPUTE_COUNT} ))
     # -p 10000-${end_port_1}:10000-${end_port_1} -p 11000-${end_port_2}:11000-${end_port_2} -p 9443:9443 \
 
+    CURRENT_USER=$(id -u)
+    if [[ "${CONTAINER_USER}" != 'NOT_SET' ]]; then
+        CURRENT_USER=$(id -u "${CONTAINER_USER}")
+        if [[ ! -z $CONTAINER_GROUP ]]; then
+            CURRENT_GROUP=$(getent group "${CONTAINER_GROUP}" | cut -d: -f3)
+            if [ -z $CURRENT_GROUP ]; then
+                echo "Unable to retrieve group ID for ${CONTAINER_GROUP}"
+                exit 1
+            fi
+            CURRENT_USER="${CURRENT_USER}:${CURRENT_GROUP}"
+        fi
+    fi
+    echo "Using user ${CURRENT_USER} to run the container"
+
     runtime_docker_opts=(
         --detach
         --name ${PXRUNTIME_CONTAINER_NAME}
@@ -710,7 +747,22 @@ run_px_runtime_docker() {
         --env WLM_JOB_START=1
         --env WLM_JOB_COUNT=5
         --network=${PXRUNTIME_CONTAINER_NAME}
+        --user=${CURRENT_USER}
     )
+
+    if [[ "${CONTAINER_SECURITY_OPT}" != 'NOT_SET' ]]; then
+        echo "Setting --security-opt to ${CONTAINER_SECURITY_OPT} to run the container"
+        runtime_docker_opts+=(
+            --security-opt=${CONTAINER_SECURITY_OPT}
+        )
+    fi
+
+    if [[ "${CONTAINER_CAP_DROP}" != 'NOT_SET' ]]; then
+        echo "Setting --cap-drop to ${CONTAINER_CAP_DROP} to run the container"
+        runtime_docker_opts+=(
+            --cap-drop=${CONTAINER_CAP_DROP}
+        )
+    fi
 
     if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
         echo "Proxy URL specified, setting container env ..."
@@ -726,20 +778,6 @@ run_px_runtime_docker() {
             )
         fi
     fi
-
-    CURRENT_USER=$(id -u)
-    if [[ "${CONTAINER_USER}" != 'NOT_SET' ]]; then
-        CURRENT_USER=$(id -u "${CONTAINER_USER}")
-        if [[ ! -z $CONTAINER_GROUP ]]; then
-            CURRENT_GROUP=$(getent group "${CONTAINER_GROUP}" | cut -d: -f3)
-            if [ -z $CURRENT_GROUP ]; then
-                echo "Unable to retrieve group ID for ${CONTAINER_GROUP}"
-                exit 1
-            fi
-            CURRENT_USER="${CURRENT_USER}:${CURRENT_GROUP}"
-        fi
-    fi
-    echo "Using user ${CURRENT_USER} to run the container"
  
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
         for mount in "${MOUNT_DIRS[@]}"; do
@@ -775,7 +813,6 @@ run_px_runtime_docker() {
             --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
             --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
             --env ENABLE_DS_METRICS=false
-            --user "${CURRENT_USER}"
         )
     fi
 
@@ -1741,6 +1778,8 @@ elif [[ ${ACTION} == "update" ]]; then
     MOUNT_DIRS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | "\(.Source):\(.Destination)"' | while read object; do echo "$object"; done)
     MOUNT_DIRS=($MOUNT_DIRS_STR)
     IFS=$SAVEIFS
+    CONTAINER_SECURITY_OPT=$($DOCKER_CMD inspect --format='{{.HostConfig.SecurityOpt}}' "${PXRUNTIME_CONTAINER_NAME}")
+    CONTAINER_CAP_DROP=$($DOCKER_CMD inspect --format='{{.HostConfig.CapDrop}}' "${PXRUNTIME_CONTAINER_NAME}")
     CONTAINER_USER=$($DOCKER_CMD inspect --format='{{.Config.User}}' "${PXRUNTIME_CONTAINER_NAME}")
     DOCKER_VOLUMES_DIR=$(dirname "$DS_STORAGE_HOST_DIR")
     SCRATCH_BASE_DIR=$(dirname "$SCRATCH_DIR")
@@ -1778,6 +1817,8 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "DS_STORAGE_HOST_DIR = ${DS_STORAGE_HOST_DIR}"
     echo "PX_STORAGE_HOST_DIR = ${PX_STORAGE_HOST_DIR}"
     echo "SCRATCH_DIR = ${SCRATCH_DIR}"
+    echo "CONTAINER_SECURITY_OPT = ${CONTAINER_SECURITY_OPT}"
+    echo "CONTAINER_CAP_DROP = ${CONTAINER_CAP_DROP}"
     echo "CONTAINER_USER = ${CONTAINER_USER}"
     echo "DOCKER_VOLUMES_DIR = ${DOCKER_VOLUMES_DIR}"
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
