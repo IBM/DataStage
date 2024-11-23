@@ -69,7 +69,7 @@ While starting a remote engine, following optional flags can be used in addition
 
 1. `--memory <value>`: Sets the maximum amount of memory the engine can use. The value takes a positive integer, followed by a suffix of m/M, g/G, to indicate megabytes or gigabytes. Default is `4G`.
 1. `--cpus <value>`: Sets the maximum amount of cpu resources the engine can use. The value takes a positive number. Default is `2` cores.
-1. `--pids-limit <value>`: Set the PID limit of the container (defaults to -1 for system default)
+1. `--pids-limit <value>`: Set the PID limit of the container (defaults to -1 for unlimited pids for the container)
 1. `--volume-dir <value>`: Sets the directory to be used as the volume directory for persistent storage. Default location is `/tmp/docker/volumes`. The volume directory will be updated with the following top level file structure:
 
     ```
