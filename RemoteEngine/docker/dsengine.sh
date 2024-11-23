@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.4
+TOOL_VERSION=1.0.5
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -49,6 +49,7 @@ IAM_URL='https://iam.cloud.ibm.com'
 PLATFORM='icp4d'
 PX_MEMORY='4g'
 PX_CPUS='2'
+PIDS_LIMIT='-1'
 COMPUTE_COUNT=0
 CONTAINER_SECURITY_OPT='NOT_SET'
 CONTAINER_CAP_DROP='NOT_SET'
@@ -79,6 +80,7 @@ STR_SET_GROUP='  --set-group                 Specify the group to be used to run
 STR_VERSION='  --version                   Version of the remote engine to use; default will use the latest version.'
 STR_MEMORY='  --memory                    Specify memory allocated to the docker container (default is 4G).'
 STR_CPUS='  --cpus                      Specify CPU allocated to the docker container (default is 2 cores).'
+STR_PIDS_LIMIT='  --pids-limit           Set the PID limit of the container (defaults to -1 for unlimited pids for the container)'
 STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>).'
 STR_PROXY_CACERT='  --proxy-cacert              Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.'             
 STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
@@ -141,7 +143,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
@@ -178,6 +180,7 @@ print_usage() {
         if [[ "${ACTION}" == 'start' ]]; then
             echo "${STR_MEMORY}"
             echo "${STR_CPUS}"
+            echo "${STR_PIDS_LIMIT}"
             echo "${STR_VOLUMES}"
             echo "${STR_MOUNT_DIR}"
             echo "${STR_SECURITY_OPT}"
@@ -274,6 +277,10 @@ function start() {
         --cpus)
             shift
             PX_CPUS="$1"
+            ;;
+        --pids-limit)
+            shift
+            PIDS_LIMIT="$1"
             ;;
         --volume-dir)
             shift
@@ -730,6 +737,7 @@ run_px_runtime_docker() {
         --hostname="$(hostname)"
         --memory=${PX_MEMORY}
         --cpus=${PX_CPUS}
+        --pids-limit=${PIDS_LIMIT}
         --env COMPONENT_ID=ds-px-runtime
         --env WLP_SKIP_UMASK=true
         --env ENVIRONMENT_TYPE=CLOUD
@@ -1280,6 +1288,7 @@ validate_action_arguments() {
         echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
         echo "CONTAINER_MEMORY=${PX_MEMORY}"
         echo "CONTAINER_CPUS=${PX_CPUS}"
+        echo "PIDS_LIMIT=${PIDS_LIMIT}"
         echo "DOCKER_VOLUMES_DIR=${DOCKER_VOLUMES_DIR}"
         if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
             echo "MOUNT_DIRS=${MOUNT_DIRS[@]}"
@@ -1766,6 +1775,7 @@ elif [[ ${ACTION} == "update" ]]; then
     IVSPEC=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IVSPEC | cut -d'=' -f2)
     PX_MEMORY=$(($($DOCKER_CMD inspect --format='{{.HostConfig.Memory}}' "${PXRUNTIME_CONTAINER_NAME}")/(1024*1024*1024))) # in GB
     PX_CPUS=$(($($DOCKER_CMD inspect --format='{{.HostConfig.NanoCpus}}' "${PXRUNTIME_CONTAINER_NAME}")/(1000*1000*1000))) # in cores
+    PIDS_LIMIT=$($DOCKER_CMD inspect --format='{{.HostConfig.PidsLimit}}' "${PXRUNTIME_CONTAINER_NAME}")
     GATEWAY_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
     IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_URL | cut -d'=' -f2)
     IAM_APIKEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
@@ -1798,6 +1808,7 @@ elif [[ ${ACTION} == "update" ]]; then
     [ -z $IVSPEC ] && "Could not retrieve IVSPEC from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $PX_MEMORY ] && "Could not retrieve PX_MEMORY from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $PX_CPUS ] && "Could not retrieve PX_CPUS from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $PIDS_LIMIT ] && "Could not retrieve PIDS_LIMIT from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $GATEWAY_URL ] && "Could not retrieve GATEWAY_URL from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $IAM_URL ] && "Could not retrieve IAM_URL from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $IAM_APIKEY ] && "Could not retrieve IAM_APIKEY from container ${PXRUNTIME_CONTAINER_NAME}"
@@ -1812,6 +1823,7 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "GATEWAY_URL = ${GATEWAY_URL}"
     echo "CONTAINER_MEMORY = ${PX_MEMORY}"
     echo "CONTAINER_CPUS = ${PX_CPUS}"
+    echo "PIDS_LIMIT = ${PIDS_LIMIT}"
     echo "IAM_URL = ${IAM_URL}"
     echo "IAM_APIKEY = ${MASKED_IAM_APIKEY}"
     echo "DS_STORAGE_HOST_DIR = ${DS_STORAGE_HOST_DIR}"
