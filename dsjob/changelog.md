@@ -4,6 +4,8 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.0.3](#503) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.3.md)
+
 [5.0.2](#502) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.2.md)
 
 [5.0.1](#501)
@@ -54,12 +56,34 @@ interface.
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
 
+## 5.0.3
+
+### New commands
+
+The following commands are added:
+
+- `generate-project-report` Generates project level report on Flows and Pipelines and their components.
+- `update-flow`  Update the flow with a new json definition.
+- `compile-pipeline` Compile a pipeline into executable script to run it as a DataStage job.
+  
+### Command changes
+
+The following commands have changed:
+
+- `run-pipeline`: Update to run pipeline using new option `optimize` and `skip-compile` to execute pipeline as a DataStage sequence runner.
+- `create-job` optionally takes `optimize` parameter that creates a DataStage sequence runner job.
+- `list-folders`: now has an option `output json` to output json results.
+
+### Fixes
+
+- `get-paramset` , `delete-paramset` and `delete-paramset-valueset` returns proper exit code when an invalid name is specified.
+- `run-pipeline` run status message outputs actual  job runtime by default unless environment variable `DSJOB_SHOW_RUNTIMES` set to 1, when the CLI execution time is shown.
+
 ## 5.0.2.1
 
 ### Fixes
  
  - `reset-pipeline-cache`. This command is now behind a toggle `ENABLE_DSJOB_RESETPIPELINECACHE`. This is to make sure that user must use the official `
-
 
 ## 5.0.2
 

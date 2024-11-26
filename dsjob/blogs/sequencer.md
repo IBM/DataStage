@@ -14,7 +14,8 @@ This step compiles an existing pipeline as sequencer job. This command performs 
 The following syntax compiles a pipeline or all the pipeline in a project:
 
 ```
-cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID} {--name PIPELINE | --id PIPELINEID} [--code] [--threads <n>]
+cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID} {--pipeline PIPELINE | --pipeline-id PIPELINEID} [--code] [--threads <n>]  [--enable-inline]
+
 ```
 -  `project` is the name of the project that contains the pipeline.
 -  `project-id` is the id of the project. One of `project` or `project-id` must be specified.
@@ -22,6 +23,7 @@ cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID} {--name 
 -  `id` is the id of the flow or a pipeline. One of `name` or `id` must be specified.
 -  `code` will output the details on the code it generates
 -  `threads` specifies the number of parallel compilations to run. The value should be in the range 5-20, default value is 5. This field is optional.
+- `enable-inline` when set to false, generates code to run each nested pipeline as independent sequencer job. Default value is `true`
 
 ex:
 // compile all pipelines in a project by concurrently compiling 10 at a time
@@ -34,11 +36,14 @@ ex:
 
 To run the pipeline as sequencer job you must use two new options to configure and run the `run-pipeline` command. For general syntax on the `run-pipeline` command please refer to [documentation](https://github.com/IBM/DataStage/blob/main/dsjob/dsjob.5.0.2.md#running-pipelines)
 
-Syntax for running the pipeline is as shown below. Please note that the two new options `--optimize` and `--skip-compile` will be available using the cpdctl release version [1.6.63]([https://github.com/IBM/cpdctl/releases/tag/v1.6.63](https://github.com/IBM/cpdctl/releases/tag/v1.6.63)) 
+Syntax for running the pipeline is as shown below. Please note that the two new options `--optimize` and `--skip-compile`  will be available using the cpdctl release version [1.6.62]([https://github.com/IBM/cpdctl/releases/tag/v1.6.62](https://github.com/IBM/cpdctl/releases/tag/v1.6.62)) 
+To use `enable-inline` option please use cpdctl version [1.6.78]([https://github.com/IBM/cpdctl/releases/tag/v1.6.62](https://github.com/IBM/cpdctl/releases/tag/v1.78)) 
 
-`optimize` when true the pipeline is run as sequencer job. If not specified then the pipeline is run as a normal pipeline execution.
 
-`skip-compile` when true the pipeline is not compiled during the run, if this flag is false then the pipeline is compiled as part of the run. This flag is only effective when `optimize` flag is set for the run, i.e. in optimized runner mode.
+- `optimize` when true the pipeline is run as sequencer job. If not specified then the pipeline is run as a normal pipeline execution.
+- `skip-compile` when true the pipeline is not compiled during the run, if this flag is false then the pipeline is compiled as part of the run. This flag is only effective when `optimize` flag is set for the run, i.e. in optimized runner mode.
+- `enable-inline` when set to false allows each nested pipeline to run as independent sequencer job. If `skip-compile` is set, then this flag will not have any effect because the existing compiled code is run as is.
+ 
 
 Following are some examples :
 
@@ -50,13 +55,21 @@ cpdctl dsjob run-pipeline --project dsjob-test --name testbashds --optimize=true
 or
 cpdctl dsjob run-pipeline --project dsjob-test --name testbashds --optimize --skip-compile=true --wait 200
 ```
+##### Run pipeline as sequencer job with independent nested sequencer job runs
+Run pipeline with enable-inline set to false.
+```
+cpdctl dsjob run-pipeline --project dsjob-test --name testbashds --optimize --wait 200 --enable-inline=false
+```
 
-##### Run pipeline without compiling implicitly
+
+##### Run pipeline without compiling
+Note: If you run pipeline without compilation, the run behavior will dependent on already compiled code with or without enable-inline option
 ```
 cpdctl dsjob run-pipeline --project dsjob-test --name testbashds --optimize --skip-compile --wait 200
 or
 cpdctl dsjob run-pipeline --project dsjob-test --name testbashds --optimize=true --skip-compile=true --wait 200
 ```  
+
 
 ##### Some internals
 When you run the pipeline using the above command, a job gets created with name `<PIPELINENAME>.DataStage sequence job`
