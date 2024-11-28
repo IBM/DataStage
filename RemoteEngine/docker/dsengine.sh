@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.5
+TOOL_VERSION=1.0.6
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -1793,6 +1793,12 @@ elif [[ ${ACTION} == "update" ]]; then
     CONTAINER_USER=$($DOCKER_CMD inspect --format='{{.Config.User}}' "${PXRUNTIME_CONTAINER_NAME}")
     DOCKER_VOLUMES_DIR=$(dirname "$DS_STORAGE_HOST_DIR")
     SCRATCH_BASE_DIR=$(dirname "$SCRATCH_DIR")
+    if [[ "$CONTAINER_CAP_DROP" == "[]" ]]; then
+        CONTAINER_CAP_DROP="NOT_SET"
+    fi
+    if [[ "$CONTAINER_SECURITY_OPT" == "[]" ]]; then
+        CONTAINER_SECURITY_OPT="NOT_SET"
+    fi 
 
     # if scratch directory was overriden, put it back in MOUNT_DIRS
     if [[ "${SCRATCH_BASE_DIR}" != "${DOCKER_VOLUMES_DIR}" ]]; then
