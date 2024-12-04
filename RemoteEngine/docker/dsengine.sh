@@ -42,6 +42,8 @@ GATEWAY_DOMAIN_YS1DEV='dataplatform.dev.cloud.ibm.com'
 GATEWAY_DOMAIN_YPQA='dataplatform.test.cloud.ibm.com'
 GATEWAY_DOMAIN_YPPROD='dataplatform.cloud.ibm.com'
 GATEWAY_DOMAIN_FRPROD='eu-de.dataplatform.cloud.ibm.com'
+GATEWAY_DOMAIN_SYDPROD='au-syd.dai.cloud.ibm.com'
+GATEWAY_DOMAIN_TORPROD='ca-tor.dai.cloud.ibm.com'
 
 # Defaults
 DATASTAGE_HOME="https://${GATEWAY_DOMAIN_YPPROD}"
@@ -68,7 +70,7 @@ STR_PROD_APIKEY='  -p, --prod-apikey           IBM Cloud Production APIKey for i
 STR_DSNEXT_SEC_KEY='  -e, --encryption key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            DataPlatform Project ID'
-STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod]'
+STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, cp4d]'
 STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
 STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
@@ -1236,12 +1238,22 @@ check_datastage_home() {
         UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_FRPROD}"
         GATEWAY_URL="https://api.${GATEWAY_DOMAIN_FRPROD}"
 
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_SYDPROD}" || "$DATASTAGE_HOME" == "sydprod" ]]; then
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_SYDPROD}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_SYDPROD}"
+
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_TORPROD}" || "$DATASTAGE_HOME" == "torprod" ]]; then
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_TORPROD}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_TORPROD}"
+
     else
         echo_error_and_exit "Incorrect value specified: '--home ${DATASTAGE_HOME}', aborting. Use one of the allowed values:
         - https://api.${GATEWAY_DOMAIN_YS1DEV}
         - https://api.${GATEWAY_DOMAIN_YPQA}
         - https://api.${GATEWAY_DOMAIN_YPPROD} (default)
-        - https://api.${GATEWAY_DOMAIN_FRPROD}"
+        - https://api.${GATEWAY_DOMAIN_FRPROD}
+        - https://api.${GATEWAY_DOMAIN_SYDPROD}
+        - https://api.${GATEWAY_DOMAIN_TORPROD}"
     fi
 
 }

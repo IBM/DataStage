@@ -672,7 +672,7 @@ handle_create_instance_usage() {
   echo "--storageClass: the file storageClass to use"
   echo "--storageSize: the storage size to use (in GB); defaults to 10"
   echo "--size: the size of the instance (small, medium, large); defaults to small"
-  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud: dallas(default), or frankfurt"
+  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud: dallas(default), frankfurt, sydney, or toronto"
   echo "--license-accept: set the to true to indicate that you have accepted the license for IBM DataStage as a Service Anywhere - https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en"
   echo ""
   exit 0
@@ -817,8 +817,14 @@ configure_data_center() {
   if [ $data_center = "frankfurt" ]; then
     # eu-de
     DS_GATEWAY="api.eu-de.dataplatform.cloud.ibm.com"
+  elif [ $data_center = "sydney" ]; then
+    # au-syd
+    DS_GATEWAY="api.au-syd.dai.cloud.ibm.com"
+  elif [ $data_center = "toronto" ]; then
+    # ca-tor
+    DS_GATEWAY="api.ca-tor.dai.cloud.ibm.com"
   elif [ $data_center != "dallas" ]; then
-    echo "Unknown value for data center '${data_center}'. Please specified either dallas, or frankfurt."
+    echo "Unknown value for data center '${data_center}'. Please specified either dallas, frankfurt, sydney, or toronto."
     exit 1
   fi
 }
