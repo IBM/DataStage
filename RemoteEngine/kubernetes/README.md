@@ -57,7 +57,7 @@ To deploy the DataStage operator on cluster without global pull secret configure
 
 # create the remote instance - add '--gateway api.dataplatform.cloud.ibm.com' if the instance needs to registers with prod env
 
-./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt] --license-accept true
+./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto] --license-accept true
 ```
 For documentation on how to create API keys, see https://cloud.ibm.com/docs/account?topic=account-manapikey.
 
@@ -88,7 +88,7 @@ sample input file:
 # indicate that you have accepted license for IBM DataStage as a Service Anywhere(https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en)
 license_accept=true
 
-# the data center where your DataStage is provisioned on IBM cloud (dallas, or frankfurt); the default is dallas.
+# the data center where your DataStage is provisioned on IBM cloud (dallas, frankfurt, sydney, or toronto); the default is dallas.
 # data_center=dallas
 
 # the namespace to deploy the remote engine

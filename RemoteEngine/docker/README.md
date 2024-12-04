@@ -80,7 +80,7 @@ While starting a remote engine, following optional flags can be used in addition
     ```
     Once the remote engine is up and running, additional files and folders will be created inside the above folders as needed by the engine.
     If you are planning to create multiple engines on the same machine, then they should use different volume directories.
-1. `--home <value>`: Sets the target IBM Cloud enviroment to either `ypprod` (Dallas data center - default) or `frprod` (Frankfurt data center). The project associated with this engine instance must be in same data center.
+1. `--home <value>`: Sets the target IBM Cloud enviroment to either `ypprod` (Dallas data center - default), `frprod` (Frankfurt data center), `sydprod` (Sydney data center), or  `torprod` (Toronto data center). The project associated with this engine instance must be in same data center.
 1. `--select-version`: Set to true if you want to choose a specific version of remote engine. By default, this flag is set to false and the latest version is used.
 1. `--version`: Version of the remote engine to use; default will use the latest version.
 1. `--security-opt <value>`: Specify the security-opt to be used to run the container.
