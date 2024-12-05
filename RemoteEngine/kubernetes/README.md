@@ -47,17 +47,17 @@ To deploy the DataStage operator on cluster without global pull secret configure
 
 ```
 # create pull secret for container registry
-./launch.sh create-pull-secret --namespace <namespace> --username <username> --password ${api-key}
+./launch.sh create-pull-secret --namespace <namespace> --username <username> --password ${api-key} [--zen-url <zen-url>]
 
 # deploy the operator
-./launch.sh install --namespace <namespace>
+./launch.sh install --namespace <namespace> [--zen-url <zen-url>]
 
 # create the api-key for dev or prod environment
-./launch.sh create-apikey-secret --namespace <namespace> --apikey ${cloud-api-key}
+./launch.sh create-apikey-secret --namespace <namespace> --apikey ${api-key} [--serviceid ${service-id}] [--zen-url <zen-url>]
 
 # create the remote instance - add '--gateway api.dataplatform.cloud.ibm.com' if the instance needs to registers with prod env
 
-./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto] --license-accept true
+./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto] [--zen-url <zen-url>] --license-accept true
 ```
 For documentation on how to create API keys, see https://cloud.ibm.com/docs/account?topic=account-manapikey.
 
@@ -98,8 +98,11 @@ namespace=<namespace>
 username=iamapikey
 password=<container-registry-api-key>
 
-# IBM cloud api key for the remote engine to use
+# IBM api key for the remote engine to use
 api_key=<api-key>
+
+# the CP4D service id username for the remote engine to use with api key
+service_id=cpadmin
 
 # the project ID that will be using this remote engine
 projectId=<project_id>
@@ -115,6 +118,9 @@ storage_class=<storage-class-name>
 
 # the storage size in gb
 storage_size=20
+
+# the zen url to use for CP4D environment
+zen_url=<zen-url>
 
 # the DNS name or IP of the EFS file system; omit if not deploying on AWS's EKS
 # the provisioner will use the storage class name specified in storage_class
