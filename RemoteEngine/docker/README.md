@@ -21,6 +21,8 @@
     1. iam.cloud.ibm.com
     1. dataplatform.cloud.ibm.com and api.dataplatform.cloud.ibm.com - if using Dallas datacenter
     1. eu-de.dataplatform.cloud.ibm.com and api.dataplatform.cloud.ibm.com - if using the Frankfurt data center
+    1. au-syd.dai.cloud.ibm.com and api.au-syd.dai.cloud.ibm.com - if using the Sydney data center
+    1. ca-tor.dai.cloud.ibm.com and api.ca-tor.dai.cloud.ibm.com - if using the Toronto data center
     1. cloud-object-storage.appdomain.cloud (the url could have a prefixed region eg. <region>.s3.cloud-object-store.appdomain.cloud), so recommendation is to allow `*.cloud-object-storage.appdomain.cloud` to accomodate such variations.
 
 
@@ -44,7 +46,7 @@
     iv =45990395FEB2B39C34B51D998E0E2E1B
     ```
     From this output, the `key` and `iv` are used as the Encryption Key and initialization vector (IV) respectively.
-1. Your Project ID. This is the ID of the project on Cloud Pak for Data project on IBM Cloud that you want to use with this Remote Engine instance. (If you are using the DataStage in Frankfurt data center then please use https://eu-de.dataplatform.cloud.ibm.com). You can retrieve this value by opening the project that you want to use with this Remote Engine and selecting the Manage tab > General to view the Project ID.
+1. Your Project ID. This is the ID of the project on Cloud Pak for Data project on IBM Cloud that you want to use with this Remote Engine instance. (If you are using the DataStage in Frankfurt data center then please use https://eu-de.dataplatform.cloud.ibm.com. If you are using the DataStage in Sydney data center then please use https://au-syd.dai.cloud.ibm.com. If you are using the DataStage in Toronto data center then please use https://ca-tor.dai.cloud.ibm.com.). You can retrieve this value by opening the project that you want to use with this Remote Engine and selecting the Manage tab > General to view the Project ID.
 1. IBM Cloud Container Registry API Key. This API key will be used to download the images needed to run Remote Engine. Currently, clients need to request this API Key once they have provisioned a DataStage-aaS Plan and it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport.
 
 ## Usage
