@@ -7,6 +7,8 @@ kubernetesCLI="oc"
 scriptName=$(basename "$0")
 scriptDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 filesDir="${scriptDir}/files"
+CURL_CMD="curl"
+remote_controlplane_env="cloud"
 
 serviceAccountFile="${filesDir}/datastage-sa.yaml"
 roleFile="${filesDir}/datastage-role.yaml"
@@ -32,6 +34,7 @@ operator_digest="sha256:99e45f8f94834d8f0ed2e9dbba9724bd79726eb292c0f2cef30844c0
 
 # default username for icr.io when using apikey
 username="iamapikey"
+service_id="iamapikey"
 
 storage_size="10"
 size="small"
@@ -81,7 +84,7 @@ create_nfs_provisioner() {
   if [ -z $provisioner_namespace ]; then
     provisioner_namespace="$namespace"
   fi
-	if [ -z $provisioner_namespace ]; then
+  if [ -z $provisioner_namespace ]; then
     display_missing_arg "namespace"
   fi
   if [ -z $storage_class ]; then
@@ -207,6 +210,11 @@ display_missing_arg()
 {
   echo "Missing required parameter - ${1}"
   exit 1
+}
+
+echo_error_and_exit() {
+    echo "ERROR: ${1}"
+    exit 1
 }
 
 validate_common_args()
@@ -418,7 +426,7 @@ create_operator_deployment() {
   fi
   # remove deployment with incorrect name used previously
   $kubernetesCLI -n $namespace delete deploy ibm-cpd-datastage-operator --ignore-not-found=true
-	$kubernetesCLI -n $namespace delete deploy ibm-cpd-datastage-remote-operator --ignore-not-found=true
+  $kubernetesCLI -n $namespace delete deploy ibm-cpd-datastage-remote-operator --ignore-not-found=true
   cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
 apiVersion: apps/v1
 kind: Deployment
@@ -531,7 +539,7 @@ create_pull_secret() {
   if [ -z $username ]; then
     display_missing_arg "username"
   fi
-	$kubernetesCLI -n ${namespace} delete secret $DS_REGISTRY_SECRET --ignore-not-found=true ${dryRun}
+  $kubernetesCLI -n ${namespace} delete secret $DS_REGISTRY_SECRET --ignore-not-found=true ${dryRun}
   $kubernetesCLI -n ${namespace} create secret docker-registry $DS_REGISTRY_SECRET --docker-server=${DOCKER_REGISTRY} --docker-username=${username} --docker-password=${password} --docker-email=cpd@us.ibm.com ${dryRun}
 }
 
@@ -543,8 +551,8 @@ create_apikey_secret() {
   if [[ ! -z $name ]] && [[ -z $inputFile ]]; then
     DS_API_KEY_SECRET="${name}"
   fi
-	$kubernetesCLI -n ${namespace} delete secret $DS_API_KEY_SECRET --ignore-not-found=true ${dryRun}
-  $kubernetesCLI -n ${namespace} create secret generic $DS_API_KEY_SECRET --from-literal=api-key=${api_key}
+  $kubernetesCLI -n ${namespace} delete secret $DS_API_KEY_SECRET --ignore-not-found=true ${dryRun}
+  $kubernetesCLI -n ${namespace} create secret generic $DS_API_KEY_SECRET --from-literal=api-key=${api_key} --from-literal=service-id=${service_id}
 }
 
 remove_previous_resources() {
@@ -584,15 +592,15 @@ create_instance() {
   fi
   configure_data_center
   # check if pxruntime with the same name exists
-  px_runtime_cr_count=`$kubernetesCLI -n $namespace get pxruntime $name --ignore-not-found=true | wc -l`
-  if [ $px_runtime_cr_count -ne 0 ]; then
-    remove_previous_resources
-    has_previous_pxruntime_cr="true"
-  fi
+  # px_runtime_cr_count=`$kubernetesCLI -n $namespace get pxruntime $name --ignore-not-found=true | wc -l`
+  # if [ $px_runtime_cr_count -ne 0 ]; then
+  #   remove_previous_resources
+  #   has_previous_pxruntime_cr="true"
+  # fi
   $kubernetesCLI -n $namespace get pxremoteengine $name
   if [ $? -eq 0 ]; then
     echo "PXRemoteEngine $name already exists; updating its image digests."
-    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"docker_registry_prefix\":\"${DOCKER_REGISTRY_PREFIX}\", \"api_key_secret\":\"${DS_API_KEY_SECRET}\", \"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}}}" --type=merge
+    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"docker_registry_prefix\":\"${DOCKER_REGISTRY_PREFIX}\", \"api_key_secret\":\"${DS_API_KEY_SECRET}\", \"project_id\": \"${projectId}\", \"remote_controlplane_env\":\"${remote_controlplane_env}\", \"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}}}" --type=merge
   else
     cat <<EOF | $kubernetesCLI apply -f -
 apiVersion: ds.cpd.ibm.com/v1
@@ -610,6 +618,7 @@ spec:
   project_id: $projectId
   docker_registry_prefix: $DOCKER_REGISTRY_PREFIX
   api_key_secret: $DS_API_KEY_SECRET
+  remote_controlplane_env: $remote_controlplane_env
   GATEWAY: $DS_GATEWAY
   image_digests:
     pxcompute: $px_compute_digest
@@ -640,6 +649,7 @@ handle_install_usage() {
   echo ""
   echo "Usage: $0 install --namespace <namespace>"
   echo "--namespace: the namespace to install the DataStage operator"
+  echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   exit 0
 }
 
@@ -650,6 +660,7 @@ handle_pull_secret_usage() {
   echo "--namespace: the namespace to install the DataStage operator"
   echo "--username: the username for the container registry"
   echo "--password: the password for the container registry"
+  echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   exit 0
 }
 
@@ -659,21 +670,24 @@ handle_apikey_usage() {
   echo "Usage: $0 create-apikey-secret --namespace <namespace> --apikey <api-key>"
   echo "--namespace: the namespace to create the api-key secret"
   echo "--apikey: the api-key for the remote engine to use when communicating with DataStage services"
+  echo "--serviceid: the username to use with the apikey"
+  echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   exit 0
 }
 
 handle_create_instance_usage() {
   echo ""
   echo "Description: creates an instance of the remote engine; the pull secret and the api-key secret should have been created in the same namespace."
-  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [data-center <data-center>] --license-accept true"
+  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--zen-url <zen-url>] --license-accept true"
   echo "--namespace: the namespace to create the instance"
   echo "--name: the name of the remote engine"
   echo "--project-id: the project ID to register the remote engine"
   echo "--storageClass: the file storageClass to use"
   echo "--storageSize: the storage size to use (in GB); defaults to 10"
   echo "--size: the size of the instance (small, medium, large); defaults to small"
-  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud: dallas(default), frankfurt, sydney, or toronto"
+  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, or toronto"
   echo "--license-accept: set the to true to indicate that you have accepted the license for IBM DataStage as a Service Anywhere - https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en"
+  echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   echo ""
   exit 0
 }
@@ -698,13 +712,59 @@ check_jq_installation() {
 
 generate_access_token() {
   apikey="${password}"
-  access_token=`curl -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$apikey" "https://iam.ng.bluemix.net/identity/token" | jq .access_token | cut -d\" -f2`
+  access_token=`$CURL_CMD -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$apikey" "https://iam.ng.bluemix.net/identity/token" | jq .access_token | cut -d\" -f2`
   if [[ -z $access_token ]]; then
     echo "Unable to retrieve access token".
     # rerun command without silent flag
-    curl -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$apikey" "https://iam.ng.bluemix.net/identity/token"
+    $CURL_CMD -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$apikey" "https://iam.ng.bluemix.net/identity/token"
     exit 1
   fi
+}
+
+# retrieve px image digests from ds-runtime for cp4d
+retrieve_px_image_digests_for_cp4d() {
+  # use fixed image digests for the initial 5.1.0 release
+  operator_digest="sha256:4d4e0e4355f2e24522880fd3a5ce2b0300096586d929a9d762b011dcfbdbec84"
+  px_runtime_digest="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea"
+  px_compute_digest="sha256:f7b7bc0bb8f92ba6d621ac5891524fa8f33f080468cae87d542ddc78d49ea1b8"
+  if [[ "$DOCKER_REGISTRY" == "icr.io" ]]; then
+    OPERATOR_REGISTRY="icr.io/cpopen"
+    DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"
+  else
+    # for testing with dev images
+    if [[ "$DOCKER_REGISTRY" == "docker-na-public.artifactory.swg-devops.com" ]]; then
+      OPERATOR_REGISTRY="${DOCKER_REGISTRY}/wcp-datastage-team-docker-local"
+      DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/wcp-datastage-team-docker-local/ubi"
+    elif [[ "$DOCKER_REGISTRY" == "cp.stg.icr.io" ]]; then
+      OPERATOR_REGISTRY="${DOCKER_REGISTRY}/cp"
+      DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/cp/cpd"
+    else
+      # assume that it's a private registry image mirroring - same
+      OPERATOR_REGISTRY="${DOCKER_REGISTRY}/cpopen"
+      DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/cp/cpd"
+    fi
+  fi
+
+
+  # if [ -z $api_key ]; then
+  #   # retrieve apikey from secret
+  #   api_key=$($kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET -o=jsonpath="{.data.api-key}" | base64 -d)
+  # fi
+  # if [ -z $service_id ]; then
+  #   # retrieve service id from secret
+  #   service_id=$($kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET -o=jsonpath="{.data.service-id}" | base64 -d)
+  # fi
+  # [ -z $api_key ] && echo_error_and_exit "Please specify CP4D api-key (--apikey) for cp4d environment. Aborting."
+  # [ -z $service_id ] && echo_error_and_exit "Please specify service id username (--serviceid) for cp4d environment. Aborting."
+  # access_token=`$CURL_CMD -s -X POST --header "cache-control: no-cache" --header "Content-type: application/json" -d "{\"userName\":\"$service_id\",\"api_key\":\"$api_key\"}" "https://${DS_GATEWAY}/icp4d-api/v1/authorize" | jq .token | cut -d\" -f2`
+  # image_digests=$($CURL_CMD -s -X GET -H "Authorization: Bearer $access_token" -H 'accept: application/json;charset=utf-8' https://${DS_GATEWAY}/data_intg/v3/flows_runtime/remote_engine/versions | jq -r '.versions[0].image_digests.px_runtime, .versions[0].image_digests.px_compute')
+  # image_digest_array=(${image_digests})
+  # if [ ${#image_digest_array[@]} -eq 2 ]; then
+  #   px_runtime_digest="${image_digest_array[0]}"
+  #   px_compute_digest="${image_digest_array[1]}"
+  #   echo "Retrieved digest for ds-px-runtime: ${px_runtime_digest}"
+  #   echo "Retrieved digest for ds-px-compute: ${px_compute_digest}"
+  # fi
 }
 
 # retrieve px image digests from ds-runtime
@@ -714,15 +774,15 @@ retrieve_px_image_digests() {
     api_key=`$kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET -o=jsonpath="{.data.api-key}" | base64 -d`
   fi
   if [ $DS_GATEWAY = "api.dataplatform.cloud.ibm.com" ]; then
-    cloud_access_token=`curl -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
-  else 
-    cloud_access_token=`curl -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.test.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
+    cloud_access_token=`$CURL_CMD -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
+  else
+    cloud_access_token=`$CURL_CMD -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.test.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
   fi
   if [ -z $cloud_access_token ]; then
     echo "Unable to retrieve access token from IBM Cloud."
     exit 1
   fi
-  image_digests=`curl -s -X GET -H "Authorization: Bearer $cloud_access_token" -H 'accept: application/json;charset=utf-8' https://${DS_GATEWAY}/data_intg/v3/flows_runtime/remote_engine/versions | jq -r '.versions[0].image_digests.px_runtime, .versions[0].image_digests.px_compute'`
+  image_digests=`$CURL_CMD -s -X GET -H "Authorization: Bearer $cloud_access_token" -H 'accept: application/json;charset=utf-8' https://${DS_GATEWAY}/data_intg/v3/flows_runtime/remote_engine/versions | jq -r '.versions[0].image_digests.px_runtime, .versions[0].image_digests.px_compute'`
   image_digest_array=(${image_digests})
   if [ ${#image_digest_array[@]} -eq 2 ]; then
     px_runtime_digest="${image_digest_array[0]}"
@@ -734,7 +794,7 @@ retrieve_px_image_digests() {
 
 retrieve_latest() {
   image="$1"
-  latest_digest=`curl -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $access_token" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${image}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"'`
+  latest_digest=`$CURL_CMD -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $access_token" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${image}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"'`
   echo "$latest_digest"
 }
 
@@ -768,30 +828,35 @@ retrieve_latest_image_digests() {
     OPERATOR_REGISTRY="icr.io/cpopen"
     DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"
     retrieve_px_image_digests
-  fi 
+  fi
 }
 
 # determine registry from pull secret
 determine_registry() {
-  $kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET > /dev/null
-  if [ $? -ne 0 ]; then
-    echo "The pull secret for the container registry has not been created."
-    exit 1
-  fi
-  username_secret=`$kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq -r '.auths | select(."icr.io") | ."icr.io" | .username'`
-  if [ $username_secret = "cp" ]; then
-    OPERATOR_REGISTRY="icr.io/cpopen"
-    DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"
-    retrieve_api_key
-    if [ ! -z $api_key ]; then
-      retrieve_px_image_digests
+# TODO - select version is not yet supported on cp4d as we do not have a versioning strategy
+  if [[ "$remote_controlplane_env" == "icp4d" ]]; then
+    retrieve_px_image_digests_for_cp4d
+  else
+    $kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET > /dev/null
+    if [ $? -ne 0 ]; then
+      echo "The pull secret for the container registry has not been created."
+      exit 1
     fi
-  elif [ $username_secret = "iamapikey" ]; then
-    password_secret=`$kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq -r '.auths | select(."icr.io") | ."icr.io" | .password'`
-    # set the registry credentials to be the ones from the secret
-    if [ ! -z $password_secret ]; then
-      password="${password_secret}"
-      retrieve_latest_image_digests
+    username_secret=`$kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq -r '.auths | select(."icr.io") | ."icr.io" | .username'`
+    if [ $username_secret = "cp" ]; then
+      OPERATOR_REGISTRY="icr.io/cpopen"
+      DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"
+      retrieve_api_key
+      if [ ! -z $api_key ]; then
+        retrieve_px_image_digests
+      fi
+    elif [ $username_secret = "iamapikey" ]; then
+      password_secret=`$kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq -r '.auths | select(."icr.io") | ."icr.io" | .password'`
+      # set the registry credentials to be the ones from the secret
+      if [ ! -z $password_secret ]; then
+        password="${password_secret}"
+        retrieve_latest_image_digests
+      fi
     fi
   fi
 }
@@ -814,6 +879,7 @@ check_namespace() {
 }
 
 configure_data_center() {
+if [[ "$remote_controlplane_env" != "icp4d" ]]; then
   if [ $data_center = "frankfurt" ]; then
     # eu-de
     DS_GATEWAY="api.eu-de.dataplatform.cloud.ibm.com"
@@ -827,6 +893,7 @@ configure_data_center() {
     echo "Unknown value for data center '${data_center}'. Please specified either dallas, frankfurt, sydney, or toronto."
     exit 1
   fi
+fi
 }
 
 while [ $# -gt 0 ]
@@ -842,6 +909,10 @@ do
         --apikey)
             shift
             api_key="${1}"
+            ;;
+        --serviceid)
+            shift
+            service_id="${1}"
             ;;
         --username)
             shift
@@ -903,6 +974,10 @@ do
             shift
             license_accept="${1}"
             ;;
+        --zen-url)
+            shift
+            zen_url="${1}"
+            ;;
         install)
             action="install"
             ;;
@@ -949,6 +1024,13 @@ handle_action_install() {
   echo "DataStage operator deployment created."
 }
 
+validate_and_setup_cp4d_args() {
+  echo "CP4D environment found, curl will be used without ssl validation ..."
+  CURL_CMD="curl -k"
+  DS_GATEWAY="$(echo ${zen_url} | sed -e 's/^.*:\/\///g' -e 's/\/.*//g')"
+  remote_controlplane_env="icp4d"
+}
+
 if [[ ! -z $dsdisplayHelp ]]; then
   case $action in
     install)
@@ -971,8 +1053,11 @@ fi
 
 determine_cli
 if [ -z $inputFile ]; then
-  determine_k8s
+  if [[ ! -z $zen_url ]]; then
+    validate_and_setup_cp4d_args
+  fi
   validate_common_args
+  determine_k8s
 fi
 
 case $action in
@@ -996,14 +1081,17 @@ esac
 
 if [ ! -z $inputFile ]; then
   source $inputFile
-  determine_k8s
+  if [[ ! -z $zen_url ]]; then
+    validate_and_setup_cp4d_args
+  fi
   validate_common_args
-  retrieve_latest_image_digests
-	if [[ ! -z $nfs_server ]]; then
+  determine_k8s
+  if [[ ! -z $nfs_server ]]; then
     create_nfs_provisioner
   fi
   create_pull_secret
   create_apikey_secret
+  determine_registry
   handle_action_install
   create_instance
 fi

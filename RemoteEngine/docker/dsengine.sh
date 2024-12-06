@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.6
+TOOL_VERSION=1.0.7
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -44,6 +44,9 @@ GATEWAY_DOMAIN_YPPROD='dataplatform.cloud.ibm.com'
 GATEWAY_DOMAIN_FRPROD='eu-de.dataplatform.cloud.ibm.com'
 GATEWAY_DOMAIN_SYDPROD='au-syd.dai.cloud.ibm.com'
 GATEWAY_DOMAIN_TORPROD='ca-tor.dai.cloud.ibm.com'
+
+# cp4d constants
+ZEN_URL='dummyzenurl'
 
 # Defaults
 DATASTAGE_HOME="https://${GATEWAY_DOMAIN_YPPROD}"
@@ -84,10 +87,14 @@ STR_MEMORY='  --memory                    Specify memory allocated to the docker
 STR_CPUS='  --cpus                      Specify CPU allocated to the docker container (default is 2 cores).'
 STR_PIDS_LIMIT='  --pids-limit           Set the PID limit of the container (defaults to -1 for unlimited pids for the container)'
 STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>).'
-STR_PROXY_CACERT='  --proxy-cacert              Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.'             
+STR_PROXY_CACERT='  --proxy-cacert              Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.'
 STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
-STR_USE_ENT_KEY='  --use-entitlement-key       [true | false]. Use entitlement key obtained from https://myibm.ibm.com to download the images, else use a container registry apikey (default is false).'
 STR_HELP='  help, --help                Print usage information'
+STR_ZEN_URL='  --zen-url                   CP4D zen url (required if --home is used with "cp4d")'
+STR_CP4D_USER='  --cp4d-user                 CP4D username (required if --home is used with "cp4d")'
+STR_CP4D_APIKEY='  --cp4d-apikey             CP4D apikey (required if --home is used with "cp4d")'
+STR_PROD_APIKEY_USER='  --prod-apikey-user           DataStage Artifactory user'
+
 
 
 #######################################################################
@@ -145,7 +152,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
@@ -167,6 +174,7 @@ print_usage() {
 
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
         echo "${STR_PROD_APIKEY}"
+        echo "${STR_PROD_APIKEY_USER}"
         if [[ "${ACTION}" == 'start' ]]; then
             echo "${STR_DSNEXT_SEC_KEY}"
             echo "${STR_IVSPEC}"
@@ -190,6 +198,11 @@ print_usage() {
             echo "${STR_SET_USER}"
             echo "${STR_SET_GROUP}"
             echo "${STR_FORCE_RENEW}"
+            echo "${STR_ZEN_URL}"
+            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+                echo "${STR_CP4D_USER}"
+                echo "${STR_CP4D_APIKEY}"
+            fi
         fi
         echo "${STR_PROXY}"
         echo "${STR_PROXY_CACERT}"
@@ -204,13 +217,24 @@ print_usage() {
 }
 
 function set_container_registry() {
-    if [[ "${1}" == 'true' ]]; then
-        DOCKER_REGISTRY='cp.icr.io/cp'
-        echo_error_and_exit 'Setting --use-entitlement-key to true is currently not supported. Aborting.'
-    elif [[ "${1}" == 'false' ]]; then
-        DOCKER_REGISTRY='icr.io/datastage'
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        # IAM_APIKEY_PROD_USER is not set for entitlement registry
+        if  [[ -n $IAM_APIKEY_PROD_USER ]]; then
+            # default to dev registry if DOCKER_REGISTRY has not been modified
+            if [[ "${DOCKER_REGISTRY}" == "icr.io/datastage" ]]; then
+                DOCKER_REGISTRY='docker-na-public.artifactory.swg-devops.com/wcp-datastage-team-docker-local/ubi'
+            else
+                # assume it's private registry populate through image mirroring - same namespace as entitlment registry
+                DOCKER_REGISTRY="${DOCKER_REGISTRY}/cp/cpd"
+            fi
+        elif [[ "$DOCKER_REGISTRY" == "cp.stg.icr.io" ]]; then
+            DOCKER_REGISTRY="${DOCKER_REGISTRY}/cp/cpd"
+        else
+            # defaults to entitlement registry
+            DOCKER_REGISTRY="cp.icr.io/cp/cpd"
+        fi
     else
-        echo_error_and_exit 'Incorrect option specified for flag "--use-entitlement-key". Acceptable values are: [true, false]'
+        DOCKER_REGISTRY='icr.io/datastage'
     fi
 }
 
@@ -332,9 +356,25 @@ function start() {
             shift
             PROXY_CACERT="$1"
             ;;
-        --use-entitlement-key)
+        --zen-url)
             shift
-            set_container_registry "${1}"
+            ZEN_URL="$1"
+            ;;
+        --cp4d-user)
+            shift
+            CP4D_USER="$1"
+            ;;
+        --cp4d-apikey)
+            shift
+            CP4D_API_KEY="$1"
+            ;;
+        --prod-apikey-user)
+            shift
+            IAM_APIKEY_PROD_USER="$1"
+            ;;
+        --registry)
+            shift
+            DOCKER_REGISTRY="$1"
             ;;
         -h | --help | help)
             print_usage
@@ -552,10 +592,14 @@ check_docker_daemon() {
 # docker login
 
 docker_login() {
-    if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
-        docker_login_datastage
+    if [[ -n $IAM_APIKEY_PROD_USER ]]; then
+        docker_login_datastage_artifactory
     else
-        docker_login_cpd
+        if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
+            docker_login_datastage
+        else
+            docker_login_cpd
+        fi
     fi
 }
 
@@ -573,11 +617,31 @@ docker_login_datastage() {
     fi
 }
 
+docker_login_datastage_artifactory() {
+    echo ""
+    [ -z $IAM_APIKEY_PROD_USER ] && echo_error_and_exit "Please specify DataStage Artifactory user (--prod-apikey-user). Aborting."
+    [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify DataStage Artifactory token (-p | --prod-apikey). Aborting."
+    DELAY=5
+
+    until $DOCKER_CMD login -u "${IAM_APIKEY_PROD_USER}" -p "${IAM_APIKEY_PROD}" $DOCKER_REGISTRY  || [ $DELAY -eq 10 ]; do
+        sleep $(( DELAY++ ))
+    done
+    status=$?
+    if [ $status -ne 0 ]; then
+        echo "docker login return code: $status."
+        echo_error_and_exit "Aborting setup."
+    fi
+}
+
 docker_login_cpd() {
     echo ""
     [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify CPD Entitlement Key (-p | --prod-apikey). Aborting."
     DELAY=5
-    until $DOCKER_CMD login -u cp -p $IAM_APIKEY_PROD $DOCKER_REGISTRY  || [ $DELAY -eq 10 ]; do
+    cpd_user="cp"
+    if [[ "${DOCKER_REGISTRY}" == "cp.stg.icr.io" ]]; then
+        cpd_user="iamapikey"
+    fi
+    until $DOCKER_CMD login -u ${cpd_user} -p $IAM_APIKEY_PROD $DOCKER_REGISTRY  || [ $DELAY -eq 10 ]; do
         sleep $(( DELAY++ ))
     done
     status=$?
@@ -596,14 +660,17 @@ retrieve_latest_px_version() {
 }
 
 retrieve_latest_px_version_from_runtime() {
-    echo "Getting PX Version to access Container Registry"
-    PX_VERSION=$($CURL_CMD -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
+    #echo "Getting PX Version to access Container Registry"
+    #PX_VERSION=$($CURL_CMD -s -X GET -H "Authorization: Bearer $ACCESS_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
+    #echo "Retrieved px-runtime digest = $PX_VERSION"
+    # set fixed version for 5.1.0
+    PX_VERSION="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea"
     echo "Retrieved px-runtime digest = $PX_VERSION"
 }
 
 get_all_px_versions_from_runtime() {
     echo "Getting PX Version to access Container Registry"
-    PX_VERSIONS_RESPONSE=$($CURL_CMD -s -X GET -H "Authorization: Bearer $IAM_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions")
+    PX_VERSIONS_RESPONSE=$($CURL_CMD -s -X GET -H "Authorization: Bearer $ACCESS_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions")
     PX_VERSION_PAIRS=$(printf "%s" "${PX_VERSIONS_RESPONSE}" | jq -r '.versions[] | "\(.px_runtime_version)(\(.image_digests.px_runtime))"')
 
     echo ''
@@ -625,9 +692,9 @@ get_all_px_versions_from_runtime() {
 check_or_pull_image() {
     IMAGE_NAME=$1
     echo "Checking image ${IMAGE_NAME}"
+    docker_login
     if [[ "$($DOCKER_CMD images -q $IMAGE_NAME 2> /dev/null)" == "" ]]; then
         echo "Image ${IMAGE_NAME} does not exist locally, proceeding to download"
-        docker_login
         echo "$DOCKER_CMD pull $IMAGE_NAME"
         $DOCKER_CMD pull $IMAGE_NAME
         if [ $status -ne 0 ]; then
@@ -635,7 +702,17 @@ check_or_pull_image() {
             echo_error_and_exit "Could not download specified image, aborting script run."
         fi
     else
-        echo "Image ${IMAGE_NAME} exists locally"
+        # TODO - currently we are pulling the latest image, so force renew
+        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+            echo "$DOCKER_CMD pull $IMAGE_NAME"
+            if $DOCKER_CMD pull $IMAGE_NAME; then
+                echo 'Latest image pull is successful (or the latest digest already exists locally)'
+            else
+                echo_error_and_exit "Failed to pull '${PXRUNTIME_DOCKER_IMAGE}', exiting."
+            fi
+        else
+            echo "Image ${IMAGE_NAME} exists locally"
+        fi
     fi
 }
 
@@ -713,6 +790,18 @@ getent() {
     grep "^$2:" /etc/$1
 }
 
+remove_px_runtime_image() {
+    echo "Removing image '${PXRUNTIME_DOCKER_IMAGE}' ..."
+    if $DOCKER_CMD rmi ${PXRUNTIME_DOCKER_IMAGE}; then
+        echo "Removed '${PXRUNTIME_DOCKER_IMAGE}'"
+    else
+        echo "Failed to remove '${PXRUNTIME_DOCKER_IMAGE}', so re-starting existing container"
+        echo ""
+        start_px_runtime_docker
+        echo_error_and_exit "Failed to remove '${PXRUNTIME_DOCKER_IMAGE}'"
+    fi
+}
+
 run_px_runtime_docker() {
     echo "Running container '${PXRUNTIME_CONTAINER_NAME}' ..."
     # end_port_1=$(( 10000 + ${COMPUTE_COUNT} ))
@@ -749,8 +838,6 @@ run_px_runtime_docker() {
         --env USE_EXTERNAL_SERVICE=true
         --env WLP_SKIP_MAXPERMSIZE=true
         --env GATEWAY_URL=${GATEWAY_URL}
-        --env IAM_URL=${IAM_URL}
-        --env SERVICE_API_KEY=${IAM_APIKEY}
         --env REMOTE_ENGINE_NAME=${REMOTE_ENGINE_NAME}
         --env DSNEXT_SEC_KEY=${DSNEXT_SEC_KEY}
         --env IVSPEC=${IVSPEC}
@@ -774,6 +861,23 @@ run_px_runtime_docker() {
         )
     fi
 
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        GATEWAY=$(printf %s "$GATEWAY_URL" | cut -d'/' -f3-)
+        runtime_docker_opts+=(
+            --env REMOTE_CONTROLPLANE_ENV=${PLATFORM}
+            --env SERVICE_ID=${CP4D_USER}
+            --env SERVICE_API_KEY=${CP4D_API_KEY}
+            --env GATEWAY=${GATEWAY}
+            # not required by ds-px-runtime but used for update
+            --env IAM_APIKEY_PROD_USER=${IAM_APIKEY_PROD_USER}
+        )
+    else
+        runtime_docker_opts+=(
+            --env IAM_URL=${IAM_URL}
+            --env SERVICE_API_KEY=${IAM_APIKEY}
+        )
+    fi
+
     if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
         echo "Proxy URL specified, setting container env ..."
         runtime_docker_opts+=(
@@ -788,7 +892,7 @@ run_px_runtime_docker() {
             )
         fi
     fi
- 
+
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
         for mount in "${MOUNT_DIRS[@]}"; do
             if [[ -n "$mount" && -v mount && ! -z $mount ]]; then
@@ -997,16 +1101,16 @@ get_iam_token() {
 
     IAM_URL="${IAM_URL%/}"
     IAM_URL="${IAM_URL%/identity/token}"
-    
+
     _iam_response=$($CURL_CMD -sS -X POST \
                 -H 'Content-Type: application/x-www-form-urlencoded' \
                 -H 'Accept: application/json' \
                 --data-urlencode 'grant_type=urn:ibm:params:oauth:grant-type:apikey' \
                 --data-urlencode "apikey=${IAM_APIKEY}" \
                 "${IAM_URL}/identity/token")
-    IAM_TOKEN=$(printf "%s" ${_iam_response} | jq -r .access_token | tr -d '"')
+    ACCESS_TOKEN=$(printf "%s" ${_iam_response} | jq -r .access_token | tr -d '"')
 
-    if [[ -z "${IAM_TOKEN}" || "${IAM_TOKEN}" == "null" ]]; then
+    if [[ -z "${ACCESS_TOKEN}" || "${ACCESS_TOKEN}" == "null" ]]; then
         echo ""
         if [[ "$_iam_response" ]]; then
             echo "Response = ${_iam_response}"
@@ -1043,6 +1147,29 @@ get_bss_id_from_token() {
 }
 
 #######################################################################
+# CP4D functions
+#######################################################################
+
+get_cp4d_access_token() {
+
+    ZEN_URL="${ZEN_URL%/}"
+    ZEN_URL="${ZEN_URL%/v1/preauth/validateAuth}"
+
+    _zen_response=$($CURL_CMD -skS -X POST -H "cache-control: no-cache" -H "Content-type: application/json" \
+                -d "{\"userName\":\"${CP4D_USER}\",\"api_key\":\"${CP4D_API_KEY}\"}" \
+                "${ZEN_URL}/icp4d-api/v1/authorize")
+    ACCESS_TOKEN=$(printf "%s" ${_zen_response} | jq -r .token | tr -d '"')
+
+    if [[ -z "${ACCESS_TOKEN}" || "${ACCESS_TOKEN}" == "null" ]]; then
+        echo ""
+        if [[ "$_zen_response" ]]; then
+            echo "Response = ${_zen_response}"
+        fi
+        echo_error_and_exit "Failed to get CP4D Access Token, please try again ..."
+    fi
+}
+
+#######################################################################
 # DataStage functions
 #######################################################################
 
@@ -1053,7 +1180,7 @@ get_bss_id_from_token() {
 get_remote_engine_id() {
     _engine_register_response=$($CURL_CMD -sS -X 'GET' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/register?type=singular" \
         -H 'accept: application/json;charset=utf-8' \
-        -H "Authorization: Bearer $IAM_TOKEN")
+        -H "Authorization: Bearer $ACCESS_TOKEN")
 
     # handle multple values
     REMOTE_ENGINE_ID=$(printf "%s" "${_engine_register_response}" \
@@ -1072,7 +1199,7 @@ get_remote_engine_id() {
 remove_remote_engine () {
     _engine_delete_response=$($CURL_CMD -sS -X 'DELETE' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/register?engine_id=${REMOTE_ENGINE_ID}" \
         -H 'accept: */*' \
-        -H "Authorization: Bearer $IAM_TOKEN")
+        -H "Authorization: Bearer $ACCESS_TOKEN")
     echo "Deleted remote engine with id: ${REMOTE_ENGINE_ID}"
 }
 
@@ -1083,7 +1210,7 @@ remove_remote_engine () {
 get_environment_id() {
     _project_env_get_response=$($CURL_CMD -sS -X 'GET' "${GATEWAY_URL}/v2/environments?project_id=${PROJECT_ID}" \
         -H 'accept: application/json' \
-        -H "Authorization: Bearer $IAM_TOKEN")
+        -H "Authorization: Bearer $ACCESS_TOKEN")
 
     if [[ -z "${_project_env_get_response}" || "${_project_env_get_response}" == "null" ]]; then
         echo ""
@@ -1104,7 +1231,7 @@ get_environment_id() {
 patch_environment() {
     _project_env_patch_response=$($CURL_CMD -sSi -X 'PATCH' "${GATEWAY_URL}/v2/environments/${PROJECT_ENV_ASSET_ID}?project_id=${PROJECT_ID}" \
         -H 'accept: application/json' \
-        -H "Authorization: Bearer $IAM_TOKEN" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" \
         -H 'Content-Type: application/json' \
         -d "{
   \"/entity/environment/hardware_specification\": {
@@ -1146,7 +1273,7 @@ patch_environment() {
 create_environment() {
     _project_env_create_response=$($CURL_CMD -sS -X 'POST' "${GATEWAY_URL}/v2/environments?project_id=${PROJECT_ID}" \
         -H 'accept: application/json' \
-        -H "Authorization: Bearer $IAM_TOKEN" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" \
         -H 'Content-Type: application/json' \
         -d "{
   \"name\": \"${REMOTE_ENGINE_NAME}\",
@@ -1212,7 +1339,7 @@ create_environment() {
 remove_environment() {
     _project_env_delete_response=$($CURL_CMD -sS -X 'DELETE' "${GATEWAY_URL}/v2/environments/${PROJECT_ENV_ASSET_ID}?project_id=${PROJECT_ID}" \
         -H 'accept: */*' \
-        -H "Authorization: Bearer $IAM_TOKEN")
+        -H "Authorization: Bearer $ACCESS_TOKEN")
     echo "Deleted environment runtime with id: ${PROJECT_ENV_ASSET_ID}"
 }
 
@@ -1246,6 +1373,11 @@ check_datastage_home() {
         UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_TORPROD}"
         GATEWAY_URL="https://api.${GATEWAY_DOMAIN_TORPROD}"
 
+    elif [[ "$DATASTAGE_HOME" == 'CP4D' || "$DATASTAGE_HOME" == 'cp4d' || "$DATASTAGE_HOME" == 'Cp4d' ]]; then
+        DATASTAGE_HOME='cp4d'
+        UI_GATEWAY_URL="${ZEN_URL}"
+        GATEWAY_URL="${ZEN_URL}"
+
     else
         echo_error_and_exit "Incorrect value specified: '--home ${DATASTAGE_HOME}', aborting. Use one of the allowed values:
         - https://api.${GATEWAY_DOMAIN_YS1DEV}
@@ -1253,7 +1385,8 @@ check_datastage_home() {
         - https://api.${GATEWAY_DOMAIN_YPPROD} (default)
         - https://api.${GATEWAY_DOMAIN_FRPROD}
         - https://api.${GATEWAY_DOMAIN_SYDPROD}
-        - https://api.${GATEWAY_DOMAIN_TORPROD}"
+        - https://api.${GATEWAY_DOMAIN_TORPROD}
+        - cp4d"
     fi
 
 }
@@ -1268,11 +1401,22 @@ check_platform() {
 
 validate_action_arguments() {
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'cleanup' ]]; then
-        [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify an IBM Cloud IAM APIKey (-a | --apikey) for the respective environment. Aborting."
+        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+            if [[ "${ACTION}" == 'start' ]]; then
+                [ -z $CP4D_USER ] && echo_error_and_exit "Please specify CP4D User (--cp4d-user) for the respective environment. Aborting."
+                [ -z $CP4D_API_KEY ] && echo_error_and_exit "Please specify CP4D APIKey (--cp4d-apikey) for the respective environment. Aborting."
+                [ -z $ZEN_URL ] && echo_error_and_exit "Please specify CP4D Zen URL (--zen-url) for the respective environment. Aborting."
+            fi
+        else
+            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify an IBM Cloud IAM APIKey (-a | --apikey) for the respective environment. Aborting."
+        fi
     fi
 
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
-        [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify a valid IBM Cloud Container Registry APIKey (-p | --prod-apikey). Aborting."
+        # TODO - this should be removed once the runtime versioning strategy in place for appropriate validation
+        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+            [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify a valid IBM Cloud Container Registry APIKey (-p | --prod-apikey). Aborting."
+        fi
     fi
 
     if [[ "${ACTION}" == 'start' ]]; then
@@ -1636,7 +1780,13 @@ print_tool_name_version
 echo ""
 
 validate_action_arguments
+set_container_registry
 setup_docker_volumes
+
+if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+    echo 'CP4D environment found, curl will be used without ssl validation ...'
+    CURL_CMD="curl -k"
+fi
 
 if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
     echo 'Found proxy url in arguments, will use curl with proxy ...'
@@ -1649,27 +1799,15 @@ if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
 fi
 
 if [[ ${ACTION} == "start" ]]; then
-
-    # check if this container is present and running. If so then exit with a prompt
-    echo "Checking for existing container '${PXRUNTIME_CONTAINER_NAME}'"
-    if [[ $(check_pxruntime_container_exists_and_running) == "true" ]]; then
-        if [[ ${FORCE_RENEW} == "true" ]]; then
-            echo "Will remove the existing container as --force-renew is specified"
-            stop_px_runtime_docker
-            remove_px_runtime_docker
-        else
+    if [[ "${FORCE_RENEW}" == 'true' ]]; then
+            echo "Flag --force-renew is specified"
+        echo ""
+        stop_px_runtime_docker
+        remove_px_runtime_docker
+    else
+        if [[ $(check_pxruntime_container_exists_and_running) == "true" ]]; then
             echo_error_and_exit "Container '${PXRUNTIME_CONTAINER_NAME}' is already running. Aborting."
-        fi
-    fi
-
-
-    # check if this container is present but not running. Restart the container
-    if [[ $(check_pxruntime_container_exists) == "true" ]]; then
-        echo "Existing container ${PXRUNTIME_CONTAINER_NAME} found in a stopped state"
-        if [[ ${FORCE_RENEW} == "true" ]]; then
-            echo "Will remove the existing container as --force-renew is specified"
-            remove_px_runtime_docker
-        else
+        elif [[ $(check_pxruntime_container_exists) == "true" ]]; then
             start_px_runtime_docker
             wait_readiness_px_runtime
 
@@ -1680,14 +1818,18 @@ if [[ ${ACTION} == "start" ]]; then
         fi
     fi
 
-    # IAM Token will be needed to retrieve latest digest, and make other api calls
-    echo "Getting IAM token"
-    get_iam_token
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        echo "Getting cp4d access token"
+        get_cp4d_access_token
+    else
+        # IAM Token will be needed to retrieve latest digest, and make other api calls
+        echo "Getting IAM token"
+        get_iam_token
+    fi
+
     # check if the runtime image exists, if not, then download
     print_header "Checking docker images ..."
-    if [[ "${PX_VERSION}" != "latest" ]]; then
-        echo "Using specified version ${PX_VERSION}"
-    elif [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
+    if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
     else
         if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
@@ -1699,12 +1841,14 @@ if [[ ${ACTION} == "start" ]]; then
 
     PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
     # update the image variables to use the PX_VERSION version
-    if [[ "$PX_VERSION" == "latest" || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    if [[ "$PX_VERSION" == "latest"* || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
     else
         PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
     fi
+
     check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
+
     print_header "Initializing ${TOOL_SHORTNAME} Runtime environment with name '${REMOTE_ENGINE_NAME}' ..."
     echo "Setting up docker environment"
 
@@ -1715,7 +1859,6 @@ if [[ ${ACTION} == "start" ]]; then
     print_header "Starting instance '${REMOTE_ENGINE_NAME}' ..."
     run_px_runtime_docker
     wait_readiness_px_runtime
-
 
     # datastage api calls
     # ---------------------
@@ -1789,8 +1932,23 @@ elif [[ ${ACTION} == "update" ]]; then
     PX_CPUS=$(($($DOCKER_CMD inspect --format='{{.HostConfig.NanoCpus}}' "${PXRUNTIME_CONTAINER_NAME}")/(1000*1000*1000))) # in cores
     PIDS_LIMIT=$($DOCKER_CMD inspect --format='{{.HostConfig.PidsLimit}}' "${PXRUNTIME_CONTAINER_NAME}")
     GATEWAY_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
-    IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_URL | cut -d'=' -f2)
-    IAM_APIKEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+
+    # these 2 env vars should be only set in case of cp4d
+    CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2)
+    CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+    if [[ -v CP4D_USER && -v CP4D_API_KEY && -n "${CP4D_USER}" && -n "${CP4D_API_KEY}" ]]; then
+        echo 'Datastage environment set to cp4d'
+        DATASTAGE_HOME='cp4d'
+    fi
+
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
+        IAM_APIKEY_PROD_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_APIKEY_PROD_USER | cut -d'=' -f2)
+        set_container_registry
+    else
+        IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_URL | cut -d'=' -f2)
+        IAM_APIKEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+    fi
     DS_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/ds-storage") | .Source')
     PX_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/px-storage") | .Source')
     SCRATCH_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/opt/ibm/PXService/Server/scratch") | .Source')
@@ -1810,7 +1968,7 @@ elif [[ ${ACTION} == "update" ]]; then
     fi
     if [[ "$CONTAINER_SECURITY_OPT" == "[]" ]]; then
         CONTAINER_SECURITY_OPT="NOT_SET"
-    fi 
+    fi
 
     # if scratch directory was overriden, put it back in MOUNT_DIRS
     if [[ "${SCRATCH_BASE_DIR}" != "${DOCKER_VOLUMES_DIR}" ]]; then
@@ -1821,6 +1979,7 @@ elif [[ ${ACTION} == "update" ]]; then
     MASKED_DSNEXT_SEC_KEY="${DSNEXT_SEC_KEY:0:1}******${DSNEXT_SEC_KEY: -1}"
     MASKED_IVSPEC="${IVSPEC:0:1}******${IVSPEC: -1}"
     MASKED_IAM_APIKEY="${IAM_APIKEY:0:1}******${IAM_APIKEY: -1}"
+
     # validate
     [ -z $DSNEXT_SEC_KEY ] && "Could not retrieve DSNEXT_SEC_KEY from container ${PXRUNTIME_CONTAINER_NAME}."
     [ -z $IVSPEC ] && "Could not retrieve IVSPEC from container ${PXRUNTIME_CONTAINER_NAME}"
@@ -1828,8 +1987,14 @@ elif [[ ${ACTION} == "update" ]]; then
     [ -z $PX_CPUS ] && "Could not retrieve PX_CPUS from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $PIDS_LIMIT ] && "Could not retrieve PIDS_LIMIT from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $GATEWAY_URL ] && "Could not retrieve GATEWAY_URL from container ${PXRUNTIME_CONTAINER_NAME}"
-    [ -z $IAM_URL ] && "Could not retrieve IAM_URL from container ${PXRUNTIME_CONTAINER_NAME}"
-    [ -z $IAM_APIKEY ] && "Could not retrieve IAM_APIKEY from container ${PXRUNTIME_CONTAINER_NAME}"
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        [ -z $ZEN_URL ] && "Could not retrieve ZEN_URL from container ${PXRUNTIME_CONTAINER_NAME}."
+        [ -z $CP4D_USER ] && "Could not retrieve CP4D_USER from container ${PXRUNTIME_CONTAINER_NAME}."
+        [ -z $CP4D_API_KEY ] && "Could not retrieve CP4D_API_KEY from container ${PXRUNTIME_CONTAINER_NAME}."
+    else
+        [ -z $IAM_URL ] && "Could not retrieve IAM_URL from container ${PXRUNTIME_CONTAINER_NAME}"
+        [ -z $IAM_APIKEY ] && "Could not retrieve IAM_APIKEY from container ${PXRUNTIME_CONTAINER_NAME}"
+    fi
     [ -z $DS_STORAGE_HOST_DIR ] && "Could not retrieve DS_STORAGE_HOST_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $PX_STORAGE_HOST_DIR ] && "Could not retrieve PX_STORAGE_HOST_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $SCRATCH_DIR ] && "Could not retrieve SCRATCH_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
@@ -1842,8 +2007,16 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "CONTAINER_MEMORY = ${PX_MEMORY}"
     echo "CONTAINER_CPUS = ${PX_CPUS}"
     echo "PIDS_LIMIT = ${PIDS_LIMIT}"
-    echo "IAM_URL = ${IAM_URL}"
-    echo "IAM_APIKEY = ${MASKED_IAM_APIKEY}"
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        MASKED_CP4D_API_KEY="${CP4D_API_KEY:0:1}******${CP4D_API_KEY: -1}"
+        echo "CP4D_USER = ${CP4D_USER}"
+        echo "CP4D_API_KEY = ${MASKED_CP4D_API_KEY}"
+        echo "ZEN_URL = ${ZEN_URL}"
+        echo "IAM_APIKEY_PROD_USER = ${IAM_APIKEY_PROD_USER}"
+    else
+        echo "IAM_URL = ${IAM_URL}"
+        echo "IAM_APIKEY = ${MASKED_IAM_APIKEY}"
+    fi
     echo "DS_STORAGE_HOST_DIR = ${DS_STORAGE_HOST_DIR}"
     echo "PX_STORAGE_HOST_DIR = ${PX_STORAGE_HOST_DIR}"
     echo "SCRATCH_DIR = ${SCRATCH_DIR}"
@@ -1859,11 +2032,18 @@ elif [[ ${ACTION} == "update" ]]; then
     stop_px_runtime_docker
     remove_px_runtime_docker
 
-    # IAM Token will be needed to retrieve latest digest, and make other api calls
-    echo "Getting IAM token"
-    get_iam_token
+# TODO - select version is not yet supporte don cp4d as we do not have a versioning strategy
+    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        echo "Getting cp4d access token"
+        get_cp4d_access_token
+    else
+        # IAM Token will be needed to retrieve latest digest, and make other api calls
+        echo "Getting IAM token"
+        get_iam_token
+    fi
     # check if the runtime image exists, if not, then download
     print_header "Checking docker images ..."
+
     if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
     else
@@ -1908,20 +2088,36 @@ elif [[ ${ACTION} == "cleanup" ]]; then
     echo    # (optional) move to a new line
     if [[ $REPLY =~ ^[Yy]$ ]]; then
 
+        CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2)
+        CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+        if [[ -v CP4D_USER && -v CP4D_API_KEY && -n "${CP4D_USER}" && -n "${CP4D_API_KEY}" ]]; then
+            echo 'Datastage environment set to cp4d'
+            DATASTAGE_HOME='cp4d'
+        fi
+
+        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+            ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
+            IAM_APIKEY_PROD_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_APIKEY_PROD_USER | cut -d'=' -f2)
+            GATEWAY_URL=$ZEN_URL
+            UI_GATEWAY_URL=$ZEN_URL
+            PROJECT_CONTEXT='icp4data'
+            echo "Getting cp4d access token"
+            get_cp4d_access_token
+        else
+            PROJECT_CONTEXT='cpdaas'
+            echo "Getting IAM token"
+            get_iam_token
+        fi
+
+        if [ -d "${CONTAINER_HOST_DIR}" ]; then
+            rm -rf "${CONTAINER_HOST_DIR}"
+        fi
+
         stop_px_runtime_docker
         remove_px_runtime_docker
         cleanup_docker_network
 
         print_header "Cleaning Remote Engine '${REMOTE_ENGINE_NAME}'..."
-
-        if [[ "${PLATFORM}" == 'icp4d' ]]; then
-            if [ -d "${CONTAINER_HOST_DIR}" ]; then
-                rm -rf "${CONTAINER_HOST_DIR}"
-            fi
-        fi
-
-        echo "Getting IAM token"
-        get_iam_token
 
         echo "Getting Remote Engine ID ..."
         get_remote_engine_id
@@ -1942,7 +2138,7 @@ elif [[ ${ACTION} == "cleanup" ]]; then
         echo "Cleanup complete"
         echo ""
         echo "Project settings:"
-        echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=cpdaas"
+        echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=${PROJECT_CONTEXT}"
         echo ""
         echo "Project assets:"
         echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
@@ -1955,4 +2151,3 @@ elif [[ ${ACTION} == "cleanup" ]]; then
     fi
 
 fi
-
