@@ -89,7 +89,7 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--cap-drop <value>`: Specify the cap-drop to be used to run the container.
 1. `--set-user <username>`: Specify the username to be used to run the container. If not set, the current user is used.
 1. `--set-group <groupname>`: Specify the group to be used to run the container.
-1. `--additional-users <uid1,uid2,uid3,...>`: Comma separated list of ids that can also pass data to remote engine besides the owner.
+1. `--additional-users <ibm-id1,ibm-id2,ibm-id3,...>`: Comma separated list of ids (ibm-ids for cloud; uids/usernames for cp4d) that can also pass data to remote engine besides the owner.
 1. `--mount-dir "</path/to/local_dir:/path/on/container>"`: Specify folder you want to mount on the container. This flag can be specified multiple times.
     * Note: This flag can be used to mount a scratch directory using `--mount-dir "</path/to/local_dir>:/opt/ibm/PXService/Server/scratch"`. This will override the default scratch directory that is either created in  `/tmp` or in the directory specified for `--volume-dir`.
 1. `--proxy http://<username>:<password>@<proxy_ip>:<port>`: Specify a proxy URL. The username and password can be skipped based on how the proxy is configured.
