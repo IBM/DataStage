@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.7
+TOOL_VERSION=1.0.8
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -81,6 +81,7 @@ STR_SECURITY_OPT='  --security-opt                  Specify the security-opt to 
 STR_CAP_DROP='  --cap-drop                 Specify the cap-drop to be used to run the container.'
 STR_SET_USER='  --set-user                  Specify the username to be used to run the container. If not set, the current user is used.'
 STR_SET_GROUP='  --set-group                 Specify the group to be used to run the container.'
+STR_ADDITIONAL_USERS='  --additional-users                 Comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner.'
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
 STR_VERSION='  --version                   Version of the remote engine to use; default will use the latest version.'
 STR_MEMORY='  --memory                    Specify memory allocated to the docker container (default is 4G).'
@@ -152,9 +153,9 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] \n                          [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--additional-users] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -344,6 +345,10 @@ function start() {
             shift
             CONTAINER_GROUP="$1"
             ;;
+        --additional-users)
+            shift
+            ADDITIONAL_USERS="$1"
+            ;;
         --force-renew)
             shift
             handle_force_renew "${1}"
@@ -420,9 +425,13 @@ function update() {
             shift
             PROXY_URL="$1"
             ;;
-        --use-entitlement-key)
+        --prod-apikey-user)
             shift
-            set_container_registry "${1}"
+            IAM_APIKEY_PROD_USER="$1"
+            ;;
+        --additional-users)
+            shift
+            ADDITIONAL_USERS="$1"
             ;;
         -h | --help | help)
             print_usage
@@ -861,6 +870,13 @@ run_px_runtime_docker() {
         )
     fi
 
+    if [[ ! -z  $ADDITIONAL_USERS ]]; then
+        echo "Adding additional users ${ADDITIONAL_USERS} to remote engine"
+        runtime_docker_opts+=(
+            --env ADDITIONAL_USERS=${ADDITIONAL_USERS}
+        )
+    fi
+
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
         GATEWAY=$(printf %s "$GATEWAY_URL" | cut -d'/' -f3-)
         runtime_docker_opts+=(
@@ -923,6 +939,7 @@ run_px_runtime_docker() {
             --env WLM_QUEUE_WAIT_TIMEOUT=0
             -v "${DS_STORAGE_HOST_DIR}":/ds-storage
             -v "${PX_STORAGE_HOST_DIR}":/px-storage
+            -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2
             --env DS_STORAGE_PATH=/ds-storage:/px-storage
             --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
             --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
@@ -1045,6 +1062,7 @@ run_px_compute() {
             --env WLM_QUEUE_WAIT_TIMEOUT=0
             -v "${DS_STORAGE_HOST_DIR}":/ds-storage
             -v "${PX_STORAGE_HOST_DIR}":/px-storage
+            -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2
         )
     fi
     $DOCKER_CMD run "${compute_docker_opts[@]}"  $PXCOMPUTE_DOCKER_IMAGE
@@ -1305,7 +1323,8 @@ create_environment() {
     }
   },
   \"tools_specification\": {
-    \"runtime_root_folder\": \"/DataStage/\"
+    \"runtime_root_folder\": \"/DataStage/\",
+    \"num_partitions\": 2
   },
   \"software_specification\": {
 
@@ -1468,6 +1487,7 @@ setup_docker_volumes() {
     PX_STORAGE_HOST_DIR="${CONTAINER_HOST_DIR}/px-storage"
     PX_STORAGE_WLM_DIR="${PX_STORAGE_HOST_DIR}/PXRuntime/WLM"
     SCRATCH_DIR="${DOCKER_VOLUMES_DIR}/scratch"
+    JDBC_JAR_DIR="${DOCKER_VOLUMES_DIR}/user-home/_global_/dbdrivers-v2"
 
     if [[ "${ACTION}" == 'start' ]]; then
 
@@ -1477,6 +1497,7 @@ setup_docker_volumes() {
             create_dir_if_not_exist "${DS_STORAGE_HOST_DIR}"
             create_dir_if_not_exist "${PX_STORAGE_HOST_DIR}"
             create_dir_if_not_exist "${PX_STORAGE_WLM_DIR}"
+            create_dir_if_not_exist "${JDBC_JAR_DIR}"
             set_permissions "${DOCKER_VOLUMES_DIR}"
         fi
 
@@ -1490,6 +1511,7 @@ setup_docker_volumes() {
         generate_snc_script
         generate_log_retention_cfg
         generate_init_volume_script
+        generate_download_jdbc_jars_script
         copy_proxy_cacert
     fi
 }
@@ -1770,6 +1792,42 @@ EOL
     fi
 }
 
+generate_download_jdbc_jars_script() {
+    DOWNLOAD_JARS_FILE="${PX_STORAGE_HOST_DIR}/download_jdbc_jars.sh"
+    if [ ! -f "${DOWNLOAD_JARS_FILE}" ]; then
+cat <<EOL > "${DOWNLOAD_JARS_FILE}"
+#!/bin/sh
+
+cd /user-home/_global_/dbdrivers-v2
+user=\$1
+api_key=\$2
+zen_url=\$3
+
+echo "Generating access token..."
+ACCESS_TOKEN=\$(curl -skS -X POST -H "cache-control: no-cache" -H "Content-type: application/json" -d "{\"userName\":\"\${user}\",\"api_key\":\"\${api_key}\"}" "\${zen_url}/icp4d-api/v1/authorize" | jq -r .token | tr -d '"')
+if [[ -z "\${ACCESS_TOKEN}" || "\${ACCESS_TOKEN}" == "null" ]]; then
+  echo "Unable to acquire access token. Incorrect credentials provided."
+  exit 1
+fi
+echo "Access token acquired."
+echo "Retrieving list of JDBC jars..."
+jar_list=\$(curl -skS -X GET -H "cache-control: no-cache" -H "Content-type: application/json" -H "Authorization: Bearer \${ACCESS_TOKEN}" "\${zen_url}/v2/connections/files" | jq -r '.resources | sort_by(.createdAt) | group_by(.fileName) | map({url: .[-1].url, fileName: .[-1].fileName}) | .[] | "\(.url):\(.fileName)"')
+echo "Fetched list of all latest unique JDBC jar files from cluster."
+count=0
+for jar in \${jar_list}; do
+  url=\$(echo "\${jar}" | cut -d ':' -f 1)
+  file=\$(echo "\${jar}" | cut -d ':' -f 2)
+  echo "Downloading file \${file}..."
+  curl -skS -X GET -H "cache-control: no-cache" -H "Content-type: octet-stream" -H "Authorization: Bearer \${ACCESS_TOKEN}" "\${zen_url}\${url}" --output \${file}
+  echo "File \${file} downloaded."
+  count=\$(( ++count ))
+done
+echo "Finished downloading \${count} files."
+EOL
+        set_permissions "${DOWNLOAD_JARS_FILE}"
+    fi
+}
+
 #######################################################################
 # main
 #######################################################################
@@ -1952,15 +2010,19 @@ elif [[ ${ACTION} == "update" ]]; then
     DS_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/ds-storage") | .Source')
     PX_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/px-storage") | .Source')
     SCRATCH_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/opt/ibm/PXService/Server/scratch") | .Source')
-    # MOUNT_DIRS=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | "\(.Source):\(.Destination)"' | tr '\n' ' ')
+    JDBC_JAR_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/user-home/_global_/dbdrivers-v2") | .Source')
+    # MOUNT_DIRS=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | "\(.Source):\(.Destination)"' | tr '\n' ' ')
     SAVEIFS=$IFS
     IFS=$'\n'
-    MOUNT_DIRS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | "\(.Source):\(.Destination)"' | while read object; do echo "$object"; done)
+    MOUNT_DIRS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | "\(.Source):\(.Destination)"' | while read object; do echo "$object"; done)
     MOUNT_DIRS=($MOUNT_DIRS_STR)
     IFS=$SAVEIFS
     CONTAINER_SECURITY_OPT=$($DOCKER_CMD inspect --format='{{.HostConfig.SecurityOpt}}' "${PXRUNTIME_CONTAINER_NAME}")
     CONTAINER_CAP_DROP=$($DOCKER_CMD inspect --format='{{.HostConfig.CapDrop}}' "${PXRUNTIME_CONTAINER_NAME}")
     CONTAINER_USER=$($DOCKER_CMD inspect --format='{{.Config.User}}' "${PXRUNTIME_CONTAINER_NAME}")
+    if [[ ! -v ADDITIONAL_USERS ]]; then
+        ADDITIONAL_USERS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ADDITIONAL_USERS | cut -d'=' -f2)
+    fi
     DOCKER_VOLUMES_DIR=$(dirname "$DS_STORAGE_HOST_DIR")
     SCRATCH_BASE_DIR=$(dirname "$SCRATCH_DIR")
     if [[ "$CONTAINER_CAP_DROP" == "[]" ]]; then
@@ -1998,6 +2060,7 @@ elif [[ ${ACTION} == "update" ]]; then
     [ -z $DS_STORAGE_HOST_DIR ] && "Could not retrieve DS_STORAGE_HOST_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $PX_STORAGE_HOST_DIR ] && "Could not retrieve PX_STORAGE_HOST_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $SCRATCH_DIR ] && "Could not retrieve SCRATCH_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $JDBC_JAR_DIR ] && "Could not retrieve JDBC_JAR_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $DOCKER_VOLUMES_DIR ] && "Could not retrieve DOCKER_VOLUMES_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $CONTAINER_USER ] && "Could not retrieve CONTAINER_USER from container ${PXRUNTIME_CONTAINER_NAME}"
 
@@ -2020,9 +2083,11 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "DS_STORAGE_HOST_DIR = ${DS_STORAGE_HOST_DIR}"
     echo "PX_STORAGE_HOST_DIR = ${PX_STORAGE_HOST_DIR}"
     echo "SCRATCH_DIR = ${SCRATCH_DIR}"
+    echo "JDBC_JAR_DIR = ${JDBC_JAR_DIR}"
     echo "CONTAINER_SECURITY_OPT = ${CONTAINER_SECURITY_OPT}"
     echo "CONTAINER_CAP_DROP = ${CONTAINER_CAP_DROP}"
     echo "CONTAINER_USER = ${CONTAINER_USER}"
+    echo "ADDITIONAL_USERS = ${ADDITIONAL_USERS}"
     echo "DOCKER_VOLUMES_DIR = ${DOCKER_VOLUMES_DIR}"
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
         echo "MOUNT_DIRS=${MOUNT_DIRS[@]}"

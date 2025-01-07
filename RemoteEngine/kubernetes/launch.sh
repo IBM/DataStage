@@ -9,6 +9,7 @@ scriptDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 filesDir="${scriptDir}/files"
 CURL_CMD="curl"
 remote_controlplane_env="cloud"
+additional_users=""
 
 serviceAccountFile="${filesDir}/datastage-sa.yaml"
 roleFile="${filesDir}/datastage-role.yaml"
@@ -600,7 +601,7 @@ create_instance() {
   $kubernetesCLI -n $namespace get pxremoteengine $name
   if [ $? -eq 0 ]; then
     echo "PXRemoteEngine $name already exists; updating its image digests."
-    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"docker_registry_prefix\":\"${DOCKER_REGISTRY_PREFIX}\", \"api_key_secret\":\"${DS_API_KEY_SECRET}\", \"project_id\": \"${projectId}\", \"remote_controlplane_env\":\"${remote_controlplane_env}\", \"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}}}" --type=merge
+    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"docker_registry_prefix\":\"${DOCKER_REGISTRY_PREFIX}\", \"api_key_secret\":\"${DS_API_KEY_SECRET}\", \"project_id\": \"${projectId}\", \"remote_controlplane_env\":\"${remote_controlplane_env}\", \"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}, \"additional_users\":\"${additional_users}\"}}" --type=merge
   else
     cat <<EOF | $kubernetesCLI apply -f -
 apiVersion: ds.cpd.ibm.com/v1
@@ -619,6 +620,7 @@ spec:
   docker_registry_prefix: $DOCKER_REGISTRY_PREFIX
   api_key_secret: $DS_API_KEY_SECRET
   remote_controlplane_env: $remote_controlplane_env
+  additional_users: $additional_users
   GATEWAY: $DS_GATEWAY
   image_digests:
     pxcompute: $px_compute_digest
@@ -687,6 +689,7 @@ handle_create_instance_usage() {
   echo "--size: the size of the instance (small, medium, large); defaults to small"
   echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, or toronto"
   echo "--license-accept: set the to true to indicate that you have accepted the license for IBM DataStage as a Service Anywhere - https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en"
+  echo "--additional-users: comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner"
   echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   echo ""
   exit 0
@@ -973,6 +976,10 @@ do
         --license-accept)
             shift
             license_accept="${1}"
+            ;;
+        --additional-users)
+            shift
+            additional_users="${1}"
             ;;
         --zen-url)
             shift
