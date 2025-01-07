@@ -689,7 +689,7 @@ handle_create_instance_usage() {
   echo "--size: the size of the instance (small, medium, large); defaults to small"
   echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, or toronto"
   echo "--license-accept: set the to true to indicate that you have accepted the license for IBM DataStage as a Service Anywhere - https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en"
-  echo "--additional-users: comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also pass data to remote engine besides the owner"
+  echo "--additional-users: comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner"
   echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   echo ""
   exit 0

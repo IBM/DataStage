@@ -119,7 +119,7 @@ storage_class=<storage-class-name>
 # the storage size in gb
 storage_size=20
 
-# comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also pass data to remote engine besides the owner
+# comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner
 # additional_users=IBMid-1000000000,IBMid-2000000000,IBMid-3000000000...
 
 # the zen url to use for CP4D environment
