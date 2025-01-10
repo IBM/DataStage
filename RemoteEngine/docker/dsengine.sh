@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.8
+TOOL_VERSION=1.0.9
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -72,7 +72,7 @@ STR_IAM_APIKEY='  -a, --apikey                IBM Cloud APIKey for the selected 
 STR_PROD_APIKEY='  -p, --prod-apikey           IBM Cloud Production APIKey for image download from DataStage Container registry. It can be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport'
 STR_DSNEXT_SEC_KEY='  -e, --encryption key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
-STR_PROJECT_UID='  -d, --project-id            DataPlatform Project ID'
+STR_PROJECT_UID='  -d, --project-id            Comma separated list of DataPlatform Project IDs'
 STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, cp4d]'
 STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
@@ -291,7 +291,7 @@ function start() {
             ;;
         -d | --project-id)
             shift
-            PROJECT_ID="$1"
+            IFS="," read -ra PROJECT_IDS <<< "$1"
             ;;
         --home)
             shift
@@ -494,7 +494,7 @@ function cleanup() {
             ;;
         -d | --project-id)
             shift
-            PROJECT_ID="$1"
+            IFS="," read -ra PROJECT_IDS <<< "$1"
             ;;
         --home)
             shift
@@ -1441,7 +1441,7 @@ validate_action_arguments() {
     if [[ "${ACTION}" == 'start' ]]; then
         [ -z $DSNEXT_SEC_KEY ] && echo_error_and_exit "Please specify an encryption key (-e | --encryption-key. Aborting."
         [ -z $IVSPEC ] && echo_error_and_exit "Please specify the initialization vector for the encryption key (-i | --ivspec). Aborting."
-        [ -z $PROJECT_ID ] && echo_error_and_exit "Please specify the project ID in which you want to create the Remote Engine environment (-p | --prod-apikey). Aborting."
+        [ -z $PROJECT_IDS ] && echo_error_and_exit "Please specify the comma separated list of project IDs in which you want to create the Remote Engine environment (-d | --project-id). Aborting."
     fi
 
     # needed for all options
@@ -1458,7 +1458,7 @@ validate_action_arguments() {
     if [[ "${ACTION}" == 'start' ]]; then
         echo "DATASTAGE_HOME=${DATASTAGE_HOME}"
         echo "GATEWAY_URL=${GATEWAY_URL}"
-        echo "PROJECT_ID=${PROJECT_ID}"
+        echo "PROJECT_IDS=${PROJECT_IDS}"
         echo "REMOTE_ENGINE_PREFIX=${REMOTE_ENGINE_NAME}"
         echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
         echo "CONTAINER_MEMORY=${PX_MEMORY}"
@@ -1928,28 +1928,32 @@ if [[ ${ACTION} == "start" ]]; then
 
     print_header "Setting up Runtime environment using Remote Engine '${REMOTE_ENGINE_NAME}' ..."
     echo "Checking if runtime environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} is available ..."
-    get_environment_id
-    if [[ -z "${PROJECT_ENV_ASSET_ID}" || "${PROJECT_ENV_ASSET_ID}" == "null" ]]; then
-        echo "Could not find an existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID}, creating a new one ..."
-        create_environment
-    else
-        echo "Found existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} with id: ${PROJECT_ENV_ASSET_ID}"
-        patch_environment
-    fi
-    echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is registered."
+    for PROJECT_ID in "${PROJECT_IDS[@]}"; do
+        echo ''
+        echo "Getting Project Environment Engine ID for project ${PROJECT_ID}..."
+        get_environment_id
+        if [[ -z "${PROJECT_ENV_ASSET_ID}" || "${PROJECT_ENV_ASSET_ID}" == "null" ]]; then
+            echo "Could not find an existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} for project ${PROJECT_ID}, creating a new one ..."
+            create_environment
+        else
+            echo "Found existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} for project ${PROJECT_ID} with id: ${PROJECT_ENV_ASSET_ID}"
+            patch_environment
+        fi
+        echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is registered for project ${PROJECT_ID}."
 
-    # echo "Updating the project to use ${REMOTE_ENGINE_NAME} as the default environment"
-    # update_datastage_settings
+        # echo "Updating the project to use ${REMOTE_ENGINE_NAME} as the default environment"
+        # update_datastage_settings
 
-    PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
-    echo ""
-    echo "Setup complete"
-    echo ""
-    echo "Project settings:"
-    echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=cpdaas"
-    echo ""
-    echo "Project assets:"
-    echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
+        PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
+        echo ""
+        echo "Setup complete"
+        echo ""
+        echo "Project settings:"
+        echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=cpdaas"
+        echo ""
+        echo "Project assets:"
+        echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
+    done
 
     # echo ""
     # echo "${bold}Starting ${TOOL_SHORTNAME} Compute ...${normal}"
@@ -2186,28 +2190,33 @@ elif [[ ${ACTION} == "cleanup" ]]; then
 
         echo "Getting Remote Engine ID ..."
         get_remote_engine_id
-        echo "Getting Project Environment Engine ID ..."
-        get_environment_id
 
+        for PROJECT_ID in "${PROJECT_IDS[@]}"; do
+            echo ''
+            echo "Getting Project Environment Engine ID for project ${PROJECT_ID}..."
+            get_environment_id
+
+            echo "Removing Runtime associated with the remote Engine for project ${PROJECT_ID}..."
+            remove_environment
+
+            # echo "Resetting DataStage settings"
+            # reset_datastage_settings
+
+            PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
+            echo ""
+            echo "Project settings:"
+            echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=${PROJECT_CONTEXT}"
+            echo ""
+            echo "Project assets:"
+            echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
+        done
+
+        echo ''
         echo "Removing Remote Engine registration ..."
         remove_remote_engine
 
-        echo "Removing Runtime associated with the remote Engine ..."
-        remove_environment
-
-        # echo "Resetting DataStage settings"
-        # reset_datastage_settings
-
-        PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
-        echo ""
+        echo ''
         echo "Cleanup complete"
-        echo ""
-        echo "Project settings:"
-        echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=${PROJECT_CONTEXT}"
-        echo ""
-        echo "Project assets:"
-        echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
-
         echo ''
         echo 'Remote engine is cleaned up. You can navigate to the project settings and select a different engine if this engine was the default.'
         print_header "Remote Engine cleanup completed."

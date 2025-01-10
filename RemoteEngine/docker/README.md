@@ -46,7 +46,7 @@
     iv =45990395FEB2B39C34B51D998E0E2E1B
     ```
     From this output, the `key` and `iv` are used as the Encryption Key and initialization vector (IV) respectively.
-1. Your Project ID. This is the ID of the project on Cloud Pak for Data project on IBM Cloud that you want to use with this Remote Engine instance. (If you are using the DataStage in Frankfurt data center then please use https://eu-de.dataplatform.cloud.ibm.com. If you are using the DataStage in Sydney data center then please use https://au-syd.dai.cloud.ibm.com. If you are using the DataStage in Toronto data center then please use https://ca-tor.dai.cloud.ibm.com.). You can retrieve this value by opening the project that you want to use with this Remote Engine and selecting the Manage tab > General to view the Project ID.
+1. Your Project ID(s). This is the comma separated list of IDs of the projects on Cloud Pak for Data project on IBM Cloud that you want to use with this Remote Engine instance. (If you are using the DataStage in Frankfurt data center then please use https://eu-de.dataplatform.cloud.ibm.com. If you are using the DataStage in Sydney data center then please use https://au-syd.dai.cloud.ibm.com. If you are using the DataStage in Toronto data center then please use https://ca-tor.dai.cloud.ibm.com.). You can retrieve this value by opening the project that you want to use with this Remote Engine and selecting the Manage tab > General to view the Project ID.
 1. IBM Cloud Container Registry API Key. This API key will be used to download the images needed to run Remote Engine. Currently, clients need to request this API Key once they have provisioned a DataStage-aaS Plan and it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport.
 
 ## Usage
@@ -60,7 +60,7 @@ The `dsengine.sh` script can be invoked from the `docker` folder of this project
                     -e "$ENCRYPTION_KEY" \
                     -i "$ENCRYPTION_IV" \
                     -p "$IBMCLOUD_CONTAINER_REGISTRY_APIKEY" \
-                    --project-id "$PROJECT_ID"
+                    --project-id "$PROJECT_ID1,$PROJECT_ID2,$PROJECT_ID3"
 
 ```
 Once the script execution has completed, this engine needs to be selected in the project settings by going to the project, navigating to `Manage` > `DataStage` and selecting the appropriate engine under the `Settings` tab > `Remote` environments.
