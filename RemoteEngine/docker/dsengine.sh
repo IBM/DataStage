@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.8
+TOOL_VERSION=1.0.9
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -33,7 +33,7 @@ DOCKER_CMD='docker'
 if ! [ -x "$(command -v docker)" ] && [ -x "$(command -v podman)" ]; then
     DOCKER_CMD='podman'
 fi
-DOCKER_VOLUMES_DIR='/tmp/docker/volumes'
+DOCKER_VOLUMES_DIR="$(pwd)/docker/volumes"
 MOUNT_DIRS=()
 SCRATCH_DIR_OVERRIDE='false'
 
