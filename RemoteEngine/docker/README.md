@@ -95,6 +95,7 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--proxy http://<username>:<password>@<proxy_ip>:<port>`: Specify a proxy URL. The username and password can be skipped based on how the proxy is configured.
 1. `--proxy-cacert <cacert location>`: Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.
 1. `--force-renew`: Set to true if you want to remove the existing remote engine container. By default, this flag is set to false and if a stopped existing container is found, it is restarted or if a running existing container is found, the script is aborted.
+1. `--use-remote-app`: Set to force to force the use of PXRemoteApp.
 
 
 ### 2. Update an engine

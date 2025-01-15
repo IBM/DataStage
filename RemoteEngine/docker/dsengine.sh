@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.8
+TOOL_VERSION=1.0.9
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -95,6 +95,7 @@ STR_ZEN_URL='  --zen-url                   CP4D zen url (required if --home is u
 STR_CP4D_USER='  --cp4d-user                 CP4D username (required if --home is used with "cp4d")'
 STR_CP4D_APIKEY='  --cp4d-apikey             CP4D apikey (required if --home is used with "cp4d")'
 STR_PROD_APIKEY_USER='  --prod-apikey-user           DataStage Artifactory user'
+STR_USE_REMOTE_APP='  --use-remote-app           [force] Forces the use of the PXRemoteApp on startup'
 
 
 
@@ -153,7 +154,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [---use-remote-app] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--additional-users] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
@@ -200,6 +201,7 @@ print_usage() {
             echo "${STR_SET_GROUP}"
             echo "${STR_FORCE_RENEW}"
             echo "${STR_ZEN_URL}"
+            echo "${STR_USE_REMOTE_APP}"
             if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
                 echo "${STR_CP4D_USER}"
                 echo "${STR_CP4D_APIKEY}"
@@ -209,6 +211,7 @@ print_usage() {
         echo "${STR_PROXY_CACERT}"
         echo "${STR_SELECT_PX_VERSION}"
         echo "${STR_VERSION}"
+        echo "${STR_ADDITIONAL_USERS}"
         # echo "${STR_USE_ENT_KEY}"
         # echo "${STR_PLATFORM}"
     fi
@@ -380,6 +383,10 @@ function start() {
         --registry)
             shift
             DOCKER_REGISTRY="$1"
+            ;;
+        --use-remote-app)
+            shift
+            APT_USE_REMOTE_APP="$1"
             ;;
         -h | --help | help)
             print_usage
@@ -874,6 +881,13 @@ run_px_runtime_docker() {
         echo "Adding additional users ${ADDITIONAL_USERS} to remote engine"
         runtime_docker_opts+=(
             --env ADDITIONAL_USERS=${ADDITIONAL_USERS}
+        )
+    fi
+
+    if [[ ! -z  $APT_USE_REMOTE_APP ]]; then
+        echo "Forcing the use of PXRemoteApp"
+        runtime_docker_opts+=(
+            --env APT_USE_REMOTE_APP=${APT_USE_REMOTE_APP}
         )
     fi
 
@@ -2023,6 +2037,9 @@ elif [[ ${ACTION} == "update" ]]; then
     if [[ ! -v ADDITIONAL_USERS ]]; then
         ADDITIONAL_USERS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ADDITIONAL_USERS | cut -d'=' -f2)
     fi
+    if [[ ! -v APT_USE_REMOTE_APP ]]; then
+        APT_USE_REMOTE_APP=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep APT_USE_REMOTE_APP | cut -d'=' -f2)
+    fi
     DOCKER_VOLUMES_DIR=$(dirname "$DS_STORAGE_HOST_DIR")
     SCRATCH_BASE_DIR=$(dirname "$SCRATCH_DIR")
     if [[ "$CONTAINER_CAP_DROP" == "[]" ]]; then
@@ -2088,6 +2105,7 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "CONTAINER_CAP_DROP = ${CONTAINER_CAP_DROP}"
     echo "CONTAINER_USER = ${CONTAINER_USER}"
     echo "ADDITIONAL_USERS = ${ADDITIONAL_USERS}"
+    echo "APT_USE_REMOTE_APP = ${APT_USE_REMOTE_APP}"
     echo "DOCKER_VOLUMES_DIR = ${DOCKER_VOLUMES_DIR}"
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
         echo "MOUNT_DIRS=${MOUNT_DIRS[@]}"
