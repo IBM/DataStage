@@ -95,7 +95,7 @@ STR_ZEN_URL='  --zen-url                   CP4D zen url (required if --home is u
 STR_CP4D_USER='  --cp4d-user                 CP4D username (required if --home is used with "cp4d")'
 STR_CP4D_APIKEY='  --cp4d-apikey             CP4D apikey (required if --home is used with "cp4d")'
 STR_PROD_APIKEY_USER='  --prod-apikey-user           DataStage Artifactory user'
-STR_USE_REMOTE_APP='  --use-remote-app           [force] Forces the use of the PXRemoteApp on startup'
+STR_ENV_VARS='  --env-vars           Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.'
 
 
 
@@ -154,9 +154,9 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [---use-remote-app] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--additional-users] \n                          [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--additional-users] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -201,7 +201,6 @@ print_usage() {
             echo "${STR_SET_GROUP}"
             echo "${STR_FORCE_RENEW}"
             echo "${STR_ZEN_URL}"
-            echo "${STR_USE_REMOTE_APP}"
             if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
                 echo "${STR_CP4D_USER}"
                 echo "${STR_CP4D_APIKEY}"
@@ -212,6 +211,7 @@ print_usage() {
         echo "${STR_SELECT_PX_VERSION}"
         echo "${STR_VERSION}"
         echo "${STR_ADDITIONAL_USERS}"
+        echo "${STR_ENV_VARS}"
         # echo "${STR_USE_ENT_KEY}"
         # echo "${STR_PLATFORM}"
     fi
@@ -384,9 +384,9 @@ function start() {
             shift
             DOCKER_REGISTRY="$1"
             ;;
-        --use-remote-app)
+        --env-vars)
             shift
-            APT_USE_REMOTE_APP="$1"
+            ENV_VARS="${1// /}"
             ;;
         -h | --help | help)
             print_usage
@@ -439,6 +439,10 @@ function update() {
         --additional-users)
             shift
             ADDITIONAL_USERS="$1"
+            ;;
+        --env-vars)
+            shift
+            ENV_VARS="${1// /}"
             ;;
         -h | --help | help)
             print_usage
@@ -884,13 +888,6 @@ run_px_runtime_docker() {
         )
     fi
 
-    if [[ ! -z  $APT_USE_REMOTE_APP ]]; then
-        echo "Forcing the use of PXRemoteApp"
-        runtime_docker_opts+=(
-            --env APT_USE_REMOTE_APP=${APT_USE_REMOTE_APP}
-        )
-    fi
-
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
         GATEWAY=$(printf %s "$GATEWAY_URL" | cut -d'/' -f3-)
         runtime_docker_opts+=(
@@ -959,6 +956,23 @@ run_px_runtime_docker() {
             --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
             --env ENABLE_DS_METRICS=false
         )
+    fi
+
+    ### must go last
+    if [[ ! -z  $ENV_VARS ]]; then
+        runtime_docker_opts+=(
+            --env ENV_VARS="${ENV_VARS}"
+        )
+        IFS=";" read -ra pairs <<< "$ENV_VARS"
+        for pair in "${pairs[@]}"; do
+            IFS='=' read -r key value <<< "$pair"
+            if [[ ! -z  $key ]] && [[ $key != "ENV_VARS" ]]; then
+                echo "Setting custom environment variable $key = $value"
+                runtime_docker_opts+=(
+                    --env "$key=$value"
+                )
+            fi
+        done
     fi
 
     $DOCKER_CMD run "${runtime_docker_opts[@]}" --entrypoint='/bin/bash' $PXRUNTIME_DOCKER_IMAGE -c "/px-storage/init-volume.sh;/px-storage/startup.sh"
@@ -1998,28 +2012,28 @@ elif [[ ${ACTION} == "update" ]]; then
     fi
 
     echo "Gathering variables required for update from the current container"
-    DSNEXT_SEC_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep DSNEXT_SEC_KEY | cut -d'=' -f2)
-    IVSPEC=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IVSPEC | cut -d'=' -f2)
+    DSNEXT_SEC_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^DSNEXT_SEC_KEY= | cut -d'=' -f2-)
+    IVSPEC=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^IVSPEC= | cut -d'=' -f2-)
     PX_MEMORY=$(($($DOCKER_CMD inspect --format='{{.HostConfig.Memory}}' "${PXRUNTIME_CONTAINER_NAME}")/(1024*1024*1024))) # in GB
     PX_CPUS=$(($($DOCKER_CMD inspect --format='{{.HostConfig.NanoCpus}}' "${PXRUNTIME_CONTAINER_NAME}")/(1000*1000*1000))) # in cores
     PIDS_LIMIT=$($DOCKER_CMD inspect --format='{{.HostConfig.PidsLimit}}' "${PXRUNTIME_CONTAINER_NAME}")
-    GATEWAY_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
+    GATEWAY_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^GATEWAY_URL= | cut -d'=' -f2-)
 
     # these 2 env vars should be only set in case of cp4d
-    CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2)
-    CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+    CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^SERVICE_ID= | cut -d'=' -f2-)
+    CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^SERVICE_API_KEY= | cut -d'=' -f2-)
     if [[ -v CP4D_USER && -v CP4D_API_KEY && -n "${CP4D_USER}" && -n "${CP4D_API_KEY}" ]]; then
         echo 'Datastage environment set to cp4d'
         DATASTAGE_HOME='cp4d'
     fi
 
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-        ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
-        IAM_APIKEY_PROD_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_APIKEY_PROD_USER | cut -d'=' -f2)
+        ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^GATEWAY_URL= | cut -d'=' -f2-)
+        IAM_APIKEY_PROD_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^IAM_APIKEY_PROD_USER= | cut -d'=' -f2-)
         set_container_registry
     else
-        IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_URL | cut -d'=' -f2)
-        IAM_APIKEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+        IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^IAM_URL= | cut -d'=' -f2-)
+        IAM_APIKEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^SERVICE_API_KEY= | cut -d'=' -f2-)
     fi
     DS_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/ds-storage") | .Source')
     PX_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/px-storage") | .Source')
@@ -2035,10 +2049,10 @@ elif [[ ${ACTION} == "update" ]]; then
     CONTAINER_CAP_DROP=$($DOCKER_CMD inspect --format='{{.HostConfig.CapDrop}}' "${PXRUNTIME_CONTAINER_NAME}")
     CONTAINER_USER=$($DOCKER_CMD inspect --format='{{.Config.User}}' "${PXRUNTIME_CONTAINER_NAME}")
     if [[ ! -v ADDITIONAL_USERS ]]; then
-        ADDITIONAL_USERS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ADDITIONAL_USERS | cut -d'=' -f2)
+        ADDITIONAL_USERS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^ADDITIONAL_USERS= | cut -d'=' -f2-)
     fi
-    if [[ ! -v APT_USE_REMOTE_APP ]]; then
-        APT_USE_REMOTE_APP=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep APT_USE_REMOTE_APP | cut -d'=' -f2)
+    if [[ ! -v ENV_VARS ]]; then
+        ENV_VARS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^ENV_VARS= | cut -d'=' -f2-)
     fi
     DOCKER_VOLUMES_DIR=$(dirname "$DS_STORAGE_HOST_DIR")
     SCRATCH_BASE_DIR=$(dirname "$SCRATCH_DIR")
@@ -2105,7 +2119,7 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "CONTAINER_CAP_DROP = ${CONTAINER_CAP_DROP}"
     echo "CONTAINER_USER = ${CONTAINER_USER}"
     echo "ADDITIONAL_USERS = ${ADDITIONAL_USERS}"
-    echo "APT_USE_REMOTE_APP = ${APT_USE_REMOTE_APP}"
+    echo "ENV_VARS = ${ENV_VARS}"
     echo "DOCKER_VOLUMES_DIR = ${DOCKER_VOLUMES_DIR}"
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
         echo "MOUNT_DIRS=${MOUNT_DIRS[@]}"
