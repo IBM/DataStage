@@ -57,7 +57,7 @@ To deploy the DataStage operator on cluster without global pull secret configure
 
 # create the remote instance - add '--gateway api.dataplatform.cloud.ibm.com' if the instance needs to registers with prod env
 
-./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto] [--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>] [--zen-url <zen-url>] --license-accept true
+./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project_id1,project_id2,project_id3> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto] [--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>] [--zen-url <zen-url>] --license-accept true
 ```
 For documentation on how to create API keys, see https://cloud.ibm.com/docs/account?topic=account-manapikey.
 
@@ -104,8 +104,8 @@ api_key=<api-key>
 # the CP4D service id username for the remote engine to use with api key
 service_id=cpadmin
 
-# the project ID that will be using this remote engine
-projectId=<project_id>
+# the comma separated list of project IDs that will be using this remote engine
+projectId=<project_id1,project_id2,project_id3>
 
 # the name of the remote engine (alphanumeric and without spaces)
 name=<name>
