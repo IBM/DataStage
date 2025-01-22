@@ -51,16 +51,32 @@
 
 ## Usage
 
-### 1. Start an engine on the Remote Engine server
+### 1a. Start an engine on the Remote Engine server for IBM Cloud
 The `dsengine.sh` script can be invoked from the `docker` folder of this project. Note that the name in the below command can be changed from `my_remote_engine_01` to your preferred name.
 ```bash
-# create/start a local remote engine instance
+# create/start a local remote engine instance for IBM Cloud
 ./dsengine.sh start -n 'my_remote_engine_01' \
                     -a "$IBMCLOUD_APIKEY" \
                     -e "$ENCRYPTION_KEY" \
                     -i "$ENCRYPTION_IV" \
                     -p "$IBMCLOUD_CONTAINER_REGISTRY_APIKEY" \
                     --project-id "$PROJECT_ID"
+
+```
+Once the script execution has completed, this engine needs to be selected in the project settings by going to the project, navigating to `Manage` > `DataStage` and selecting the appropriate engine under the `Settings` tab > `Remote` environments.
+### 1b. Start an engine on the Remote Engine server for Cloud Pak for Data Instances
+The `dsengine.sh` script can be invoked from the `docker` folder of this project. Note that the name in the below command can be changed from `my_remote_engine_01` to your preferred name.
+```bash
+# create/start a local remote engine instance for CP4D instance
+./dsengine.sh start -n 'my_remote_engine_01' \
+                    -e "$ENCRYPTION_KEY" \
+                    -i "$ENCRYPTION_IV" \
+                    -p "$IBMCLOUD_CONTAINER_REGISTRY_APIKEY" \
+                    --project-id "$PROJECT_ID" \
+                    --home "cp4d" \
+                    --zen-url "CP4D_ZEN_URL" \
+                    --cp4d-user "CP4D_USERNAME" \
+                    --cp4d-apikey "CP4D_API_KEY"
 
 ```
 Once the script execution has completed, this engine needs to be selected in the project settings by going to the project, navigating to `Manage` > `DataStage` and selecting the appropriate engine under the `Settings` tab > `Remote` environments.
@@ -95,6 +111,9 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--proxy http://<username>:<password>@<proxy_ip>:<port>`: Specify a proxy URL. The username and password can be skipped based on how the proxy is configured.
 1. `--proxy-cacert <cacert location>`: Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.
 1. `--force-renew`: Set to true if you want to remove the existing remote engine container. By default, this flag is set to false and if a stopped existing container is found, it is restarted or if a running existing container is found, the script is aborted.
+1. `--zen-url`: CP4D zen url of the cluster (required if --home is used with "cp4d").
+1. `--cp4d-user`: CP4D username used to log into the cluster (required if --home is used with "cp4d").
+1. `--cp4d-apikey`: CP4D apikey used to authenticate with the cluster. Go to "Profile and settings" when logged in to get your api key for the connection. (required if --home is used with "cp4d").
 1. `--env-vars`: Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.
 
 
