@@ -91,9 +91,9 @@ STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<user
 STR_PROXY_CACERT='  --proxy-cacert              Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.'
 STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
 STR_HELP='  help, --help                Print usage information'
-STR_ZEN_URL='  --zen-url                   CP4D zen url (required if --home is used with "cp4d")'
-STR_CP4D_USER='  --cp4d-user                 CP4D username (required if --home is used with "cp4d")'
-STR_CP4D_APIKEY='  --cp4d-apikey             CP4D apikey (required if --home is used with "cp4d")'
+STR_ZEN_URL='  --zen-url                   CP4D zen url of the cluster (required if --home is used with "cp4d")'
+STR_CP4D_USER='  --cp4d-user                 CP4D username used to log into the cluster (required if --home is used with "cp4d")'
+STR_CP4D_APIKEY='  --cp4d-apikey             CP4D apikey used to authenticate with the cluster. Go to "Profile and settings" when logged in to get your api key for the connection. (required if --home is used with "cp4d")'
 STR_PROD_APIKEY_USER='  --prod-apikey-user           DataStage Artifactory user'
 STR_ENV_VARS='  --env-vars           Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.'
 
