@@ -108,6 +108,7 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>`: Comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner.
 1. `--mount-dir "</path/to/local_dir:/path/on/container>"`: Specify folder you want to mount on the container. This flag can be specified multiple times.
     * Note: This flag can be used to mount a scratch directory using `--mount-dir "</path/to/local_dir>:/opt/ibm/PXService/Server/scratch"`. This will override the default scratch directory that is either created in  `/tmp` or in the directory specified for `--volume-dir`.
+1. `--add-host <host>:<ip>`: Add a <host>:<ip> entry to the /etc/hosts file of the container. This flag can be specified multiple times.
 1. `--proxy http://<username>:<password>@<proxy_ip>:<port>`: Specify a proxy URL. The username and password can be skipped based on how the proxy is configured.
 1. `--proxy-cacert <cacert location>`: Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.
 1. `--force-renew`: Set to true if you want to remove the existing remote engine container. By default, this flag is set to false and if a stopped existing container is found, it is restarted or if a running existing container is found, the script is aborted.
