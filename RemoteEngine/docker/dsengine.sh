@@ -35,6 +35,7 @@ if ! [ -x "$(command -v docker)" ] && [ -x "$(command -v podman)" ]; then
 fi
 DOCKER_VOLUMES_DIR="$(pwd)/docker/volumes"
 MOUNT_DIRS=()
+ADD_HOSTS=()
 SCRATCH_DIR_OVERRIDE='false'
 
 # env constnats
@@ -76,6 +77,7 @@ STR_PROJECT_UID='  -d, --project-id            DataPlatform Project ID'
 STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, cp4d]'
 STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
+STR_ADD_HOST="  --add-host                 Add a <host>:<ip> entry to the container's /etc/hosts file. This flag can be specified multiple times."
 STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
 STR_SECURITY_OPT='  --security-opt                  Specify the security-opt to be used to run the container.'
 STR_CAP_DROP='  --cap-drop                 Specify the cap-drop to be used to run the container.'
@@ -154,7 +156,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--additional-users] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
@@ -195,6 +197,7 @@ print_usage() {
             echo "${STR_PIDS_LIMIT}"
             echo "${STR_VOLUMES}"
             echo "${STR_MOUNT_DIR}"
+            echo "${STR_ADD_HOST}"
             echo "${STR_SECURITY_OPT}"
             echo "${STR_CAP_DROP}"
             echo "${STR_SET_USER}"
@@ -319,6 +322,10 @@ function start() {
         --mount-dir)
             shift
             MOUNT_DIRS+=("$1")
+            ;;
+        --add-host)
+            shift
+            ADD_HOSTS+=("$1")
             ;;
         # --platform)
         #     shift
@@ -942,6 +949,16 @@ run_px_runtime_docker() {
         )
     fi
 
+    if [[ -v ADD_HOSTS && ! -z $ADD_HOSTS ]]; then
+        for host in "${ADD_HOSTS[@]}"; do
+            if [[ -n "$host" && -v host && ! -z $host ]]; then
+                runtime_docker_opts+=(
+                    --add-host "${host}"
+                )
+            fi
+        done
+    fi
+
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         runtime_docker_opts+=(
             --env WLMON=1
@@ -1501,6 +1518,14 @@ validate_action_arguments() {
                 fi
             done
         fi
+        if [[ -v ADD_HOSTS && ! -z $ADD_HOSTS ]]; then
+            echo "ADD_HOSTS=${ADD_HOSTS[@]}"
+            for host in "${ADD_HOSTS[@]}"; do
+                if [[ -n "$host" && -v host && ! -z $host ]]; then
+                    echo "${host}"
+                fi
+            done
+        fi
         echo ""
     fi
 
@@ -2044,6 +2069,8 @@ elif [[ ${ACTION} == "update" ]]; then
     IFS=$'\n'
     MOUNT_DIRS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | "\(.Source):\(.Destination)"' | while read object; do echo "$object"; done)
     MOUNT_DIRS=($MOUNT_DIRS_STR)
+    ADD_HOSTS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].HostConfig.ExtraHosts | .[]')
+    ADD_HOSTS=($ADD_HOSTS_STR)
     IFS=$SAVEIFS
     CONTAINER_SECURITY_OPT=$($DOCKER_CMD inspect --format='{{.HostConfig.SecurityOpt}}' "${PXRUNTIME_CONTAINER_NAME}")
     CONTAINER_CAP_DROP=$($DOCKER_CMD inspect --format='{{.HostConfig.CapDrop}}' "${PXRUNTIME_CONTAINER_NAME}")
@@ -2123,6 +2150,9 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "DOCKER_VOLUMES_DIR = ${DOCKER_VOLUMES_DIR}"
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
         echo "MOUNT_DIRS=${MOUNT_DIRS[@]}"
+    fi
+    if [[ -v ADD_HOSTS && ! -z $ADD_HOSTS ]]; then
+        echo "ADD_HOSTS=${ADD_HOSTS[@]}"
     fi
 
     echo ""
