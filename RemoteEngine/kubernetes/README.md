@@ -1,7 +1,10 @@
 # DataStage Remote Engine on Kubernetes
 
 ## License
+### Cloud
 [IBM DataStage as a Service Anywhere](https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en)
+### CP4D
+[IBM DataStage Enterprise and IBM DataStage Enterprise Plus](https://www14.software.ibm.com/cgi-bin/weblap/lap.pl?li_formnum=L-QFYS-RTJPJH)
 
 ## Requirements
 DataStage Remote Engine supports deployment on the following platforms:
@@ -35,31 +38,32 @@ The remote engine supports three default sizes: small, medium, and large.
 - 3 compute pods: 8 vCPU and 32 GB RAM
 - 1 conductor pod: 4 vCPU and 4 GB RAM
 
-## IBM Cloud API key
-1. An IBM Cloud API key is required for registering the remote engine to your Cloud Pak for Data project on IBM Cloud.
+## Needed API keys
+1. If you are specifically deploying a remote engine for IBM Cloud, an IBM Cloud API key is required for registering the remote engine to your Cloud Pak for Data project on IBM Cloud.
     1. Click Manage > Access (IAM) > API keys to open the “API keys” page (URL: https://cloud.ibm.com/iam/apikeys).
     2. Ensure that My IBM Cloud API keys is selected in the View list.
     3. Click Create an IBM Cloud API key, and then specify a name and description
-2. IBM Cloud Container Registry APIKey. This apikey will be used to download the images needed to run Remote Engine. Currently there is no way to generate this, so it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport
+2. IBM Cloud Container Registry APIKey. This apikey will be used to download the images needed to run Remote Engine whether it is for IBM Cloud or CP4D. Currently there is no way to generate this, so it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport
 
 ## Usage
 To deploy the DataStage operator on cluster without global pull secret configured for the container registry, the pull secret needs to be created. You need an active connection to the cluster with either kubectl or oc cli available.
 
 ```
 # create pull secret for container registry
-./launch.sh create-pull-secret --namespace <namespace> --username <username> --password ${api-key} [--zen-url <zen-url>]
+./launch.sh create-pull-secret --namespace <namespace> --username <username> --password ${api-key} [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
 
 # deploy the operator
-./launch.sh install --namespace <namespace> [--zen-url <zen-url>]
+./launch.sh install --namespace <namespace> [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
 
 # create the api-key for dev or prod environment
-./launch.sh create-apikey-secret --namespace <namespace> --apikey ${api-key} [--serviceid ${service-id}] [--zen-url <zen-url>]
+./launch.sh create-apikey-secret --namespace <namespace> --apikey ${api-key} [--serviceid ${service-id}] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
 
 # create the remote instance - add '--gateway api.dataplatform.cloud.ibm.com' if the instance needs to registers with prod env
 
-./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto] [--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>] [--zen-url <zen-url>] --license-accept true
+./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto (if you are specifically deploying a remote engine for IBM Cloud)] [--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)] --license-accept true
 ```
-For documentation on how to create API keys, see https://cloud.ibm.com/docs/account?topic=account-manapikey.
+For documentation on how to create IBM Cloud API keys, see https://cloud.ibm.com/docs/account?topic=account-manapikey.
+To generate a CP4D API Key, go to "Profile and settings" when logged in to the CP4D Cluster to get your api key for the connection.
 
 ## Setting up Amazon Elastic File System (EKS only)
 Creating an EFS file system
@@ -88,7 +92,7 @@ sample input file:
 # indicate that you have accepted license for IBM DataStage as a Service Anywhere(https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en)
 license_accept=true
 
-# the data center where your DataStage is provisioned on IBM cloud (dallas, frankfurt, sydney, or toronto); the default is dallas.
+# If you are specifically deploying a remote engine for IBM Cloud, the data center where your DataStage is provisioned on IBM cloud (dallas, frankfurt, sydney, or toronto); the default is dallas.
 # data_center=dallas
 
 # the namespace to deploy the remote engine
@@ -98,10 +102,11 @@ namespace=<namespace>
 username=iamapikey
 password=<container-registry-api-key>
 
-# IBM api key for the remote engine to use
+# If you are deploying a remote engine for IBM Cloud, this value will be the IBM Cloud api key for the remote engine to use.
+# If you are deploying a remote engine for CP4D, this value will be the CP4D Cluster account login api key of the target cluster for the remote engine to use. Go to "Profile and settings" when logged in to get your api key for the connection.
 api_key=<api-key>
 
-# the CP4D service id username for the remote engine to use with api key
+# If you are specifically deploying a remote engine for CP4D, the CP4D service id username of the target cluster for the remote engine to use with api key
 service_id=cpadmin
 
 # the project ID that will be using this remote engine
@@ -122,17 +127,18 @@ storage_size=20
 # comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner
 # additional_users=IBMid-1000000000,IBMid-2000000000,IBMid-3000000000...
 
-# the zen url to use for CP4D environment
+# If you are specifically deploying a remote engine for CP4D, the zen url of the target cluster to use for CP4D environment. Specifying this variable will automatically switch usage from IBM Cloud to CP4D.
 zen_url=<zen-url>
 
 # the DNS name or IP of the EFS file system; omit if not deploying on AWS's EKS
 # the provisioner will use the storage class name specified in storage_class
-nfs_server=<dns-name-or-IP>
+# nfs_server=<dns-name-or-IP>
 
 # the namespace to deploy the storage class provisioner; will deploy to the same
 # namespace as the remote engine if omitted
-provisioner_namespace=<namespace>
+# provisioner_namespace=<namespace>
 ```
+This script will deploy a remote engine for CP4D Cluster. If you need to deploy remote engine for IBM Cloud, uncomment the data_center variable, comment out the zen_url and service_id variables, and change the api_key variable according to the commented instructions.
 
 Running the install script with the input file:
 ```
