@@ -1,14 +1,17 @@
 # DataStage Remote Engine using Docker
 
 ## License
+### Cloud
 [IBM DataStage as a Service Anywhere](https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en)
+### CP4D
+[IBM DataStage Enterprise and IBM DataStage Enterprise Plus](https://www14.software.ibm.com/cgi-bin/weblap/lap.pl?li_formnum=L-QFYS-RTJPJH)
 
 ## Limitations
 1. The script might not work on Apple `M` processors as it runs x86 software via an emulation layer.
 2. The script is not tested on Windows OS.
 
 ## Pre-Requisites
-1. You must have DataStage provisioned on IBM cloud with an `Anywhere` plan. You can see different plans with details on https://cloud.ibm.com/catalog/services/datastage.
+1. If you are specifically deploying a remote engine for IBM Cloud, you must have DataStage provisioned on IBM Cloud with an `Anywhere` plan. You can see different plans with details on https://cloud.ibm.com/catalog/services/datastage.
 1. Software that must be installed on the system.
     1. `docker` or `podman`
     1. `jq`
@@ -18,18 +21,19 @@
 1. Recommended OS: Red Hat Enterprise Linux (RHEL 8.8, 8.10, 9.2 and 9.4), Ubuntu (20.04, 22.04, 24.04).
 1. Ensure that the virtual machine allows outbound traffic to the following URLs:
     1. icr.io
-    1. iam.cloud.ibm.com
-    1. dataplatform.cloud.ibm.com and api.dataplatform.cloud.ibm.com - if using Dallas datacenter
-    1. eu-de.dataplatform.cloud.ibm.com and api.dataplatform.cloud.ibm.com - if using the Frankfurt data center
-    1. au-syd.dai.cloud.ibm.com and api.au-syd.dai.cloud.ibm.com - if using the Sydney data center
-    1. ca-tor.dai.cloud.ibm.com and api.ca-tor.dai.cloud.ibm.com - if using the Toronto data center
-    1. cloud-object-storage.appdomain.cloud (the url could have a prefixed region eg. <region>.s3.cloud-object-store.appdomain.cloud), so recommendation is to allow `*.cloud-object-storage.appdomain.cloud` to accomodate such variations.
+    1. If you are specifically deploying a remote engine for IBM Cloud:
+        1. iam.cloud.ibm.com
+        1. dataplatform.cloud.ibm.com and api.dataplatform.cloud.ibm.com - if using Dallas datacenter
+        1. eu-de.dataplatform.cloud.ibm.com and api.dataplatform.cloud.ibm.com - if using the Frankfurt data center
+        1. au-syd.dai.cloud.ibm.com and api.au-syd.dai.cloud.ibm.com - if using the Sydney data center
+        1. ca-tor.dai.cloud.ibm.com and api.ca-tor.dai.cloud.ibm.com - if using the Toronto data center
+        1. cloud-object-storage.appdomain.cloud (the url could have a prefixed region eg. <region>.s3.cloud-object-store.appdomain.cloud), so recommendation is to allow `*.cloud-object-storage.appdomain.cloud` to accomodate such variations.
 
 
 ## Requirements
 1. Clone this repo on the Remote Engine server: `git clone https://github.com/IBM/DataStage.git`.
     1. If you already have this repo cloned, go to the root directory and run `git pull` to get the latest changes.
-1. Your IBM Cloud API Key. The API key is required for registering the remote engine to your Cloud Pak for Data project on IBM Cloud. To generate a new API key (https://cloud.ibm.com/docs/account?topic=account-userapikey&interface=ui), open https://cloud.ibm.com in your browser.
+1. If you are specifically deploying a remote engine for IBM Cloud, specify your IBM Cloud API Key. The API key is required for registering the remote engine to your Cloud Pak for Data project on IBM Cloud. To generate a new API key (https://cloud.ibm.com/docs/account?topic=account-userapikey&interface=ui), open https://cloud.ibm.com in your browser.
     1. Click Manage > Access (IAM). Then, on the left side menu, select "API Keys" to open the "API Keys" page (URL: https://cloud.ibm.com/iam/apikeys).
     2. Ensure that My IBM Cloud API keys is selected in the View list.
     3. Click Create an IBM Cloud API key, and then specify a name and description.
@@ -46,8 +50,9 @@
     iv =45990395FEB2B39C34B51D998E0E2E1B
     ```
     From this output, the `key` and `iv` are used as the Encryption Key and initialization vector (IV) respectively.
-1. Your Project ID. This is the ID of the project on Cloud Pak for Data project on IBM Cloud that you want to use with this Remote Engine instance. (If you are using the DataStage in Frankfurt data center then please use https://eu-de.dataplatform.cloud.ibm.com. If you are using the DataStage in Sydney data center then please use https://au-syd.dai.cloud.ibm.com. If you are using the DataStage in Toronto data center then please use https://ca-tor.dai.cloud.ibm.com.). You can retrieve this value by opening the project that you want to use with this Remote Engine and selecting the Manage tab > General to view the Project ID.
-1. IBM Cloud Container Registry API Key. This API key will be used to download the images needed to run Remote Engine. Currently, clients need to request this API Key once they have provisioned a DataStage-aaS Plan and it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport.
+1. Your Project ID. This is the ID of the project on Cloud Pak for Data project that you want to use with this Remote Engine instance whether it is for IBM Cloud or CP4D. (If you are using the DataStage in Frankfurt data center then please use https://eu-de.dataplatform.cloud.ibm.com. If you are using the DataStage in Sydney data center then please use https://au-syd.dai.cloud.ibm.com. If you are using the DataStage in Toronto data center then please use https://ca-tor.dai.cloud.ibm.com.). You can retrieve this value by opening the project that you want to use with this Remote Engine and selecting the Manage tab > General to view the Project ID.
+1. If you are specifically deploying a remote engine for IBM Cloud, the IBM Cloud Container Registry API Key. This API key will be used to download the images needed to run Remote Engine for IBM Cloud. Currently, clients need to request this API Key once they have provisioned a DataStage-aaS Plan and it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport.
+1. If you are specifically deploying a remote engine for CP4D, the IBM Entitlement API key. This API key will be used to download the images needed to run Remote Engine for CP4D. Please follow https://www.ibm.com/docs/en/cloud-paks/cp-data/5.0.x?topic=information-obtaining-your-entitlement-api-key for instructions on how to obtain your IBM Entitlement API Key.
 
 ## Usage
 
@@ -71,7 +76,7 @@ The `dsengine.sh` script can be invoked from the `docker` folder of this project
 ./dsengine.sh start -n 'my_remote_engine_01' \
                     -e "$ENCRYPTION_KEY" \
                     -i "$ENCRYPTION_IV" \
-                    -p "$IBMCLOUD_CONTAINER_REGISTRY_APIKEY" \
+                    -p "$IBM_ENTITLED_REGISTRY_APIKEY" \
                     --project-id "$PROJECT_ID" \
                     --home "cp4d" \
                     --zen-url "CP4D_ZEN_URL" \
