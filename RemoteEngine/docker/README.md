@@ -51,7 +51,8 @@
     ```
     From this output, the `key` and `iv` are used as the Encryption Key and initialization vector (IV) respectively.
 1. Your Project ID. This is the ID of the project on Cloud Pak for Data project that you want to use with this Remote Engine instance whether it is for IBM Cloud or CP4D. (If you are using the DataStage in Frankfurt data center then please use https://eu-de.dataplatform.cloud.ibm.com. If you are using the DataStage in Sydney data center then please use https://au-syd.dai.cloud.ibm.com. If you are using the DataStage in Toronto data center then please use https://ca-tor.dai.cloud.ibm.com.). You can retrieve this value by opening the project that you want to use with this Remote Engine and selecting the Manage tab > General to view the Project ID.
-1. IBM Cloud Container Registry API Key. This API key will be used to download the images needed to run Remote Engine whether it is for IBM Cloud or CP4D. Currently, clients need to request this API Key once they have provisioned a DataStage-aaS Plan and it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport.
+1. If you are specifically deploying a remote engine for IBM Cloud, the IBM Cloud Container Registry API Key. This API key will be used to download the images needed to run Remote Engine for IBM Cloud. Currently, clients need to request this API Key once they have provisioned a DataStage-aaS Plan and it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport.
+1. If you are specifically deploying a remote engine for CP4D, the IBM Entitlement API key. This API key will be used to download the images needed to run Remote Engine for CP4D. Please follow https://www.ibm.com/docs/en/cloud-paks/cp-data/5.0.x?topic=information-obtaining-your-entitlement-api-key for instructions on how to obtain your IBM Entitlement API Key.
 
 ## Usage
 
@@ -75,7 +76,7 @@ The `dsengine.sh` script can be invoked from the `docker` folder of this project
 ./dsengine.sh start -n 'my_remote_engine_01' \
                     -e "$ENCRYPTION_KEY" \
                     -i "$ENCRYPTION_IV" \
-                    -p "$IBMCLOUD_CONTAINER_REGISTRY_APIKEY" \
+                    -p "$IBM_ENTITLEMENT_APIKEY" \
                     --project-id "$PROJECT_ID" \
                     --home "cp4d" \
                     --zen-url "CP4D_ZEN_URL" \

@@ -43,7 +43,8 @@ The remote engine supports three default sizes: small, medium, and large.
     1. Click Manage > Access (IAM) > API keys to open the “API keys” page (URL: https://cloud.ibm.com/iam/apikeys).
     2. Ensure that My IBM Cloud API keys is selected in the View list.
     3. Click Create an IBM Cloud API key, and then specify a name and description
-2. IBM Cloud Container Registry APIKey. This apikey will be used to download the images needed to run Remote Engine whether it is for IBM Cloud or CP4D. Currently there is no way to generate this, so it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport
+2. If you are specifically deploying a remote engine for IBM Cloud, the IBM Cloud Container Registry APIKey. This apikey will be used to download the images needed to run Remote Engine for IBM Cloud. Currently there is no way to generate this, so it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport
+2. If you are specifically deploying a remote engine for IBM Cloud, the IBM Entitlement APIKey. This apikey will be used to download the images needed to run Remote Engine for CP4D. Please follow https://www.ibm.com/docs/en/cloud-paks/cp-data/5.0.x?topic=information-obtaining-your-entitlement-api-key for instructions on how to obtain your IBM Entitlement API Key.
 
 ## Usage
 To deploy the DataStage operator on cluster without global pull secret configured for the container registry, the pull secret needs to be created. You need an active connection to the cluster with either kubectl or oc cli available.
@@ -98,9 +99,10 @@ license_accept=true
 # the namespace to deploy the remote engine
 namespace=<namespace>
 
-# the username and password for the container registry
-username=iamapikey
-password=<container-registry-api-key>
+# If you are specifically deploying a remote engine for IBM Cloud, the username and api key for the IBM Cloud Container Registry.
+# If you are specifically deploying a remote engine for CP4D, the username and api key for the IBM Entitled Registry.
+username=<account-login-user>
+password=<registry-api-key>
 
 # If you are deploying a remote engine for IBM Cloud, this value will be the IBM Cloud api key for the remote engine to use.
 # If you are deploying a remote engine for CP4D, this value will be the CP4D Cluster account login api key of the target cluster for the remote engine to use. Go to "Profile and settings" when logged in to get your api key for the connection.
@@ -138,7 +140,7 @@ zen_url=<zen-url>
 # namespace as the remote engine if omitted
 # provisioner_namespace=<namespace>
 ```
-This script will deploy a remote engine for CP4D Cluster. If you need to deploy remote engine for IBM Cloud, uncomment the data_center variable, comment out the zen_url and service_id variables, and change the api_key variable according to the commented instructions.
+This script will deploy a remote engine for CP4D Cluster. If you need to deploy remote engine for IBM Cloud, uncomment the data_center variable, comment out the zen_url and service_id variables, and change the api_key, username, and password variables according to the commented instructions.
 
 Running the install script with the input file:
 ```
