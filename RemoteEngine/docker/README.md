@@ -76,7 +76,7 @@ The `dsengine.sh` script can be invoked from the `docker` folder of this project
 ./dsengine.sh start -n 'my_remote_engine_01' \
                     -e "$ENCRYPTION_KEY" \
                     -i "$ENCRYPTION_IV" \
-                    -p "$IBM_ENTITLEMENT_APIKEY" \
+                    -p "$IBM_ENTITLED_REGISTRY_APIKEY" \
                     --project-id "$PROJECT_ID" \
                     --home "cp4d" \
                     --zen-url "CP4D_ZEN_URL" \

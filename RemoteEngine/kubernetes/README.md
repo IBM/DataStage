@@ -44,7 +44,7 @@ The remote engine supports three default sizes: small, medium, and large.
     2. Ensure that My IBM Cloud API keys is selected in the View list.
     3. Click Create an IBM Cloud API key, and then specify a name and description
 2. If you are specifically deploying a remote engine for IBM Cloud, the IBM Cloud Container Registry APIKey. This apikey will be used to download the images needed to run Remote Engine for IBM Cloud. Currently there is no way to generate this, so it needs to be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport
-2. If you are specifically deploying a remote engine for IBM Cloud, the IBM Entitlement APIKey. This apikey will be used to download the images needed to run Remote Engine for CP4D. Please follow https://www.ibm.com/docs/en/cloud-paks/cp-data/5.0.x?topic=information-obtaining-your-entitlement-api-key for instructions on how to obtain your IBM Entitlement API Key.
+3. If you are specifically deploying a remote engine for IBM Cloud, the IBM Entitlement APIKey. This apikey will be used to download the images needed to run Remote Engine for CP4D. Please follow https://www.ibm.com/docs/en/cloud-paks/cp-data/5.0.x?topic=information-obtaining-your-entitlement-api-key for instructions on how to obtain your IBM Entitlement API Key.
 
 ## Usage
 To deploy the DataStage operator on cluster without global pull secret configured for the container registry, the pull secret needs to be created. You need an active connection to the cluster with either kubectl or oc cli available.
