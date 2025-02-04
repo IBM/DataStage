@@ -112,7 +112,7 @@ api_key=<api-key>
 service_id=cpadmin
 
 # the comma separated list of project IDs that will be using this remote engine
-projectId=<project_id1,project_id2,project_id3>
+projectId=<project_id1,project_id2,project_id3,...>
 
 # the name of the remote engine (alphanumeric and without spaces)
 name=<name>
@@ -127,7 +127,7 @@ storage_class=<storage-class-name>
 storage_size=20
 
 # comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner
-# additional_users=IBMid-1000000000,IBMid-2000000000,IBMid-3000000000...
+# additional_users=<IBMid-1000000000,IBMid-2000000000,IBMid-3000000000...>
 
 # If you are specifically deploying a remote engine for CP4D, the zen url of the target cluster to use for CP4D environment. Specifying this variable will automatically switch usage from IBM Cloud to CP4D.
 zen_url=<zen-url>
