@@ -61,7 +61,7 @@ To deploy the DataStage operator on cluster without global pull secret configure
 
 # create the remote instance - add '--gateway api.dataplatform.cloud.ibm.com' if the instance needs to registers with prod env
 
-./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto (if you are specifically deploying a remote engine for IBM Cloud)] [--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)] --license-accept true
+./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project_id1,project_id2,project_id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto (if you are specifically deploying a remote engine for IBM Cloud)] [--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)] --license-accept true
 ```
 For documentation on how to create IBM Cloud API keys, see https://cloud.ibm.com/docs/account?topic=account-manapikey.
 To generate a CP4D API Key, go to "Profile and settings" when logged in to the CP4D Cluster to get your api key for the connection.
@@ -111,8 +111,8 @@ api_key=<api-key>
 # If you are specifically deploying a remote engine for CP4D, the CP4D service id username of the target cluster for the remote engine to use with api key
 service_id=cpadmin
 
-# the project ID that will be using this remote engine
-projectId=<project_id>
+# the comma separated list of project IDs that will be using this remote engine
+projectId=<project_id1,project_id2,project_id3,...>
 
 # the name of the remote engine (alphanumeric and without spaces)
 name=<name>
@@ -127,7 +127,7 @@ storage_class=<storage-class-name>
 storage_size=20
 
 # comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner
-# additional_users=IBMid-1000000000,IBMid-2000000000,IBMid-3000000000...
+# additional_users=<IBMid-1000000000,IBMid-2000000000,IBMid-3000000000...>
 
 # If you are specifically deploying a remote engine for CP4D, the zen url of the target cluster to use for CP4D environment. Specifying this variable will automatically switch usage from IBM Cloud to CP4D.
 zen_url=<zen-url>

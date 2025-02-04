@@ -616,7 +616,7 @@ spec:
   storageSize: $storage_size
   scaleConfig: $size
   remote_engine: true
-  project_id: $projectId
+  project_id: [$projectId]
   docker_registry_prefix: $DOCKER_REGISTRY_PREFIX
   api_key_secret: $DS_API_KEY_SECRET
   remote_controlplane_env: $remote_controlplane_env
@@ -680,10 +680,10 @@ handle_apikey_usage() {
 handle_create_instance_usage() {
   echo ""
   echo "Description: creates an instance of the remote engine; the pull secret and the api-key secret should have been created in the same namespace."
-  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--zen-url <zen-url>] --license-accept true"
+  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id1,project-id2,project-id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--zen-url <zen-url>] --license-accept true"
   echo "--namespace: the namespace to create the instance"
   echo "--name: the name of the remote engine"
-  echo "--project-id: the project ID to register the remote engine"
+  echo "--project-id: the comma separated list of project IDs to register the remote engine"
   echo "--storageClass: the file storageClass to use"
   echo "--storageSize: the storage size to use (in GB); defaults to 10"
   echo "--size: the size of the instance (small, medium, large); defaults to small"
