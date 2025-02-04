@@ -21,7 +21,6 @@ TOOL_SHORTNAME='DataStage Remote Engine'
 
 # image information
 DOCKER_REGISTRY='icr.io/datastage'
-PX_VERSION='latest'
 SELECT_PX_VERSION='false'
 
 # container names
@@ -85,7 +84,6 @@ STR_SET_USER='  --set-user                  Specify the username to be used to r
 STR_SET_GROUP='  --set-group                 Specify the group to be used to run the container.'
 STR_ADDITIONAL_USERS='  --additional-users                 Comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner.'
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
-STR_VERSION='  --version                   Version of the remote engine to use; default will use the latest version.'
 STR_MEMORY='  --memory                    Specify memory allocated to the docker container (default is 4G).'
 STR_CPUS='  --cpus                      Specify CPU allocated to the docker container (default is 2 cores).'
 STR_PIDS_LIMIT='  --pids-limit           Set the PID limit of the container (defaults to -1 for unlimited pids for the container)'
@@ -212,7 +210,6 @@ print_usage() {
         echo "${STR_PROXY}"
         echo "${STR_PROXY_CACERT}"
         echo "${STR_SELECT_PX_VERSION}"
-        echo "${STR_VERSION}"
         echo "${STR_ADDITIONAL_USERS}"
         echo "${STR_ENV_VARS}"
         # echo "${STR_USE_ENT_KEY}"
@@ -335,9 +332,9 @@ function start() {
             shift
             handle_select_version "${1}"
             ;;
-        --version)
+        --digest)
             shift
-            PX_VERSION="${1}"
+            USE_DIGEST="${1}"
             ;;
         --security-opt)
             shift
@@ -434,6 +431,10 @@ function update() {
         --select-version)
             shift
             handle_select_version "${1}"
+            ;;
+        --digest)
+            shift
+            USE_DIGEST="${1}"
             ;;
         --proxy)
             shift
@@ -1950,6 +1951,8 @@ if [[ ${ACTION} == "start" ]]; then
     print_header "Checking docker images ..."
     if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
+    elif [[ -v USE_DIGEST ]]; then
+        PX_VERSION="${USE_DIGEST}"
     else
         if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
             retrieve_latest_px_version
@@ -2185,6 +2188,8 @@ elif [[ ${ACTION} == "update" ]]; then
 
     if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
+    elif [[ -v USE_DIGEST ]]; then
+        PX_VERSION="${USE_DIGEST}"
     else
         if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
             retrieve_latest_px_version
