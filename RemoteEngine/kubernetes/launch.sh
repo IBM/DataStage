@@ -680,7 +680,7 @@ handle_apikey_usage() {
 handle_create_instance_usage() {
   echo ""
   echo "Description: creates an instance of the remote engine; the pull secret and the api-key secret should have been created in the same namespace."
-  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id1,project-id2,project-id3> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--zen-url <zen-url>] --license-accept true"
+  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id1,project-id2,project-id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--zen-url <zen-url>] --license-accept true"
   echo "--namespace: the namespace to create the instance"
   echo "--name: the name of the remote engine"
   echo "--project-id: the comma separated list of project IDs to register the remote engine"
