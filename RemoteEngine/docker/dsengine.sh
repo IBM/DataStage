@@ -78,7 +78,6 @@ STR_VOLUMES="  --volume-dir                Specify a directory for datastage per
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
 STR_ADD_HOST="  --add-host                 Add a <host>:<ip> entry to the /etc/hosts file of the container. This flag can be specified multiple times."
 STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
-STR_USE_VERSION='  --use-version                   Uses the provided px-runtime image digest to start the remote engine (default is latest).'
 STR_SECURITY_OPT='  --security-opt                  Specify the security-opt to be used to run the container.'
 STR_CAP_DROP='  --cap-drop                 Specify the cap-drop to be used to run the container.'
 STR_SET_USER='  --set-user                  Specify the username to be used to run the container. If not set, the current user is used.'
@@ -155,7 +154,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--use-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--additional-users] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
@@ -211,7 +210,6 @@ print_usage() {
         echo "${STR_PROXY}"
         echo "${STR_PROXY_CACERT}"
         echo "${STR_SELECT_PX_VERSION}"
-        echo "${STR_USE_VERSION}"
         echo "${STR_ADDITIONAL_USERS}"
         echo "${STR_ENV_VARS}"
         # echo "${STR_USE_ENT_KEY}"
@@ -334,9 +332,9 @@ function start() {
             shift
             handle_select_version "${1}"
             ;;
-        --use-version)
+        --digest)
             shift
-            USE_PX_VERSION="${1}"
+            USE_DIGEST="${1}"
             ;;
         --security-opt)
             shift
@@ -434,9 +432,9 @@ function update() {
             shift
             handle_select_version "${1}"
             ;;
-        --use-version)
+        --digest)
             shift
-            USE_PX_VERSION="${1}"
+            USE_DIGEST="${1}"
             ;;
         --proxy)
             shift
@@ -1945,8 +1943,8 @@ if [[ ${ACTION} == "start" ]]; then
     print_header "Checking docker images ..."
     if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
-    elif [[ -v USE_PX_VERSION ]]; then
-        PX_VERSION="${USE_PX_VERSION}"
+    elif [[ -v USE_DIGEST ]]; then
+        PX_VERSION="${USE_DIGEST}"
     else
         if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
             retrieve_latest_px_version
@@ -2178,8 +2176,8 @@ elif [[ ${ACTION} == "update" ]]; then
 
     if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
-    elif [[ -v USE_PX_VERSION ]]; then
-        PX_VERSION="${USE_PX_VERSION}"
+    elif [[ -v USE_DIGEST ]]; then
+        PX_VERSION="${USE_DIGEST}"
     else
         if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
             retrieve_latest_px_version
