@@ -65,7 +65,7 @@ The `dsengine.sh` script can be invoked from the `docker` folder of this project
                     -e "$ENCRYPTION_KEY" \
                     -i "$ENCRYPTION_IV" \
                     -p "$IBMCLOUD_CONTAINER_REGISTRY_APIKEY" \
-                    --project-id "$PROJECT_ID1,$PROJECT_ID2,$PROJECT_ID3"
+                    --project-id "$PROJECT_ID1,$PROJECT_ID2,$PROJECT_ID3,..."
 
 ```
 Once the script execution has completed, this engine needs to be selected in the project settings by going to the project, navigating to `Manage` > `DataStage` and selecting the appropriate engine under the `Settings` tab > `Remote` environments.
@@ -77,7 +77,7 @@ The `dsengine.sh` script can be invoked from the `docker` folder of this project
                     -e "$ENCRYPTION_KEY" \
                     -i "$ENCRYPTION_IV" \
                     -p "$IBM_ENTITLED_REGISTRY_APIKEY" \
-                    --project-id "$PROJECT_ID" \
+                    --project-id "$PROJECT_ID1,$PROJECT_ID2,$PROJECT_ID3,..." \
                     --home "cp4d" \
                     --zen-url "CP4D_ZEN_URL" \
                     --cp4d-user "CP4D_USERNAME" \
