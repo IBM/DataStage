@@ -21,7 +21,6 @@ TOOL_SHORTNAME='DataStage Remote Engine'
 
 # image information
 DOCKER_REGISTRY='icr.io/datastage'
-PX_VERSION='latest'
 SELECT_PX_VERSION='false'
 
 # container names
@@ -33,8 +32,9 @@ DOCKER_CMD='docker'
 if ! [ -x "$(command -v docker)" ] && [ -x "$(command -v podman)" ]; then
     DOCKER_CMD='podman'
 fi
-DOCKER_VOLUMES_DIR='/tmp/docker/volumes'
+DOCKER_VOLUMES_DIR="$(pwd)/docker/volumes"
 MOUNT_DIRS=()
+ADD_HOSTS=()
 SCRATCH_DIR_OVERRIDE='false'
 
 # env constnats
@@ -76,6 +76,7 @@ STR_PROJECT_UID='  -d, --project-id            Comma separated list of DataPlatf
 STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, cp4d]'
 STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
+STR_ADD_HOST="  --add-host                 Add a <host>:<ip> entry to the /etc/hosts file of the container. This flag can be specified multiple times."
 STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
 STR_SECURITY_OPT='  --security-opt                  Specify the security-opt to be used to run the container.'
 STR_CAP_DROP='  --cap-drop                 Specify the cap-drop to be used to run the container.'
@@ -83,7 +84,6 @@ STR_SET_USER='  --set-user                  Specify the username to be used to r
 STR_SET_GROUP='  --set-group                 Specify the group to be used to run the container.'
 STR_ADDITIONAL_USERS='  --additional-users                 Comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner.'
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
-STR_VERSION='  --version                   Version of the remote engine to use; default will use the latest version.'
 STR_MEMORY='  --memory                    Specify memory allocated to the docker container (default is 4G).'
 STR_CPUS='  --cpus                      Specify CPU allocated to the docker container (default is 2 cores).'
 STR_PIDS_LIMIT='  --pids-limit           Set the PID limit of the container (defaults to -1 for unlimited pids for the container)'
@@ -91,10 +91,11 @@ STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<user
 STR_PROXY_CACERT='  --proxy-cacert              Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.'
 STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
 STR_HELP='  help, --help                Print usage information'
-STR_ZEN_URL='  --zen-url                   CP4D zen url (required if --home is used with "cp4d")'
-STR_CP4D_USER='  --cp4d-user                 CP4D username (required if --home is used with "cp4d")'
-STR_CP4D_APIKEY='  --cp4d-apikey             CP4D apikey (required if --home is used with "cp4d")'
+STR_ZEN_URL='  --zen-url                   CP4D zen url of the cluster (required if --home is used with "cp4d")'
+STR_CP4D_USER='  --cp4d-user                 CP4D username used to log into the cluster (required if --home is used with "cp4d")'
+STR_CP4D_APIKEY='  --cp4d-apikey             CP4D apikey used to authenticate with the cluster. Go to "Profile and settings" when logged in to get your api key for the connection. (required if --home is used with "cp4d")'
 STR_PROD_APIKEY_USER='  --prod-apikey-user           DataStage Artifactory user'
+STR_ENV_VARS='  --env-vars           Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.'
 
 
 
@@ -153,9 +154,9 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--additional-users] \n                          [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--security-opt] [--cap-drop] [--additional-users] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -194,6 +195,7 @@ print_usage() {
             echo "${STR_PIDS_LIMIT}"
             echo "${STR_VOLUMES}"
             echo "${STR_MOUNT_DIR}"
+            echo "${STR_ADD_HOST}"
             echo "${STR_SECURITY_OPT}"
             echo "${STR_CAP_DROP}"
             echo "${STR_SET_USER}"
@@ -208,7 +210,8 @@ print_usage() {
         echo "${STR_PROXY}"
         echo "${STR_PROXY_CACERT}"
         echo "${STR_SELECT_PX_VERSION}"
-        echo "${STR_VERSION}"
+        echo "${STR_ADDITIONAL_USERS}"
+        echo "${STR_ENV_VARS}"
         # echo "${STR_USE_ENT_KEY}"
         # echo "${STR_PLATFORM}"
     fi
@@ -317,6 +320,10 @@ function start() {
             shift
             MOUNT_DIRS+=("$1")
             ;;
+        --add-host)
+            shift
+            ADD_HOSTS+=("$1")
+            ;;
         # --platform)
         #     shift
         #     PLATFORM="$1"
@@ -325,17 +332,17 @@ function start() {
             shift
             handle_select_version "${1}"
             ;;
-        --version)
+        --digest)
             shift
-            PX_VERSION="${1}"
+            USE_DIGEST="${1}"
             ;;
         --security-opt)
             shift
-            CONTAINER_SECURITY_OPT="$1"
+            CONTAINER_SECURITY_OPT=$( echo "$1" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//' )
             ;;
         --cap-drop)
             shift
-            CONTAINER_CAP_DROP="$1"
+            CONTAINER_CAP_DROP=$( echo "$1" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//' )
             ;;
         --set-user)
             shift
@@ -381,6 +388,10 @@ function start() {
             shift
             DOCKER_REGISTRY="$1"
             ;;
+        --env-vars)
+            shift
+            ENV_VARS="${1// /}"
+            ;;
         -h | --help | help)
             print_usage
             exit 1
@@ -421,6 +432,10 @@ function update() {
             shift
             handle_select_version "${1}"
             ;;
+        --digest)
+            shift
+            USE_DIGEST="${1}"
+            ;;
         --proxy)
             shift
             PROXY_URL="$1"
@@ -429,9 +444,21 @@ function update() {
             shift
             IAM_APIKEY_PROD_USER="$1"
             ;;
+        --security-opt)
+            shift
+            CONTAINER_SECURITY_OPT=$( echo "$1" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//' )
+            ;;
+        --cap-drop)
+            shift
+            CONTAINER_CAP_DROP=$( echo "$1" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//' )
+            ;;
         --additional-users)
             shift
             ADDITIONAL_USERS="$1"
+            ;;
+        --env-vars)
+            shift
+            ENV_VARS="${1// /}"
             ;;
         -h | --help | help)
             print_usage
@@ -931,6 +958,16 @@ run_px_runtime_docker() {
         )
     fi
 
+    if [[ -v ADD_HOSTS && ! -z $ADD_HOSTS ]]; then
+        for host in "${ADD_HOSTS[@]}"; do
+            if [[ -n "$host" && -v host && ! -z $host ]]; then
+                runtime_docker_opts+=(
+                    --add-host "${host}"
+                )
+            fi
+        done
+    fi
+
     if [[ "${PLATFORM}" == 'icp4d' ]]; then
         runtime_docker_opts+=(
             --env WLMON=1
@@ -945,6 +982,23 @@ run_px_runtime_docker() {
             --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
             --env ENABLE_DS_METRICS=false
         )
+    fi
+
+    ### must go last
+    if [[ ! -z  $ENV_VARS ]]; then
+        runtime_docker_opts+=(
+            --env ENV_VARS="${ENV_VARS}"
+        )
+        IFS=";" read -ra pairs <<< "$ENV_VARS"
+        for pair in "${pairs[@]}"; do
+            IFS='=' read -r key value <<< "$pair"
+            if [[ ! -z  $key ]] && [[ $key != "ENV_VARS" ]]; then
+                echo "Setting custom environment variable $key = $value"
+                runtime_docker_opts+=(
+                    --env "$key=$value"
+                )
+            fi
+        done
     fi
 
     $DOCKER_CMD run "${runtime_docker_opts[@]}" --entrypoint='/bin/bash' $PXRUNTIME_DOCKER_IMAGE -c "/px-storage/init-volume.sh;/px-storage/startup.sh"
@@ -1473,6 +1527,14 @@ validate_action_arguments() {
                 fi
             done
         fi
+        if [[ -v ADD_HOSTS && ! -z $ADD_HOSTS ]]; then
+            echo "ADD_HOSTS=${ADD_HOSTS[@]}"
+            for host in "${ADD_HOSTS[@]}"; do
+                if [[ -n "$host" && -v host && ! -z $host ]]; then
+                    echo "${host}"
+                fi
+            done
+        fi
         echo ""
     fi
 
@@ -1889,6 +1951,8 @@ if [[ ${ACTION} == "start" ]]; then
     print_header "Checking docker images ..."
     if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
+    elif [[ -v USE_DIGEST ]]; then
+        PX_VERSION="${USE_DIGEST}"
     else
         if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
             retrieve_latest_px_version
@@ -1988,28 +2052,28 @@ elif [[ ${ACTION} == "update" ]]; then
     fi
 
     echo "Gathering variables required for update from the current container"
-    DSNEXT_SEC_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep DSNEXT_SEC_KEY | cut -d'=' -f2)
-    IVSPEC=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IVSPEC | cut -d'=' -f2)
+    DSNEXT_SEC_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^DSNEXT_SEC_KEY= | cut -d'=' -f2-)
+    IVSPEC=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^IVSPEC= | cut -d'=' -f2-)
     PX_MEMORY=$(($($DOCKER_CMD inspect --format='{{.HostConfig.Memory}}' "${PXRUNTIME_CONTAINER_NAME}")/(1024*1024*1024))) # in GB
     PX_CPUS=$(($($DOCKER_CMD inspect --format='{{.HostConfig.NanoCpus}}' "${PXRUNTIME_CONTAINER_NAME}")/(1000*1000*1000))) # in cores
     PIDS_LIMIT=$($DOCKER_CMD inspect --format='{{.HostConfig.PidsLimit}}' "${PXRUNTIME_CONTAINER_NAME}")
-    GATEWAY_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
+    GATEWAY_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^GATEWAY_URL= | cut -d'=' -f2-)
 
     # these 2 env vars should be only set in case of cp4d
-    CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2)
-    CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+    CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^SERVICE_ID= | cut -d'=' -f2-)
+    CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^SERVICE_API_KEY= | cut -d'=' -f2-)
     if [[ -v CP4D_USER && -v CP4D_API_KEY && -n "${CP4D_USER}" && -n "${CP4D_API_KEY}" ]]; then
         echo 'Datastage environment set to cp4d'
         DATASTAGE_HOME='cp4d'
     fi
 
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-        ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
-        IAM_APIKEY_PROD_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_APIKEY_PROD_USER | cut -d'=' -f2)
+        ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^GATEWAY_URL= | cut -d'=' -f2-)
+        IAM_APIKEY_PROD_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^IAM_APIKEY_PROD_USER= | cut -d'=' -f2-)
         set_container_registry
     else
-        IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_URL | cut -d'=' -f2)
-        IAM_APIKEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+        IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^IAM_URL= | cut -d'=' -f2-)
+        IAM_APIKEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^SERVICE_API_KEY= | cut -d'=' -f2-)
     fi
     DS_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/ds-storage") | .Source')
     PX_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/px-storage") | .Source')
@@ -2020,12 +2084,21 @@ elif [[ ${ACTION} == "update" ]]; then
     IFS=$'\n'
     MOUNT_DIRS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | "\(.Source):\(.Destination)"' | while read object; do echo "$object"; done)
     MOUNT_DIRS=($MOUNT_DIRS_STR)
+    ADD_HOSTS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].HostConfig.ExtraHosts | .[]')
+    ADD_HOSTS=($ADD_HOSTS_STR)
     IFS=$SAVEIFS
-    CONTAINER_SECURITY_OPT=$($DOCKER_CMD inspect --format='{{.HostConfig.SecurityOpt}}' "${PXRUNTIME_CONTAINER_NAME}")
-    CONTAINER_CAP_DROP=$($DOCKER_CMD inspect --format='{{.HostConfig.CapDrop}}' "${PXRUNTIME_CONTAINER_NAME}")
+    if [[ "${CONTAINER_SECURITY_OPT}" == 'NOT_SET' ]]; then
+        CONTAINER_SECURITY_OPT=$($DOCKER_CMD inspect --format='{{.HostConfig.SecurityOpt}}' "${PXRUNTIME_CONTAINER_NAME}" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//')
+    fi
+    if [[ "${CONTAINER_CAP_DROP}" == 'NOT_SET' ]]; then
+        CONTAINER_CAP_DROP=$($DOCKER_CMD inspect --format='{{.HostConfig.CapDrop}}' "${PXRUNTIME_CONTAINER_NAME}" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//')
+    fi
     CONTAINER_USER=$($DOCKER_CMD inspect --format='{{.Config.User}}' "${PXRUNTIME_CONTAINER_NAME}")
     if [[ ! -v ADDITIONAL_USERS ]]; then
-        ADDITIONAL_USERS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ADDITIONAL_USERS | cut -d'=' -f2)
+        ADDITIONAL_USERS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^ADDITIONAL_USERS= | cut -d'=' -f2-)
+    fi
+    if [[ ! -v ENV_VARS ]]; then
+        ENV_VARS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^ENV_VARS= | cut -d'=' -f2-)
     fi
     DOCKER_VOLUMES_DIR=$(dirname "$DS_STORAGE_HOST_DIR")
     SCRATCH_BASE_DIR=$(dirname "$SCRATCH_DIR")
@@ -2092,9 +2165,13 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "CONTAINER_CAP_DROP = ${CONTAINER_CAP_DROP}"
     echo "CONTAINER_USER = ${CONTAINER_USER}"
     echo "ADDITIONAL_USERS = ${ADDITIONAL_USERS}"
+    echo "ENV_VARS = ${ENV_VARS}"
     echo "DOCKER_VOLUMES_DIR = ${DOCKER_VOLUMES_DIR}"
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
         echo "MOUNT_DIRS=${MOUNT_DIRS[@]}"
+    fi
+    if [[ -v ADD_HOSTS && ! -z $ADD_HOSTS ]]; then
+        echo "ADD_HOSTS=${ADD_HOSTS[@]}"
     fi
 
     echo ""
@@ -2115,6 +2192,8 @@ elif [[ ${ACTION} == "update" ]]; then
 
     if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
+    elif [[ -v USE_DIGEST ]]; then
+        PX_VERSION="${USE_DIGEST}"
     else
         if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
             retrieve_latest_px_version

@@ -6,7 +6,7 @@
 
 * Learn more about DataStage on IBM Cloud at https://cloud.ibm.com/services/datastage
 
-* Learn more about DataStage on IBM Cloud Pak for Data at https://www.ibm.com/docs/en/cloud-paks/cp-data/4.6.x?topic=services-datastage
+* Learn more about DataStage on IBM Cloud Pak for Data at https://www.ibm.com/docs/en/cloud-paks/cp-data/5.1.x?topic=data-transforming-datastage
 
 This repository contains samples, scripts and various resources to use with DataStage.
 

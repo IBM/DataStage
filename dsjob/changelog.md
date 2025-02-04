@@ -4,6 +4,8 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.1.0](#510) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.1.0.md)
+
 [5.0.3](#503) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.3.md)
 
 [5.0.2](#502) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.2.md)
@@ -56,6 +58,44 @@ interface.
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
 
+## 5.1.0
+
+### New commands
+
+The following commands are added:
+
+- `update-project` currently this command can be used to enable folder support on a project.
+- `get-git-commit` provides git commit status while commit is in progress.
+- `get-git-pull` provides git pull status while pull is in progress.
+- `get-wlmconfig` provides Workload Management configuration set on a px instance.
+- `update-wlparams` updates WLM params for a WLM configuration on a px instance.
+- `update-wlresources` updates WLM resources for a WLM configuration on a px instance.
+- `update-wlqueues` updates WLM queues for a WLM configuration on a px instance.
+- `list-track-project` provides list of all projects that are tracked for changes, this information is useful for git operations.
+- `update-build-stage` updates build stage with new definition.
+- `update-message-handler` updates message handler with new definitions.
+
+### Command changes
+
+The following commands have changed:
+
+- `update-ds-setting`: New format are now accepted for timestamp as "%mm-%dd-%yyyy %hh:%nn:%ss", time as %hh:%nn:%ss" and data as %mm-%dd-%yyyy".
+	- also `warn-limit` option is added to control warn limits before job is aborted at project level.
+- `create-job`  optionally takes  `optimize`  parameter that creates a DataStage sequence runner job. It now take `enable-inline` flag to run nested pipelines inline instead of as separate jobs.
+- `folders` option  is added to the following commands to allow asset to be created in a folder
+	- `create-flow`, `create-cff-schema`, `create-connection`, `create-build-stage` ,  `create-custom-stage`, `create-wrapped-stage`,  `create-java-library`,  `create-message-handler`, `create-paramset`, `create-pipeline-job`, `create-rule`, `create-subflow`, `create-tabledef`, `create-function-lib` and `create-job`.
+- `git-status` command changes to allow to display identical, changed and deleted objects using the flags `hide-identical`, `hide-modified` and `hide-deleted` respectively.
+- `migrate` now has two new flags `enable-autosave` to autosave migrated pipelines and `enable-jinja` to allow ninja templates in a bash script.
+- `run` commands now takes list of paramfiles to allow to load job parameters from multiple files.
+- `compile-pipeline` and `run-pipeline`  added new flag `enable-inline` allows user to set it to false to allows nested pipelines run as independent sequence runner jobs.
+
+### Fixes
+
+- `list-jobruns`, `list-job-status`, `list-active-runs` and `jobrunclean`  fixed to address issues switching to new Jobs API. 
+- `describe-dataset` and `describe-fileset` now display same partition information when output is set to json format.
+- `jobinfo` commands output changed to retrofit with changes from job api. Job runs now missing some of CAMS metadata.
+
+
 ## 5.0.3
 
 ### New commands
@@ -83,7 +123,8 @@ The following commands have changed:
 
 ### Fixes
  
- - `reset-pipeline-cache`. This command is now behind a toggle `ENABLE_DSJOB_RESETPIPELINECACHE`. This is to make sure that user must use the official `
+- `reset-pipeline-cache`. This command is now behind a toggle `ENABLE_DSJOB_RESETPIPELINECACHE`. This is to make sure that user must use the official `
+
 
 ## 5.0.2
 
