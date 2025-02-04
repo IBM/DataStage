@@ -158,7 +158,7 @@ print_usage() {
     if [[ "${ACTION}" == 'start' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--additional-users] [--env-vars] \n                          [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--security-opt] [--cap-drop] [--additional-users] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -341,11 +341,11 @@ function start() {
             ;;
         --security-opt)
             shift
-            CONTAINER_SECURITY_OPT="$1"
+            CONTAINER_SECURITY_OPT=$( echo "$1" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//' )
             ;;
         --cap-drop)
             shift
-            CONTAINER_CAP_DROP="$1"
+            CONTAINER_CAP_DROP=$( echo "$1" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//' )
             ;;
         --set-user)
             shift
@@ -442,6 +442,14 @@ function update() {
         --prod-apikey-user)
             shift
             IAM_APIKEY_PROD_USER="$1"
+            ;;
+        --security-opt)
+            shift
+            CONTAINER_SECURITY_OPT=$( echo "$1" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//' )
+            ;;
+        --cap-drop)
+            shift
+            CONTAINER_CAP_DROP=$( echo "$1" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//' )
             ;;
         --additional-users)
             shift
@@ -2072,8 +2080,12 @@ elif [[ ${ACTION} == "update" ]]; then
     ADD_HOSTS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].HostConfig.ExtraHosts | .[]')
     ADD_HOSTS=($ADD_HOSTS_STR)
     IFS=$SAVEIFS
-    CONTAINER_SECURITY_OPT=$($DOCKER_CMD inspect --format='{{.HostConfig.SecurityOpt}}' "${PXRUNTIME_CONTAINER_NAME}")
-    CONTAINER_CAP_DROP=$($DOCKER_CMD inspect --format='{{.HostConfig.CapDrop}}' "${PXRUNTIME_CONTAINER_NAME}")
+    if [[ "${CONTAINER_SECURITY_OPT}" == 'NOT_SET' ]]; then
+        CONTAINER_SECURITY_OPT=$($DOCKER_CMD inspect --format='{{.HostConfig.SecurityOpt}}' "${PXRUNTIME_CONTAINER_NAME}" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//')
+    fi
+    if [[ "${CONTAINER_CAP_DROP}" == 'NOT_SET' ]]; then
+        CONTAINER_CAP_DROP=$($DOCKER_CMD inspect --format='{{.HostConfig.CapDrop}}' "${PXRUNTIME_CONTAINER_NAME}" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//')
+    fi
     CONTAINER_USER=$($DOCKER_CMD inspect --format='{{.Config.User}}' "${PXRUNTIME_CONTAINER_NAME}")
     if [[ ! -v ADDITIONAL_USERS ]]; then
         ADDITIONAL_USERS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^ADDITIONAL_USERS= | cut -d'=' -f2-)
