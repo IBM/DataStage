@@ -26,6 +26,7 @@ OPERATOR_REGISTRY="${DOCKER_REGISTRY}/datastage"
 DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/datastage"
 DS_REGISTRY_SECRET="datastage-pull-secret"
 DS_API_KEY_SECRET="datastage-api-key-secret"
+DS_PROXY_URL="datastage-proxy-url"
 DS_GATEWAY="api.dataplatform.cloud.ibm.com"
 data_center="dallas"
 
@@ -556,6 +557,21 @@ create_apikey_secret() {
   $kubernetesCLI -n ${namespace} create secret generic $DS_API_KEY_SECRET --from-literal=api-key=${api_key} --from-literal=service-id=${service_id}
 }
 
+create_proxy_secrets() {
+  if [ ! -z $proxy_url ]; then
+    CURL_CMD="curl --proxy ${proxy_url}"
+    $kubernetesCLI -n ${namespace} delete secret $DS_PROXY_URL --ignore-not-found=true ${dryRun}
+    $kubernetesCLI -n ${namespace} create secret generic $DS_PROXY_URL --from-literal=proxy_url=${proxy_url}
+    if [ ! -z $cacert_location ] && [ -f $cacert_location ]; then
+      CURL_CMD="${CURL_CMD} --proxy-insecure"
+      $kubernetesCLI -n ${namespace} delete secret connection-ca-certs --ignore-not-found=true ${dryRun}
+      $kubernetesCLI -n ${namespace} create secret generic connection-ca-certs --from-file=${cacert_location}
+    else
+      echo "The specified proxy certificate $cacert_location is not found."
+    fi
+  fi
+}
+
 remove_previous_resources() {
   $kubernetesCLI -n ${namespace} delete deploy ${name}-ibm-datastage-px-runtime --ignore-not-found=true
   $kubernetesCLI -n ${namespace} delete sts ${name}-ibm-datastage-px-compute --ignore-not-found=true
@@ -642,7 +658,7 @@ fi
 
 handle_badusage() {
   echo ""
-  echo "Usage: $0 create-pull-secret|create-apikey-secret|install|create-instance|create-nfs-provisioner --help"
+  echo "Usage: $0 create-pull-secret|create-proxy-secrets|create-apikey-secret|install|create-instance|create-nfs-provisioner --help"
   echo ""
   exit 3
 }
@@ -662,6 +678,17 @@ handle_pull_secret_usage() {
   echo "--namespace: the namespace to install the DataStage operator"
   echo "--username: the username for the container registry"
   echo "--password: the password for the container registry"
+  echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
+  exit 0
+}
+
+handle_proxy_usage() {
+  echo ""
+  echo "Description: create a secret used for proxy urls and cacerts"
+  echo "Usage: $0 create-proxy-usage --namespace <namespace> --proxy <proxy_url> --proxy-cacert <cacert_location>"
+  echo "--namespace: the namespace to install the DataStage operator"
+  echo "--proxy: Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>)"
+  echo "--proxy-cacert: Specify the absolute location of the custom CA store for the specified proxy - if it is using a self signed certificate"
   echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   exit 0
 }
@@ -925,6 +952,14 @@ do
             shift
             password="${1}"
             ;;
+        --proxy)
+            shift
+            proxy_url="${1}"
+            ;;
+        --proxy-cacert)
+            shift
+            cacert_location="${1}"
+            ;;
         --project-id)
             shift
             projectId="${1}"
@@ -991,6 +1026,9 @@ do
         create-pull-secret)
              action="create-pull-secret"
             ;;
+        create-proxy-secrets)
+            action="create-proxy-secrets"
+             ;;
         create-apikey-secret)
             action="create-apikey-secret"
              ;;
@@ -1046,6 +1084,9 @@ if [[ ! -z $dsdisplayHelp ]]; then
     create-pull-secret)
       handle_pull_secret_usage
       ;;
+    create-proxy-secrets)
+      handle_proxy_usage
+      ;;
     create-apikey-secret)
       handle_apikey_usage
       ;;
@@ -1074,6 +1115,9 @@ install)
 create-pull-secret)
   create_pull_secret
   ;;
+create-proxy-secrets)
+  create_proxy_secrets
+  ;;
 create-apikey-secret)
   create_apikey_secret
   ;;
@@ -1097,6 +1141,7 @@ if [ ! -z $inputFile ]; then
     create_nfs_provisioner
   fi
   create_pull_secret
+  create_proxy_secrets
   create_apikey_secret
   determine_registry
   handle_action_install

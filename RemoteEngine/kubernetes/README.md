@@ -53,11 +53,14 @@ To deploy the DataStage operator on cluster without global pull secret configure
 # create pull secret for container registry
 ./launch.sh create-pull-secret --namespace <namespace> --username <username> --password ${api-key} [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
 
-# deploy the operator
-./launch.sh install --namespace <namespace> [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
+# create the proxy secrets if proxies are used
+# ./launch.sh create-proxy-secret --namespace <namespace> [--proxy <proxy_url>] [--proxy-cacert <cacert_location>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
 
 # create the api-key for dev or prod environment
 ./launch.sh create-apikey-secret --namespace <namespace> --apikey ${api-key} [--serviceid ${service-id}] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
+
+# deploy the operator
+./launch.sh install --namespace <namespace> [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
 
 # create the remote instance - add '--gateway api.dataplatform.cloud.ibm.com' if the instance needs to registers with prod env
 
@@ -131,6 +134,12 @@ storage_size=20
 
 # If you are specifically deploying a remote engine for CP4D, the zen url of the target cluster to use for CP4D environment. Specifying this variable will automatically switch usage from IBM Cloud to CP4D.
 zen_url=<zen-url>
+
+# Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>).
+# proxy_url=<proxy-url>
+
+# Specify the absolute location of the custom CA store for the specified proxy - if it is using a self signed certificate.
+# cacert_location=<cacert-location>
 
 # the DNS name or IP of the EFS file system; omit if not deploying on AWS's EKS
 # the provisioner will use the storage class name specified in storage_class
