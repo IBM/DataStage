@@ -726,10 +726,21 @@ generate_access_token() {
 
 # retrieve px image digests from ds-runtime for cp4d
 retrieve_px_image_digests_for_cp4d() {
-  # use fixed image digests for the initial 5.1.0 release
-  operator_digest="sha256:4d4e0e4355f2e24522880fd3a5ce2b0300096586d929a9d762b011dcfbdbec84"
-  px_runtime_digest="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea"
-  px_compute_digest="sha256:f7b7bc0bb8f92ba6d621ac5891524fa8f33f080468cae87d542ddc78d49ea1b8"
+  ASSET_VERSION=$($CURL_CMD -s "https://${DS_GATEWAY}/data_intg/v3/assets/version" | jq -r '.version' | cut -d'.' -f1)
+  if (($ASSET_VERSION >= 511)); then
+    # set fixed version for 5.1.1
+    operator_digest="sha256:be24dd5fb73e40177810a0ff71ee885ddf0883ab3f8b790a6620a705848406c5"
+    px_runtime_digest="sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a"
+    px_compute_digest="sha256:eb9979137e0c724b0087246757666c662e1d430c5590a1a9e674f887be62f699"
+  else
+    # use fixed image digests for the initial 5.1.0 release
+    operator_digest="sha256:4d4e0e4355f2e24522880fd3a5ce2b0300096586d929a9d762b011dcfbdbec84"
+    px_runtime_digest="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea"
+    px_compute_digest="sha256:f7b7bc0bb8f92ba6d621ac5891524fa8f33f080468cae87d542ddc78d49ea1b8"
+  fi
+  echo "Retrieved operator digest = $operator_digest"
+  echo "Retrieved px-runtime digest = $px_runtime_digest"
+  echo "Retrieved px-compute digest = $px_compute_digest"
   if [[ "$DOCKER_REGISTRY" == "icr.io" ]]; then
     OPERATOR_REGISTRY="icr.io/cpopen"
     DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"

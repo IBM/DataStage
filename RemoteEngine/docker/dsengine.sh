@@ -699,8 +699,14 @@ retrieve_latest_px_version_from_runtime() {
     #echo "Getting PX Version to access Container Registry"
     #PX_VERSION=$($CURL_CMD -s -X GET -H "Authorization: Bearer $ACCESS_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
     #echo "Retrieved px-runtime digest = $PX_VERSION"
-    # set fixed version for 5.1.0
-    PX_VERSION="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea"
+    ASSET_VERSION=$($CURL_CMD -s "${GATEWAY_URL}/data_intg/v3/assets/version" | jq -r '.version' | cut -d'.' -f1)
+    if (($ASSET_VERSION >= 511)); then
+        # set fixed version for 5.1.1
+        PX_VERSION="sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a"
+    else
+        # set fixed version for 5.1.0
+        PX_VERSION="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea"
+    fi
     echo "Retrieved px-runtime digest = $PX_VERSION"
 }
 
