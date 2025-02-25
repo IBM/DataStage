@@ -64,6 +64,10 @@ CURL_CMD="curl"
 FORCE_RENEW='false'
 PROXY_CACERT_LOCATION="/px-storage/proxy.pem"
 
+supported_versions="5.1.0 5.1.1"
+asset_versions="510 511"
+px_runtime_digests="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a"
+
 bold=$(tput bold)
 normal=$(tput sgr0)
 
@@ -699,9 +703,35 @@ retrieve_latest_px_version_from_runtime() {
     #echo "Getting PX Version to access Container Registry"
     #PX_VERSION=$($CURL_CMD -s -X GET -H "Authorization: Bearer $ACCESS_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
     #echo "Retrieved px-runtime digest = $PX_VERSION"
-    # set fixed version for 5.1.0
-    PX_VERSION="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea"
-    echo "Retrieved px-runtime digest = $PX_VERSION"
+    check_version_for_cp4d
+}
+
+# retrieve asset version from cp4d to determine which digest to use
+check_version_for_cp4d() {
+  asset_version=$($CURL_CMD -s "${GATEWAY_URL}/data_intg/v3/assets/version")
+
+  versionsArray=(${supported_versions})
+  assetVersionsArray=(${asset_versions})
+  pxruntimeArray=(${px_runtime_digests})
+
+  if [ ${#versionsArray[@]} -ne ${#assetVersionsArray[@]} ]; then
+    echo "Mismatch size for '${supportedVersions}' and '${assetVersions}'"
+    exit 1
+  fi
+  arraylength=${#versionsArray[@]}
+
+  for (( i=0; i<${arraylength}; i++ ));
+  do
+    assetVersion="${assetVersionsArray[$i]}\.[0-9]+\.[0-9]+"
+    echo "${asset_version}" | grep -E "${assetVersion}" &> /dev/null
+    if [[ $? -eq 0 ]]; then
+      version="${versionsArray[$i]}"
+      PX_VERSION="${pxruntimeArray[$i]}"
+      echo "Version determined from control plane: $version"
+      echo "Retrieved px-runtime digest: $PX_VERSION"
+      break;
+    fi
+  done
 }
 
 get_all_px_versions_from_runtime() {
