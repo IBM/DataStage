@@ -33,6 +33,12 @@ px_runtime_digest="sha256:7b1a21a5ddacb157ba3e27729c493769f344a70ad4ae64fc7d4501
 px_compute_digest="sha256:dc3236055473b2e45d22162bbbd8c2d12888d2b8fac8d803bd275965cbf1cc22"
 operator_digest="sha256:99e45f8f94834d8f0ed2e9dbba9724bd79726eb292c0f2cef30844c072e178dc"
 
+supported_versions="5.1.0 5.1.1"
+asset_versions="510 511"
+operator_digests="sha256:4d4e0e4355f2e24522880fd3a5ce2b0300096586d929a9d762b011dcfbdbec84 sha256:be24dd5fb73e40177810a0ff71ee885ddf0883ab3f8b790a6620a705848406c5"
+px_runtime_digests="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a"
+px_compute_digests="sha256:f7b7bc0bb8f92ba6d621ac5891524fa8f33f080468cae87d542ddc78d49ea1b8 sha256:eb9979137e0c724b0087246757666c662e1d430c5590a1a9e674f887be62f699"
+
 # default username for icr.io when using apikey
 username="iamapikey"
 service_id="iamapikey"
@@ -726,21 +732,7 @@ generate_access_token() {
 
 # retrieve px image digests from ds-runtime for cp4d
 retrieve_px_image_digests_for_cp4d() {
-  ASSET_VERSION=$($CURL_CMD -s "https://${DS_GATEWAY}/data_intg/v3/assets/version" | jq -r '.version' | cut -d'.' -f1)
-  if (($ASSET_VERSION >= 511)); then
-    # set fixed version for 5.1.1
-    operator_digest="sha256:be24dd5fb73e40177810a0ff71ee885ddf0883ab3f8b790a6620a705848406c5"
-    px_runtime_digest="sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a"
-    px_compute_digest="sha256:eb9979137e0c724b0087246757666c662e1d430c5590a1a9e674f887be62f699"
-  else
-    # use fixed image digests for the initial 5.1.0 release
-    operator_digest="sha256:4d4e0e4355f2e24522880fd3a5ce2b0300096586d929a9d762b011dcfbdbec84"
-    px_runtime_digest="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea"
-    px_compute_digest="sha256:f7b7bc0bb8f92ba6d621ac5891524fa8f33f080468cae87d542ddc78d49ea1b8"
-  fi
-  echo "Retrieved operator digest = $operator_digest"
-  echo "Retrieved px-runtime digest = $px_runtime_digest"
-  echo "Retrieved px-compute digest = $px_compute_digest"
+  check_version_for_cp4d
   if [[ "$DOCKER_REGISTRY" == "icr.io" ]]; then
     OPERATOR_REGISTRY="icr.io/cpopen"
     DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"
@@ -779,6 +771,40 @@ retrieve_px_image_digests_for_cp4d() {
   #   echo "Retrieved digest for ds-px-runtime: ${px_runtime_digest}"
   #   echo "Retrieved digest for ds-px-compute: ${px_compute_digest}"
   # fi
+}
+
+# retrieve asset version from cp4d to determine which digests to use
+check_version_for_cp4d() {
+  asset_version=$($CURL_CMD -s "https://${DS_GATEWAY}/data_intg/v3/assets/version")
+
+  versionsArray=(${supported_versions})
+  assetVersionsArray=(${asset_versions})
+  operatorArray=(${operator_digests})
+  pxruntimeArray=(${px_runtime_digests})
+  pxcomputeArray=(${px_compute_digests})
+
+  if [ ${#versionsArray[@]} -ne ${#assetVersionsArray[@]} ]; then
+    echo "Mismatch size for '${supportedVersions}' and '${assetVersions}'"
+    exit 1
+  fi
+  arraylength=${#versionsArray[@]}
+
+  for (( i=0; i<${arraylength}; i++ ));
+  do
+    assetVersion="${assetVersionsArray[$i]}\.[0-9]+\.[0-9]+"
+    echo "${asset_version}" | grep -E "${assetVersion}" &> /dev/null
+    if [[ $? -eq 0 ]]; then
+      version="${versionsArray[$i]}"
+      operator_digest="${operatorArray[$i]}"
+      px_runtime_digest="${pxruntimeArray[$i]}"
+      px_compute_digest="${pxcomputeArray[$i]}"
+      echo "Version determined from control plane: $version"
+      echo "Retrieved operator digest: $operator_digest"
+      echo "Retrieved px-runtime digest: $px_runtime_digest"
+      echo "Retrieved px-compute digest: $px_compute_digest"
+      break;
+    fi
+  done
 }
 
 # retrieve px image digests from ds-runtime
