@@ -51,20 +51,20 @@ To deploy the DataStage operator on cluster without global pull secret configure
 
 ```
 # create pull secret for container registry
-./launch.sh create-pull-secret --namespace <namespace> --username <username> --password ${api-key} [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
+./launch.sh create-pull-secret --namespace <namespace> --username <username> --password ${api-key} [--registry <docker-registry>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
 
 # create the proxy secrets if proxies are used
-# ./launch.sh create-proxy-secret --namespace <namespace> [--proxy <proxy_url>] [--proxy-cacert <cacert_location>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
+# ./launch.sh create-proxy-secrets --namespace <namespace> --proxy <proxy_url> [--proxy-cacert <cacert_location>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
 
 # create the api-key for dev or prod environment
 ./launch.sh create-apikey-secret --namespace <namespace> --apikey ${api-key} [--serviceid ${service-id}] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
 
 # deploy the operator
-./launch.sh install --namespace <namespace> [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
+./launch.sh install --namespace <namespace> [--registry <docker-registry>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
 
 # create the remote instance - add '--gateway api.dataplatform.cloud.ibm.com' if the instance needs to registers with prod env
 
-./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project_id1,project_id2,project_id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto (if you are specifically deploying a remote engine for IBM Cloud)] [--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)] --license-accept true
+./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project_id1,project_id2,project_id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto (if you are specifically deploying a remote engine for IBM Cloud)] [--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>] [--registry <docker-registry>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)] --license-accept true
 ```
 For documentation on how to create IBM Cloud API keys, see https://cloud.ibm.com/docs/account?topic=account-manapikey.
 To generate a CP4D API Key, go to "Profile and settings" when logged in to the CP4D Cluster to get your api key for the connection.
@@ -85,7 +85,7 @@ You can obtain the IP address from the AWS Console on the Amazon EFS > File syst
 
 ```
 # create the NFS provisioner with the EFS file system;
-./launch.sh create-nfs-provisioner --namespace <namespace> --server <dns-name-or-IP>
+./launch.sh create-nfs-provisioner --namespace <namespace> --server <dns-name-or-IP> [--path <path to mount>] [--storage-class <storage-class>]
 ```
 
 ## Installing with an input file
@@ -140,6 +140,9 @@ zen_url=<zen-url>
 
 # Specify the absolute location of the custom CA store for the specified proxy - if it is using a self signed certificate.
 # cacert_location=<cacert-location>
+
+# Specify your custom container registry to pull images from if you are image mirroring using a private registry.
+# CUSTOM_DOCKER_REGISTRY=<docker-registry>
 
 # the DNS name or IP of the EFS file system; omit if not deploying on AWS's EKS
 # the provisioner will use the storage class name specified in storage_class
