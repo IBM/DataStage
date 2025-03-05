@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.10
+TOOL_VERSION=1.0.11
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -930,7 +930,7 @@ run_px_runtime_docker() {
     runtime_docker_opts=(
         --detach
         --name ${PXRUNTIME_CONTAINER_NAME}
-        --hostname="$(hostname)"
+        --hostname=${PXRUNTIME_CONTAINER_NAME}
         --memory=${PX_MEMORY}
         --cpus=${PX_CPUS}
         --pids-limit=${PIDS_LIMIT}
@@ -1173,7 +1173,7 @@ run_px_compute() {
     compute_docker_opts=(
         --detach
         -p ${PORT1}:13502 \
-        --hostname=`hostname` \
+        --hostname=${PXRUNTIME_CONTAINER_NAME} \
         --name ${CONTAINER_NAME}
         --env APT_ORCHHOME=/opt/ibm/PXService/Server/PXEngine
         --env DSHOME=/opt/ibm/PXService/Server/DSEngine
