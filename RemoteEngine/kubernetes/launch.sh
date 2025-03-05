@@ -22,16 +22,12 @@ nfsStorageClassFile="${filesDir}/efs-storageclass.yaml"
 nfs_path="/"
 
 DOCKER_REGISTRY="icr.io"
-OPERATOR_REGISTRY="${DOCKER_REGISTRY}/datastage"
-DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/datastage"
 DS_REGISTRY_SECRET="datastage-pull-secret"
 DS_API_KEY_SECRET="datastage-api-key-secret"
 DS_PROXY_URL="datastage-proxy-url"
 DS_GATEWAY="api.dataplatform.cloud.ibm.com"
 data_center="dallas"
 
-px_runtime_digest="sha256:7b1a21a5ddacb157ba3e27729c493769f344a70ad4ae64fc7d4501efb66cd7f2"
-px_compute_digest="sha256:dc3236055473b2e45d22162bbbd8c2d12888d2b8fac8d803bd275965cbf1cc22"
 operator_digest="sha256:99e45f8f94834d8f0ed2e9dbba9724bd79726eb292c0f2cef30844c072e178dc"
 
 supported_versions="5.1.0 5.1.1"
@@ -547,6 +543,9 @@ create_pull_secret() {
   if [ -z $username ]; then
     display_missing_arg "username"
   fi
+  if [[ ! -z ${CUSTOM_DOCKER_REGISTRY} ]]; then
+    DOCKER_REGISTRY="${CUSTOM_DOCKER_REGISTRY}"
+  fi
   $kubernetesCLI -n ${namespace} delete secret $DS_REGISTRY_SECRET --ignore-not-found=true ${dryRun}
   $kubernetesCLI -n ${namespace} create secret docker-registry $DS_REGISTRY_SECRET --docker-server=${DOCKER_REGISTRY} --docker-username=${username} --docker-password=${password} --docker-email=cpd@us.ibm.com ${dryRun}
 }
@@ -671,8 +670,9 @@ handle_badusage() {
 
 handle_install_usage() {
   echo ""
-  echo "Usage: $0 install --namespace <namespace>"
+  echo "Usage: $0 install --namespace <namespace> [--registry <docker-registry>] [--zen-url <zen-url>]"
   echo "--namespace: the namespace to install the DataStage operator"
+  echo "--registry: Custom container registry to pull images from"
   echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   exit 0
 }
@@ -680,10 +680,11 @@ handle_install_usage() {
 handle_pull_secret_usage() {
   echo ""
   echo "Description: create a docker registry secret used for pulling images"
-  echo "Usage: $0 create-pull-secret --namespace <namespace> --username <username> --password <password>"
+  echo "Usage: $0 create-pull-secret --namespace <namespace> --username <username> --password <password> [--registry <docker-registry>] [--zen-url <zen-url>]"
   echo "--namespace: the namespace to install the DataStage operator"
   echo "--username: the username for the container registry"
   echo "--password: the password for the container registry"
+  echo "--registry: Custom container registry to pull images from"
   echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   exit 0
 }
@@ -691,7 +692,7 @@ handle_pull_secret_usage() {
 handle_proxy_usage() {
   echo ""
   echo "Description: create a secret used for proxy urls and cacerts"
-  echo "Usage: $0 create-proxy-usage --namespace <namespace> --proxy <proxy_url> --proxy-cacert <cacert_location>"
+  echo "Usage: $0 create-proxy-secrets --namespace <namespace> --proxy <proxy_url> [--proxy-cacert <cacert_location>] [--zen-url <zen-url>]"
   echo "--namespace: the namespace to install the DataStage operator"
   echo "--proxy: Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>)"
   echo "--proxy-cacert: Specify the absolute location of the custom CA store for the specified proxy - if it is using a self signed certificate"
@@ -702,7 +703,7 @@ handle_proxy_usage() {
 handle_apikey_usage() {
   echo ""
   echo "Description: creates a secret with the api key for the remote engine to use when calling DataStage services"
-  echo "Usage: $0 create-apikey-secret --namespace <namespace> --apikey <api-key>"
+  echo "Usage: $0 create-apikey-secret --namespace <namespace> --apikey <api-key> [--serviceid <service-id>] [--zen-url <zen-url>]"
   echo "--namespace: the namespace to create the api-key secret"
   echo "--apikey: the api-key for the remote engine to use when communicating with DataStage services"
   echo "--serviceid: the username to use with the apikey"
@@ -713,7 +714,7 @@ handle_apikey_usage() {
 handle_create_instance_usage() {
   echo ""
   echo "Description: creates an instance of the remote engine; the pull secret and the api-key secret should have been created in the same namespace."
-  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id1,project-id2,project-id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--zen-url <zen-url>] --license-accept true"
+  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id1,project-id2,project-id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--registry <docker-registry>] [--zen-url <zen-url>] --license-accept true"
   echo "--namespace: the namespace to create the instance"
   echo "--name: the name of the remote engine"
   echo "--project-id: the comma separated list of project IDs to register the remote engine"
@@ -723,6 +724,7 @@ handle_create_instance_usage() {
   echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, or toronto"
   echo "--license-accept: set the to true to indicate that you have accepted the license for IBM DataStage as a Service Anywhere - https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en"
   echo "--additional-users: comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner"
+  echo "--registry: Custom container registry to pull images from"
   echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   echo ""
   exit 0
@@ -731,10 +733,11 @@ handle_create_instance_usage() {
 handle_create_nfs_provisioner_usage() {
   echo ""
   echo "Description: create a storage class for provisioning PV from an NFS fileserver"
-  echo "Usage: $0 create-nfs-provisioner --namespace <namespace> --server <nfs-server-ip> [--path <path to mount>]"
+  echo "Usage: $0 create-nfs-provisioner --namespace <namespace> --server <nfs-server-ip> [--path <path to mount>] [--storage-class <storage-class>]"
   echo "--namespace: the namespace to create the provisioner"
   echo "--server: the IP address of the nfs server"
   echo "--path: the path to mount from the nfs server; defaults to '/'."
+  echo "--storageClass: the file storageClass to use; defaults to 'nfs-client'."
   exit 0
 }
 
@@ -749,7 +752,7 @@ check_jq_installation() {
 generate_access_token() {
   apikey="${password}"
   access_token=`$CURL_CMD -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$apikey" "https://iam.ng.bluemix.net/identity/token" | jq .access_token | cut -d\" -f2`
-  if [[ -z $access_token ]]; then
+  if [[ $? -ne 0 ]] || [[ -z $access_token ]] || [[ "$access_token" == "null" ]]; then
     echo "Unable to retrieve access token".
     # rerun command without silent flag
     $CURL_CMD -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$apikey" "https://iam.ng.bluemix.net/identity/token"
@@ -759,8 +762,10 @@ generate_access_token() {
 
 # retrieve px image digests from ds-runtime for cp4d
 retrieve_px_image_digests_for_cp4d() {
+  echo "Getting PX Version from CP4D API"
   check_version_for_cp4d
-  if [[ "$DOCKER_REGISTRY" == "icr.io" ]]; then
+  if [[ -z ${CUSTOM_DOCKER_REGISTRY} ]] && [[ "$DOCKER_REGISTRY" == "icr.io" ]]; then
+    # set cpd registry location
     OPERATOR_REGISTRY="icr.io/cpopen"
     DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"
   else
@@ -772,11 +777,15 @@ retrieve_px_image_digests_for_cp4d() {
       OPERATOR_REGISTRY="${DOCKER_REGISTRY}/cp"
       DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/cp/cpd"
     else
-      # assume that it's a private registry image mirroring - same
+      # assume that it's a custom docker registry image mirroring
       OPERATOR_REGISTRY="${DOCKER_REGISTRY}/cpopen"
       DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/cp/cpd"
+      echo "Using custom docker registry for CP4D."
     fi
   fi
+  echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
+  echo "OPERATOR_REGISTRY=${OPERATOR_REGISTRY}"
+  echo "DOCKER_REGISTRY_PREFIX=${DOCKER_REGISTRY_PREFIX}"
 
 
   # if [ -z $api_key ]; then
@@ -832,10 +841,12 @@ check_version_for_cp4d() {
       break;
     fi
   done
+  [ -z $px_runtime_digest ] && echo_error_and_exit "Failed to retrieve operator, px-runtime, and px-compute digests. Aborting."
 }
 
 # retrieve px image digests from ds-runtime
 retrieve_px_image_digests() {
+  echo "Getting Cloud access token to access available image digests."
   if [ -z $api_key ]; then
     # retrieve apikey from secret
     api_key=`$kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET -o=jsonpath="{.data.api-key}" | base64 -d`
@@ -857,43 +868,71 @@ retrieve_px_image_digests() {
     echo "Retrieved digest for ds-px-runtime: ${px_runtime_digest}"
     echo "Retrieved digest for ds-px-compute: ${px_compute_digest}"
   fi
+  [ -z $px_runtime_digest ] && echo_error_and_exit "Failed to retrieve px-runtime digest. Aborting."
+  [ -z $px_compute_digest ] && echo_error_and_exit "Failed to retrieve px-compute digest. Aborting."
 }
 
 retrieve_latest() {
   image="$1"
   latest_digest=`$CURL_CMD -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $access_token" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${image}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"'`
+  if [[ $? -ne 0 ]] || [[ -z $latest_digest ]] || [[ "$latest_digest" == "null" ]]; then
+    echo "Failed to retrieve the latest digest for ${image}. Aborting after error output."
+    # rerun command without silent flag
+    $CURL_CMD -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $access_token" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${image}"
+    exit 1
+  fi
   echo "$latest_digest"
 }
 
 retrieve_latest_image_digests() {
   check_jq_installation
-  if [ $username = "iamapikey" ]; then
+  if [[ -z ${CUSTOM_DOCKER_REGISTRY} ]] && [[ "${DOCKER_REGISTRY}" == "icr.io" ]] && [[ "$username" == "iamapikey" ]]; then
+    OPERATOR_REGISTRY="icr.io/datastage"
+    DOCKER_REGISTRY_PREFIX="icr.io/datastage"
+    echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
+    echo "OPERATOR_REGISTRY=${OPERATOR_REGISTRY}"
+    echo "DOCKER_REGISTRY_PREFIX=${DOCKER_REGISTRY_PREFIX}"
     generate_access_token
+    echo "Retrieving latest digest for ds-px-runtime."
     retrieved_digest=$(retrieve_latest 'ds-px-runtime')
     if [[ $retrieved_digest = sha256* ]]; then
       px_runtime_digest="${retrieved_digest}"
       echo "Retrieved digest for ds-px-runtime: ${px_runtime_digest}"
     else
-      echo "Unable to retrieve latest digest for ds-px-runtime; defaulting to ${px_runtime_digest}."
+      echo_error_and_exit "Unable to retrieve latest digest for ds-px-runtime. Aborting."
     fi
+    echo "Retrieving latest digest for ds-px-compute."
     retrieved_digest=$(retrieve_latest 'ds-px-compute')
     if [[ $retrieved_digest = sha256* ]]; then
       px_compute_digest="${retrieved_digest}"
       echo "Retrieved digest for ds-px-compute: ${px_compute_digest}"
     else
-      echo "Unable to retrieve latest digest for ds-px-compute; defaulting to ${px_compute_digest}."
+      echo_error_and_exit "Unable to retrieve latest digest for ds-px-compute. Aborting."
     fi
+    echo "Retrieving latest digest for ds-operator."
     retrieved_digest=$(retrieve_latest 'ds-operator')
     if [[ $retrieved_digest = sha256* ]]; then
       operator_digest="${retrieved_digest}"
       echo "Retrieved digest for ds-operator: ${operator_digest}"
     else
-      echo "Unable to retrieve latest digest for ds-operator; defaulting to ${operator_digest}."
+      echo_error_and_exit "Unable to retrieve latest digest for ds-operator. Aborting."
     fi
-  else
+  elif [[ -z ${CUSTOM_DOCKER_REGISTRY} ]] && [[ "${DOCKER_REGISTRY}" == "icr.io" ]]; then
     # set cpd registry location
     OPERATOR_REGISTRY="icr.io/cpopen"
     DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"
+    echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
+    echo "OPERATOR_REGISTRY=${OPERATOR_REGISTRY}"
+    echo "DOCKER_REGISTRY_PREFIX=${DOCKER_REGISTRY_PREFIX}"
+    retrieve_px_image_digests
+  else
+    # assume that it's a custom docker registry image mirroring
+    OPERATOR_REGISTRY="${DOCKER_REGISTRY}/cpopen"
+    DOCKER_REGISTRY_PREFIX="${DOCKER_REGISTRY}/cp/cpd"
+    echo "Using custom docker registry for IBM Cloud."
+    echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
+    echo "OPERATOR_REGISTRY=${OPERATOR_REGISTRY}"
+    echo "DOCKER_REGISTRY_PREFIX=${DOCKER_REGISTRY_PREFIX}"
     retrieve_px_image_digests
   fi
 }
@@ -901,6 +940,9 @@ retrieve_latest_image_digests() {
 # determine registry from pull secret
 determine_registry() {
 # TODO - select version is not yet supported on cp4d as we do not have a versioning strategy
+  if [[ ! -z ${CUSTOM_DOCKER_REGISTRY} ]]; then
+    DOCKER_REGISTRY="${CUSTOM_DOCKER_REGISTRY}"
+  fi
   if [[ "$remote_controlplane_env" == "icp4d" ]]; then
     retrieve_px_image_digests_for_cp4d
   else
@@ -909,20 +951,28 @@ determine_registry() {
       echo "The pull secret for the container registry has not been created."
       exit 1
     fi
-    username_secret=`$kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq -r '.auths | select(."icr.io") | ."icr.io" | .username'`
-    if [ $username_secret = "cp" ]; then
+    username_secret=`$kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq -r '.auths | select(."'${DOCKER_REGISTRY}'") | ."'${DOCKER_REGISTRY}'" | .username'`
+    if [[ -z ${CUSTOM_DOCKER_REGISTRY} ]] && [[ "${DOCKER_REGISTRY}" == "icr.io" ]] && [[ "$username_secret" == "cp" ]]; then
       OPERATOR_REGISTRY="icr.io/cpopen"
       DOCKER_REGISTRY_PREFIX="cp.icr.io/cp/cpd"
+      echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
+      echo "OPERATOR_REGISTRY=${OPERATOR_REGISTRY}"
+      echo "DOCKER_REGISTRY_PREFIX=${DOCKER_REGISTRY_PREFIX}"
       retrieve_api_key
       if [ ! -z $api_key ]; then
         retrieve_px_image_digests
+      else
+        echo_error_and_exit "Failed to retrieve apikey from secret. Aborting."
       fi
-    elif [ $username_secret = "iamapikey" ]; then
-      password_secret=`$kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq -r '.auths | select(."icr.io") | ."icr.io" | .password'`
+    else
+      password_secret=`$kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq -r '.auths | select(."'${DOCKER_REGISTRY}'") | ."'${DOCKER_REGISTRY}'" | .password'`
       # set the registry credentials to be the ones from the secret
       if [ ! -z $password_secret ]; then
+        username="${username_secret}"
         password="${password_secret}"
         retrieve_latest_image_digests
+      else
+        echo_error_and_exit "Failed to retrieve password from secret. Aborting."
       fi
     fi
   fi
@@ -1023,11 +1073,7 @@ do
            ;;
         --registry)
             shift
-            DOCKER_REGISTRY="${1}"
-            ;;
-        --registry-prefix)
-            shift
-            DOCKER_REGISTRY_PREFIX="${1}"
+            CUSTOM_DOCKER_REGISTRY="${1}"
             ;;
         --gateway)
             shift

@@ -119,6 +119,9 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--zen-url`: CP4D zen url of the cluster (required if --home is used with "cp4d").
 1. `--cp4d-user`: CP4D username used to log into the cluster (required if --home is used with "cp4d").
 1. `--cp4d-apikey`: CP4D apikey used to authenticate with the cluster. Go to "Profile and settings" when logged in to get your api key for the connection. (required if --home is used with "cp4d").
+1. `--registry`: Custom container registry to pull images from.
+1. `-u | --user`: User to login to a custom container registry.
+1. `--skip-docker-login`: [true | false]. Skips Docker login to container registry if that step is not needed.
 1. `--env-vars`: Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.
     * Remote Engine specific environment variables:
         * REMOTE_ENGINE_BATCH_SIZE - Set to an integer representing the maximum number of jobs that remote engine will pull at one time. Default value is 5.

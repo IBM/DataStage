@@ -15,12 +15,13 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.9
+TOOL_VERSION=1.0.10
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
 # image information
 DOCKER_REGISTRY='icr.io/datastage'
+SKIP_DOCKER_LOGIN='false'
 SELECT_PX_VERSION='false'
 
 # container names
@@ -80,26 +81,28 @@ STR_PROJECT_UID='  -d, --project-id            Comma separated list of DataPlatf
 STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, cp4d]'
 STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
-STR_ADD_HOST="  --add-host                 Add a <host>:<ip> entry to the /etc/hosts file of the container. This flag can be specified multiple times."
+STR_ADD_HOST="  --add-host                  Add a <host>:<ip> entry to the /etc/hosts file of the container. This flag can be specified multiple times."
 STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
-STR_SECURITY_OPT='  --security-opt                  Specify the security-opt to be used to run the container.'
-STR_CAP_DROP='  --cap-drop                 Specify the cap-drop to be used to run the container.'
+STR_SECURITY_OPT='  --security-opt              Specify the security-opt to be used to run the container.'
+STR_CAP_DROP='  --cap-drop                  Specify the cap-drop to be used to run the container.'
 STR_SET_USER='  --set-user                  Specify the username to be used to run the container. If not set, the current user is used.'
 STR_SET_GROUP='  --set-group                 Specify the group to be used to run the container.'
-STR_ADDITIONAL_USERS='  --additional-users                 Comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner.'
+STR_ADDITIONAL_USERS='  --additional-users          Comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner.'
 # STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
 STR_MEMORY='  --memory                    Specify memory allocated to the docker container (default is 4G).'
 STR_CPUS='  --cpus                      Specify CPU allocated to the docker container (default is 2 cores).'
-STR_PIDS_LIMIT='  --pids-limit           Set the PID limit of the container (defaults to -1 for unlimited pids for the container)'
+STR_PIDS_LIMIT='  --pids-limit                Set the PID limit of the container (defaults to -1 for unlimited pids for the container)'
 STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>).'
 STR_PROXY_CACERT='  --proxy-cacert              Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.'
 STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
 STR_HELP='  help, --help                Print usage information'
 STR_ZEN_URL='  --zen-url                   CP4D zen url of the cluster (required if --home is used with "cp4d")'
 STR_CP4D_USER='  --cp4d-user                 CP4D username used to log into the cluster (required if --home is used with "cp4d")'
-STR_CP4D_APIKEY='  --cp4d-apikey             CP4D apikey used to authenticate with the cluster. Go to "Profile and settings" when logged in to get your api key for the connection. (required if --home is used with "cp4d")'
-STR_PROD_APIKEY_USER='  --prod-apikey-user           DataStage Artifactory user'
-STR_ENV_VARS='  --env-vars           Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.'
+STR_CP4D_APIKEY='  --cp4d-apikey               CP4D apikey used to authenticate with the cluster. Go to "Profile and settings" when logged in to get your api key for the connection. (required if --home is used with "cp4d")'
+STR_REGISTRY='  --registry                  Custom container registry to pull images from.'
+STR_REGISTRY_USER='  -u, --user          User to login to a custom container registry.'
+STR_SKIP_DOCKER_LOGIN='  --skip-docker-login         [true | false]. Skips Docker login to container registry if that step is not needed.'
+STR_ENV_VARS='  --env-vars                  Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.'
 
 
 
@@ -158,9 +161,9 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--security-opt] [--cap-drop] [--additional-users] [--env-vars] \n                          [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--skip-docker-login] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -180,7 +183,9 @@ print_usage() {
 
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
         echo "${STR_PROD_APIKEY}"
-        echo "${STR_PROD_APIKEY_USER}"
+        echo "${STR_REGISTRY}"
+        echo "${STR_REGISTRY_USER}"
+        echo "${STR_SKIP_DOCKER_LOGIN}"
         if [[ "${ACTION}" == 'start' ]]; then
             echo "${STR_DSNEXT_SEC_KEY}"
             echo "${STR_IVSPEC}"
@@ -225,9 +230,11 @@ print_usage() {
 }
 
 function set_container_registry() {
-    if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-        # IAM_APIKEY_PROD_USER is not set for entitlement registry
-        if  [[ -n $IAM_APIKEY_PROD_USER ]]; then
+    if [[ ! -z ${CUSTOM_DOCKER_REGISTRY} ]]; then
+        DOCKER_REGISTRY="${CUSTOM_DOCKER_REGISTRY}"
+    elif [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+        # CUSTOM_DOCKER_REGISTRY_USER is not set for entitlement registry
+        if  [[ -n $CUSTOM_DOCKER_REGISTRY_USER ]]; then
             # default to dev registry if DOCKER_REGISTRY has not been modified
             if [[ "${DOCKER_REGISTRY}" == "icr.io/datastage" ]]; then
                 DOCKER_REGISTRY='docker-na-public.artifactory.swg-devops.com/wcp-datastage-team-docker-local/ubi'
@@ -259,6 +266,14 @@ function handle_force_renew() {
         FORCE_RENEW="${1}"
     else
         echo_error_and_exit 'Incorrect option specified for flag "--force-renew". Acceptable values are: [true, false]'
+    fi
+}
+
+function handle_skip_docker_login() {
+    if [[ "${1}" == 'true' || "${1}" == 'false' ]]; then
+        SKIP_DOCKER_LOGIN="${1}"
+    else
+        echo_error_and_exit 'Incorrect option specified for flag "--skip-docker-login". Acceptable values are: [true, false]'
     fi
 }
 
@@ -384,13 +399,17 @@ function start() {
             shift
             CP4D_API_KEY="$1"
             ;;
-        --prod-apikey-user)
+        -u | --user)
             shift
-            IAM_APIKEY_PROD_USER="$1"
+            CUSTOM_DOCKER_REGISTRY_USER="$1"
             ;;
         --registry)
             shift
-            DOCKER_REGISTRY="$1"
+            CUSTOM_DOCKER_REGISTRY="$1"
+            ;;
+        --skip-docker-login)
+            shift
+            handle_skip_docker_login "${1}"
             ;;
         --env-vars)
             shift
@@ -444,9 +463,9 @@ function update() {
             shift
             PROXY_URL="$1"
             ;;
-        --prod-apikey-user)
+        -u | --user)
             shift
-            IAM_APIKEY_PROD_USER="$1"
+            CUSTOM_DOCKER_REGISTRY_USER="$1"
             ;;
         --security-opt)
             shift
@@ -459,6 +478,14 @@ function update() {
         --additional-users)
             shift
             ADDITIONAL_USERS="$1"
+            ;;
+        --registry)
+            shift
+            CUSTOM_DOCKER_REGISTRY="$1"
+            ;;
+        --skip-docker-login)
+            shift
+            handle_skip_docker_login "${1}"
             ;;
         --env-vars)
             shift
@@ -632,19 +659,25 @@ check_docker_daemon() {
 # docker login
 
 docker_login() {
-    if [[ -n $IAM_APIKEY_PROD_USER ]]; then
-        docker_login_datastage_artifactory
+    if [[ "${SKIP_DOCKER_LOGIN}" == 'true' ]]; then
+        echo ""
+        echo "Docker login has been skipped."
     else
-        if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
-            docker_login_datastage
+        if [[ -n $CUSTOM_DOCKER_REGISTRY_USER ]]; then
+            docker_login_custom
         else
-            docker_login_cpd
+            if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
+                docker_login_datastage
+            else
+                docker_login_cpd
+            fi
         fi
     fi
 }
 
 docker_login_datastage() {
     echo ""
+    echo "Docker login to DataStage Container Registry."
     [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify DataStage Container Registry IAM APIKey (-p | --prod-apikey). Aborting."
     DELAY=5
     until $DOCKER_CMD login -u iamapikey -p $IAM_APIKEY_PROD $DOCKER_REGISTRY  || [ $DELAY -eq 10 ]; do
@@ -657,13 +690,14 @@ docker_login_datastage() {
     fi
 }
 
-docker_login_datastage_artifactory() {
+docker_login_custom() {
     echo ""
-    [ -z $IAM_APIKEY_PROD_USER ] && echo_error_and_exit "Please specify DataStage Artifactory user (--prod-apikey-user). Aborting."
-    [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify DataStage Artifactory token (-p | --prod-apikey). Aborting."
+    echo "Docker login to Custom Container Registry."
+    [ -z $CUSTOM_DOCKER_REGISTRY_USER ] && echo_error_and_exit "Please specify Custom Container Registry user (-u | --user). Aborting."
+    [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify Custom Container Registry token (-p | --prod-apikey). Aborting."
     DELAY=5
 
-    until $DOCKER_CMD login -u "${IAM_APIKEY_PROD_USER}" -p "${IAM_APIKEY_PROD}" $DOCKER_REGISTRY  || [ $DELAY -eq 10 ]; do
+    until $DOCKER_CMD login -u "${CUSTOM_DOCKER_REGISTRY_USER}" -p "${IAM_APIKEY_PROD}" $DOCKER_REGISTRY  || [ $DELAY -eq 10 ]; do
         sleep $(( DELAY++ ))
     done
     status=$?
@@ -675,6 +709,7 @@ docker_login_datastage_artifactory() {
 
 docker_login_cpd() {
     echo ""
+    echo "Docker login to CPD Entitlement."
     [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify CPD Entitlement Key (-p | --prod-apikey). Aborting."
     DELAY=5
     cpd_user="cp"
@@ -694,8 +729,10 @@ docker_login_cpd() {
 retrieve_latest_px_version() {
     echo "Getting IAM token to access Container Registry"
     get_cr_iam_token
+    echo "Getting PX Version from Cloud Container Registry"
     icr_response=$($CURL_CMD -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $CR_IAM_TOKEN" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${PXRUNTIME_IMAGE_NAME}")
     PX_VERSION=$(echo "${icr_response}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"')
+    [ -z $PX_VERSION ] && echo_error_and_exit "Failed to retrieve px-runtime digest. Aborting."
     echo "Retrieved px-runtime digest = $PX_VERSION"
 }
 
@@ -703,6 +740,7 @@ retrieve_latest_px_version_from_runtime() {
     #echo "Getting PX Version to access Container Registry"
     #PX_VERSION=$($CURL_CMD -s -X GET -H "Authorization: Bearer $ACCESS_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
     #echo "Retrieved px-runtime digest = $PX_VERSION"
+    echo "Getting PX Version from CP4D API"
     check_version_for_cp4d
 }
 
@@ -732,6 +770,7 @@ check_version_for_cp4d() {
       break;
     fi
   done
+  [ -z $PX_VERSION ] && echo_error_and_exit "Failed to retrieve px-runtime digest. Aborting."
 }
 
 get_all_px_versions_from_runtime() {
@@ -934,6 +973,20 @@ run_px_runtime_docker() {
         )
     fi
 
+    if [[ ! -z  $CUSTOM_DOCKER_REGISTRY ]]; then
+        echo "Setting custom docker registry ${CUSTOM_DOCKER_REGISTRY} to remote engine"
+        runtime_docker_opts+=(
+            --env CUSTOM_DOCKER_REGISTRY=${CUSTOM_DOCKER_REGISTRY}
+        )
+    fi
+
+    if [[ ! -z  $CUSTOM_DOCKER_REGISTRY_USER ]]; then
+        echo "Setting custom docker registry user ${CUSTOM_DOCKER_REGISTRY_USER} to remote engine"
+        runtime_docker_opts+=(
+            --env CUSTOM_DOCKER_REGISTRY_USER=${CUSTOM_DOCKER_REGISTRY_USER}
+        )
+    fi
+
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
         GATEWAY=$(printf %s "$GATEWAY_URL" | cut -d'/' -f3-)
         runtime_docker_opts+=(
@@ -941,8 +994,6 @@ run_px_runtime_docker() {
             --env SERVICE_ID=${CP4D_USER}
             --env SERVICE_API_KEY=${CP4D_API_KEY}
             --env GATEWAY=${GATEWAY}
-            # not required by ds-px-runtime but used for update
-            --env IAM_APIKEY_PROD_USER=${IAM_APIKEY_PROD_USER}
         )
     else
         runtime_docker_opts+=(
@@ -1929,8 +1980,8 @@ main "$@";
 print_tool_name_version
 echo ""
 
-validate_action_arguments
 set_container_registry
+validate_action_arguments
 setup_docker_volumes
 
 if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
@@ -1984,10 +2035,10 @@ if [[ ${ACTION} == "start" ]]; then
     elif [[ -v USE_DIGEST ]]; then
         PX_VERSION="${USE_DIGEST}"
     else
-        if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
-            retrieve_latest_px_version
-        else
+        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             retrieve_latest_px_version_from_runtime
+        else
+            retrieve_latest_px_version
         fi
     fi
 
@@ -2099,7 +2150,6 @@ elif [[ ${ACTION} == "update" ]]; then
 
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
         ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^GATEWAY_URL= | cut -d'=' -f2-)
-        IAM_APIKEY_PROD_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^IAM_APIKEY_PROD_USER= | cut -d'=' -f2-)
         set_container_registry
     else
         IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^IAM_URL= | cut -d'=' -f2-)
@@ -2126,6 +2176,12 @@ elif [[ ${ACTION} == "update" ]]; then
     CONTAINER_USER=$($DOCKER_CMD inspect --format='{{.Config.User}}' "${PXRUNTIME_CONTAINER_NAME}")
     if [[ ! -v ADDITIONAL_USERS ]]; then
         ADDITIONAL_USERS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^ADDITIONAL_USERS= | cut -d'=' -f2-)
+    fi
+    if [[ ! -v CUSTOM_DOCKER_REGISTRY ]]; then
+        CUSTOM_DOCKER_REGISTRY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^CUSTOM_DOCKER_REGISTRY= | cut -d'=' -f2-)
+    fi
+    if [[ ! -v CUSTOM_DOCKER_REGISTRY_USER ]]; then
+        CUSTOM_DOCKER_REGISTRY_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^CUSTOM_DOCKER_REGISTRY_USER= | cut -d'=' -f2-)
     fi
     if [[ ! -v ENV_VARS ]]; then
         ENV_VARS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^ENV_VARS= | cut -d'=' -f2-)
@@ -2182,7 +2238,6 @@ elif [[ ${ACTION} == "update" ]]; then
         echo "CP4D_USER = ${CP4D_USER}"
         echo "CP4D_API_KEY = ${MASKED_CP4D_API_KEY}"
         echo "ZEN_URL = ${ZEN_URL}"
-        echo "IAM_APIKEY_PROD_USER = ${IAM_APIKEY_PROD_USER}"
     else
         echo "IAM_URL = ${IAM_URL}"
         echo "IAM_APIKEY = ${MASKED_IAM_APIKEY}"
@@ -2195,6 +2250,8 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "CONTAINER_CAP_DROP = ${CONTAINER_CAP_DROP}"
     echo "CONTAINER_USER = ${CONTAINER_USER}"
     echo "ADDITIONAL_USERS = ${ADDITIONAL_USERS}"
+    echo "CUSTOM_DOCKER_REGISTRY = ${CUSTOM_DOCKER_REGISTRY}"
+    echo "CUSTOM_DOCKER_REGISTRY_USER = ${CUSTOM_DOCKER_REGISTRY_USER}"
     echo "ENV_VARS = ${ENV_VARS}"
     echo "DOCKER_VOLUMES_DIR = ${DOCKER_VOLUMES_DIR}"
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
@@ -2225,10 +2282,10 @@ elif [[ ${ACTION} == "update" ]]; then
     elif [[ -v USE_DIGEST ]]; then
         PX_VERSION="${USE_DIGEST}"
     else
-        if [[ "${DOCKER_REGISTRY}" == 'icr.io'* ]]; then
-            retrieve_latest_px_version
-        else
+        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             retrieve_latest_px_version_from_runtime
+        else
+            retrieve_latest_px_version
         fi
     fi
 
@@ -2266,16 +2323,17 @@ elif [[ ${ACTION} == "cleanup" ]]; then
     echo    # (optional) move to a new line
     if [[ $REPLY =~ ^[Yy]$ ]]; then
 
-        CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_ID | cut -d'=' -f2)
-        CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep SERVICE_API_KEY | cut -d'=' -f2)
+        CP4D_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^SERVICE_ID= | cut -d'=' -f2-)
+        CP4D_API_KEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^SERVICE_API_KEY= | cut -d'=' -f2-)
         if [[ -v CP4D_USER && -v CP4D_API_KEY && -n "${CP4D_USER}" && -n "${CP4D_API_KEY}" ]]; then
             echo 'Datastage environment set to cp4d'
             DATASTAGE_HOME='cp4d'
         fi
 
+        CUSTOM_DOCKER_REGISTRY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^CUSTOM_DOCKER_REGISTRY= | cut -d'=' -f2-)
+        CUSTOM_DOCKER_REGISTRY_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^CUSTOM_DOCKER_REGISTRY_USER= | cut -d'=' -f2-)
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-            ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep GATEWAY_URL | cut -d'=' -f2)
-            IAM_APIKEY_PROD_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep IAM_APIKEY_PROD_USER | cut -d'=' -f2)
+            ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^GATEWAY_URL= | cut -d'=' -f2-)
             GATEWAY_URL=$ZEN_URL
             UI_GATEWAY_URL=$ZEN_URL
             PROJECT_CONTEXT='icp4data'
