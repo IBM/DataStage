@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.11
+TOOL_VERSION=1.0.12
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -2188,10 +2188,10 @@ elif [[ ${ACTION} == "update" ]]; then
     fi
     DOCKER_VOLUMES_DIR=$(dirname "$DS_STORAGE_HOST_DIR")
     SCRATCH_BASE_DIR=$(dirname "$SCRATCH_DIR")
-    if [[ "$CONTAINER_CAP_DROP" == "[]" ]]; then
+    if [[ -z $CONTAINER_CAP_DROP ]] || [[ "$CONTAINER_CAP_DROP" == "[]" ]]; then
         CONTAINER_CAP_DROP="NOT_SET"
     fi
-    if [[ "$CONTAINER_SECURITY_OPT" == "[]" ]]; then
+    if [[ -z $CONTAINER_SECURITY_OPT ]] || [[ "$CONTAINER_SECURITY_OPT" == "[]" ]]; then
         CONTAINER_SECURITY_OPT="NOT_SET"
     fi
 
