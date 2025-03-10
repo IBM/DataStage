@@ -4,6 +4,8 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.1.1](#511) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.1.1.md)
+
 [5.1.0](#510) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.1.0.md)
 
 [5.0.3](#503) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.3.md)
@@ -58,6 +60,38 @@ interface.
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
 
+## 5.1.1
+
+### New commands
+
+The following commands are added:
+
+- `copy-dataset` adds ability to copy dataset to a different location as a new dataset asset
+- `copy-fileset` adds ability to copy fileset to a different location as a new fileset asset
+- `delete-data-asset` deletes an existing data asset from a project
+- `download-data-asset` downloads the data asset to local file
+- `export-data-asset` exports the data asset to a zip file compatible with import-zip
+- `list-data-assets` lists all data assets in a project
+- `upload-data-asset` updates the data asset with local file content
+- `list-datasources` lists all data sources available in a project
+
+### Command changes
+
+The following commands have changed:
+
+- `create-connection`, `update-connection` now allows `--parameterize` flag to let users to create or update connection port as a parameterized value.
+- `update-ds-setting` commands now support ability to set default suffixes through the flags `--datastage-job-suffix]`, `--pipeline-job-suffix` `--pipeline-optimized-suffix` to set suffixes for DataStage jobs, Pipelines and Optimized Runner jobs.
+- `update-ds-settings` adds new flag `--enable-remote-engine` to allow only remote engine option. The option is irreversible.
+- `migrate` adds new flag `--migrate_jdbc_impala` to migrate as impala connection.
+- `compile-pipeline` takes a new flag `--job-suffix` to create jobs with a specific suffix.
+- `rename-dataset` adds new flag `--deep` to rename dataset and underlying physical files.
+- `rename-fileset` adds new flag `--deep` to rename fileset and underlying physical files.
+
+### Fixes
+
+- `jobrunclean` and `list-sctive-runs` commands use new job run api and address some performance improvements.
+- `run-pipeline` fixes issue with fetching logURL for each stage, this is caused due to framework changes.
+
 ## 5.1.0
 
 ### New commands
@@ -80,21 +114,20 @@ The following commands are added:
 The following commands have changed:
 
 - `update-ds-setting`: New format are now accepted for timestamp as "%mm-%dd-%yyyy %hh:%nn:%ss", time as %hh:%nn:%ss" and data as %mm-%dd-%yyyy".
-	- also `warn-limit` option is added to control warn limits before job is aborted at project level.
-- `create-job`  optionally takes  `optimize`  parameter that creates a DataStage sequence runner job. It now take `enable-inline` flag to run nested pipelines inline instead of as separate jobs.
-- `folders` option  is added to the following commands to allow asset to be created in a folder
-	- `create-flow`, `create-cff-schema`, `create-connection`, `create-build-stage` ,  `create-custom-stage`, `create-wrapped-stage`,  `create-java-library`,  `create-message-handler`, `create-paramset`, `create-pipeline-job`, `create-rule`, `create-subflow`, `create-tabledef`, `create-function-lib` and `create-job`.
+- `warn-limit` option is added to control warn limits before job is aborted at project level.
+- `create-job` optionally takes `optimize` parameter that creates a DataStage sequence runner job. It now take `enable-inline` flag to run nested pipelines inline instead of as separate jobs.
+- `folders` option is added to the following commands to allow asset to be created in a folder
+  - `create-flow`, `create-cff-schema`, `create-connection`, `create-build-stage` , `create-custom-stage`, `create-wrapped-stage`, `create-java-library`, `create-message-handler`, `create-paramset`, `create-pipeline-job`, `create-rule`, `create-subflow`, `create-tabledef`, `create-function-lib` and `create-job`.
 - `git-status` command changes to allow to display identical, changed and deleted objects using the flags `hide-identical`, `hide-modified` and `hide-deleted` respectively.
 - `migrate` now has two new flags `enable-autosave` to autosave migrated pipelines and `enable-jinja` to allow ninja templates in a bash script.
-- `run` commands now takes list of paramfiles to allow to load job parameters from multiple files.
-- `compile-pipeline` and `run-pipeline`  added new flag `enable-inline` allows user to set it to false to allows nested pipelines run as independent sequence runner jobs.
+- `run` commands now take list of paramfiles to allow to load job parameters from multiple files.
+- `compile-pipeline` and `run-pipeline` add new flag `enable-inline` to allow user to set it to false to allow nested pipelines run as independent sequence runner jobs.
 
 ### Fixes
 
-- `list-jobruns`, `list-job-status`, `list-active-runs` and `jobrunclean`  fixed to address issues switching to new Jobs API. 
+- `list-jobruns`, `list-job-status`, `list-active-runs` and `jobrunclean` fixed to address issues switching to new Jobs API.
 - `describe-dataset` and `describe-fileset` now display same partition information when output is set to json format.
 - `jobinfo` commands output changed to retrofit with changes from job api. Job runs now missing some of CAMS metadata.
-
 
 ## 5.0.3
 
@@ -103,9 +136,9 @@ The following commands have changed:
 The following commands are added:
 
 - `generate-project-report` Generates project level report on Flows and Pipelines and their components.
-- `update-flow`  Update the flow with a new json definition.
+- `update-flow` Update the flow with a new json definition.
 - `compile-pipeline` Compile a pipeline into executable script to run it as a DataStage job.
-  
+
 ### Command changes
 
 The following commands have changed:
@@ -117,14 +150,7 @@ The following commands have changed:
 ### Fixes
 
 - `get-paramset` , `delete-paramset` and `delete-paramset-valueset` returns proper exit code when an invalid name is specified.
-- `run-pipeline` run status message outputs actual  job runtime by default unless environment variable `DSJOB_SHOW_RUNTIMES` set to 1, when the CLI execution time is shown.
-
-## 5.0.2.1
-
-### Fixes
- 
-- `reset-pipeline-cache`. This command is now behind a toggle `ENABLE_DSJOB_RESETPIPELINECACHE`. This is to make sure that user must use the official `
-
+- `run-pipeline` run status message outputs actual job runtime by default unless environment variable `DSJOB_SHOW_RUNTIMES` set to 1, when the CLI execution time is shown.
 
 ## 5.0.2
 
@@ -132,7 +158,7 @@ The following commands have changed:
 
 The following commands are added:
 
-- `list-scheduled-jobs`  List all scheduled jobs.
+- `list-scheduled-jobs` List all scheduled jobs.
 
 ### Command changes
 
@@ -154,7 +180,7 @@ The following commands have changed:
 
 `get-job run`:
 
-- added ability to fetch last run of the job with specific run-name  
+- added ability to fetch last run of the job with specific run-name
 
 `list-jobs`
 
@@ -200,8 +226,8 @@ The following commands have changed:
 
 The following commands are added:
 
-- `reset-pipeline-cache`  Reset a pipeline's cache.
-- `clear-vault-cache`  Clear a vault cache.
+- `reset-pipeline-cache` Reset a pipeline's cache.
+- `clear-vault-cache` Clear a vault cache.
 
 ### Command changes
 
@@ -357,7 +383,7 @@ The following commands have changed:
 `create-message-handler`:
 
 - fixed issue with `--default` flag, it now correctly sets the message handler into project settings as a default handler.
-- fixed issue with runtime errors with message handlers created through dsjob due to missing type information.  
+- fixed issue with runtime errors with message handlers created through dsjob due to missing type information.
 
 `export-datastage-assets`:
 
@@ -373,8 +399,8 @@ The following commands have changed:
 
 The following commands are added to enhance job run analysis.
 
-- `rename-dataset`  Rename a Data Set.
-- `rename-fileset`  Rename a File Set.
+- `rename-dataset` Rename a Data Set.
+- `rename-fileset` Rename a File Set.
 
 ### Command changes
 
@@ -436,15 +462,15 @@ Note: When using command line to specify a parameter that start with a `$` user 
 
 `migrate`:
 
-- added support for  `output json` to output the response from migrate status.
+- added support for `output json` to output the response from migrate status.
 
 `list-projects`:
 
-- added support for  `output json` to output the response in json of project definition.
+- added support for `output json` to output the response in json of project definition.
 
 `list-spaces`:
 
-- added support for  `output json` to output the response in json of space definition.
+- added support for `output json` to output the response in json of space definition.
 
 `create-paramset` and `update-paramset`:
 
@@ -487,7 +513,7 @@ The following commands have changed:
 
 `list-jobruns`: fixed incorrect flag name from `sort-by-runid` to `sort-by-runname`.
 
-`list-paramsets`  supports json formatted output.
+`list-paramsets` supports json formatted output.
 
 ## 4.8.0
 
@@ -510,15 +536,15 @@ The following commands are added to work with Cobol File Formats.
 - `create-cff-schema` Create CFF Schema.
 - `delete-cff-schema` Delete CFF Schema.
 - `export-cff-schema` Export CFF Schema(s).
-  
+
 The following commands are added to synchronize projects artifacts with git.
 
 - `git-commit` Git commit a Project.
 - `git-pull` Git pull a Project.
 - `git-status` Get git status of a Project.
-  
+
 Other:
-  
+
 - `dataset-truncate` allows truncation of data in a DataSet.
 - `encrypt` allows cluster-specific encryption of text.
 
@@ -564,9 +590,9 @@ The following commands have changed:
 
 `run-pipeline` now allows reset-cache options to clear cache before the run.
 
-`compile` enhanced to support pushdown materialization  policy.
+`compile` enhanced to support pushdown materialization policy.
 
-`run` can now use runtime environment  and runtime language settings for each job run.
+`run` can now use runtime environment and runtime language settings for each job run.
 
 `update-ds-settings` is enhanced to set collate option on the project.
 
@@ -575,7 +601,7 @@ The following commands have changed:
 
 All export-<Component> commands now use unix globbing pattern with wild cards instead of regular expressions.
 
-`create-dsparams`  changed to export user environment definitions from DSParams file from legacy into PROJDEF parameter file. It will no longer use runtime environment to export and store DSParams.
+`create-dsparams` changed to export user environment definitions from DSParams file from legacy into PROJDEF parameter file. It will no longer use runtime environment to export and store DSParams.
 
 `jobrunclean` enhanced to accept timestamp to clean up jobs that started before a specific time.
 
@@ -617,7 +643,7 @@ ex: `cpdclt dsjob export-subflow --project >PROJECTNAME> --name ab*` will export
 
 `compile` now takes a new flag `materialization-policy` when ELT compile is enabled with the flag `--enable-elt-mode`. This flag determines the generated output and takes the following values: OUTPUT_ONLY, TEMP_TABLES, TEMP_VIEWS, CARDINARLITY_CHANGER_TABLES. The output of the command now displays total time in the summary line.
 
-`delete-dataset` and `delete-fileset` now have an option to delete multiple objects. A `--dry-run` option is now available to show the details of the objects that would be deleted.  
+`delete-dataset` and `delete-fileset` now have an option to delete multiple objects. A `--dry-run` option is now available to show the details of the objects that would be deleted.
 
 ### Fixes
 
@@ -641,8 +667,8 @@ The following export commands are added to allow export of individual assets int
 - `export-build-stage` Export Build Stage(s).
 - `export-connection` Export Connection(s).
 - `export-custom-stage` Export Custom Stage(s).
-- `export-dataset` Export Data Sets(s).  
-- `export-fileset` Export File Sets(s).  
+- `export-dataset` Export Data Sets(s).
+- `export-fileset` Export File Sets(s).
 - `export-java-library` Export Java Library(s).
 - `export-library` Export XML Library(s).
 - `export-message-handler` Export Message Handler(s).
@@ -683,7 +709,7 @@ DSJob plugin commands are now organized alphabetically for easier browsing.
 
 `migrate` command ignores `--create-connection-paramsets` when `--enable-local-connection` is set.
 
-`get-paramset`  prints out a detailed parameter set definition by default using table format.
+`get-paramset` prints out a detailed parameter set definition by default using table format.
 
 ## 4.7.0
 
@@ -734,10 +760,10 @@ Changed output format to table format for `jobrunstat` and `list-jobruns`.
 
 - `validate-connection` Validate connections.
 - `validate-flow` Validate flow references.
-- `validate-subflow`  Validate subflow references.
-- `validate-job`  Validate job references.
+- `validate-subflow` Validate subflow references.
+- `validate-job` Validate job references.
 - `validate-pipeline` Validate pipelines.
-- `waitforjob`  Wait for Job.
+- `waitforjob` Wait for Job.
 - `list-dependencies` List dependencies between DataStage components.
 - `create-dsparams` Create DSParams as environment variables.
 
@@ -747,7 +773,7 @@ Changed output format to table format for `jobrunstat` and `list-jobruns`.
 
 ### Fixes
 
-Fixed `logdetail`, `logsum` and `lognewest` to use raw logs to parse logs to generate output. 
+Fixed `logdetail`, `logsum` and `lognewest` to use raw logs to parse logs to generate output.
 
 Allow `export` command to export assets specified, fix validates export types specified at command line correctly to the name of the asset.
 
@@ -769,23 +795,23 @@ Allow `export` command to export assets specified, fix validates export types sp
 DataSet operations now take advantage of new asset api. Currently following operations are supported and their command options are changed to make use of new api.
 
 ```
-list-datasets               List DataSets.
-get-dataset                 Get DataSet data.
-delete-dataset              Delete a Dataset.
-describe-dataset            Describe the DataSet.
-view-dataset                View DataSet.
-list-filesets               List FileSets.
-get-fileset                 Get FileSet data.
-delete-fileset              Delete a FileSet.
-describe-fileset            Describe the FileSet
-view-fileset                View FileSet.
+list-datasets        List DataSets.
+get-dataset         Get DataSet data.
+delete-dataset       Delete a Dataset.
+describe-dataset      Describe the DataSet.
+view-dataset        View DataSet.
+list-filesets        List FileSets.
+get-fileset         Get FileSet data.
+delete-fileset       Delete a FileSet.
+describe-fileset      Describe the FileSet
+view-fileset        View FileSet.
 ```
 
 `dsjob version`
 This command now prints component versions in alphabetic order. Added canvas and pipeline to the list.
 
 `compile` command now allows user to specify regular expression to compile multiple flows.
-`compile` flag  `--enable-elt-mode` is used to compile dbt model to perform ELT operations.
+`compile` flag `--enable-elt-mode` is used to compile dbt model to perform ELT operations.
 
 Retry logic is tuned to handle http errors and properly exit if backend cannot progress. Commands that are affected are `migrate`, `export-project`, `import-zip` with wait options and also `export-datastage-assets`.
 
