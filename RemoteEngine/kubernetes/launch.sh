@@ -3,6 +3,10 @@
 #
 # This script is a utility to install DataStage Remote Engine
 
+# tool version
+TOOL_VERSION=1.0.0
+TOOL_NAME='IBM DataStage Remote Engine'
+
 kubernetesCLI="oc"
 scriptName=$(basename "$0")
 scriptDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -44,6 +48,14 @@ service_id="iamapikey"
 
 storage_size="10"
 size="small"
+
+bold=$(tput bold)
+normal=$(tput sgr0)
+
+print_header() {
+    echo ""
+    echo "${bold}$1${normal}"
+}
 
 determine_cli() {
   which kubectl
@@ -1236,6 +1248,7 @@ if [[ ! -z $dsdisplayHelp ]]; then
     esac
 fi
 
+print_header "$TOOL_NAME ${TOOL_VERSION}"
 determine_cli
 if [ -z $inputFile ]; then
   if [[ ! -z $zen_url ]]; then
