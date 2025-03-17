@@ -2037,6 +2037,9 @@ if [[ ${ACTION} == "start" ]]; then
     else
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             retrieve_latest_px_version_from_runtime
+        elif [[ -v CUSTOM_DOCKER_REGISTRY ]]; then
+            echo "Setting ds-px-runtime image to latest for custom docker registry."
+            PX_VERSION="latest"
         else
             retrieve_latest_px_version
         fi
@@ -2284,6 +2287,9 @@ elif [[ ${ACTION} == "update" ]]; then
     else
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             retrieve_latest_px_version_from_runtime
+        elif [[ -v CUSTOM_DOCKER_REGISTRY ]]; then
+            echo "Setting ds-px-runtime image to latest for custom docker registry."
+            PX_VERSION="latest"
         else
             retrieve_latest_px_version
         fi
