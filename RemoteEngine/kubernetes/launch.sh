@@ -960,7 +960,7 @@ retrieve_latest_image_digests() {
     if [[ -v USE_DIGESTS ]]; then
       set_remote_engine_digests
     else
-      echo_error_and_exit "Must use --digests to set the digests for ds-operator, ds-px-runtime, and ds-px-compute to use for custom registry."
+      echo_error_and_exit "Must use --digests to set the digests for ds-operator, ds-px-runtime, and ds-px-compute to use with custom registry for IBM Cloud."
     fi
   fi
 }

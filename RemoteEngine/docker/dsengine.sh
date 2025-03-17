@@ -2038,8 +2038,7 @@ if [[ ${ACTION} == "start" ]]; then
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             retrieve_latest_px_version_from_runtime
         elif [[ -v CUSTOM_DOCKER_REGISTRY ]]; then
-            echo "Setting ds-px-runtime image to latest for custom docker registry."
-            PX_VERSION="latest"
+            echo_error_and_exit "Must use --digest to set the digest for ds-px-runtime to use with custom registry for IBM Cloud."
         else
             retrieve_latest_px_version
         fi
@@ -2288,8 +2287,7 @@ elif [[ ${ACTION} == "update" ]]; then
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             retrieve_latest_px_version_from_runtime
         elif [[ -v CUSTOM_DOCKER_REGISTRY ]]; then
-            echo "Setting ds-px-runtime image to latest for custom docker registry."
-            PX_VERSION="latest"
+            echo_error_and_exit "Must use --digest to set the digest for ds-px-runtime to use with custom registry for IBM Cloud."
         else
             retrieve_latest_px_version
         fi
