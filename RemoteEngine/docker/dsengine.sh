@@ -65,9 +65,9 @@ CURL_CMD="curl"
 FORCE_RENEW='false'
 PROXY_CACERT_LOCATION="/px-storage/proxy.pem"
 
-supported_versions="5.1.0 5.1.1"
-asset_versions="510 511"
-px_runtime_digests="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a"
+supported_versions="5.1.0 5.1.1 5.1.2"
+asset_versions="510 511 512"
+px_runtime_digests="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a sha256:eda5ec48b2818d44b37b506297f2c5ce316f3ffa9b28202ea5746702f1132701"
 
 bold=$(tput bold)
 normal=$(tput sgr0)
