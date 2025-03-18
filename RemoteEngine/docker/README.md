@@ -126,6 +126,7 @@ While starting a remote engine, following optional flags can be used in addition
     * Remote Engine specific environment variables:
         * REMOTE_ENGINE_BATCH_SIZE - Set to an integer representing the maximum number of jobs that remote engine will pull at one time. Default value is 5.
         * APT_USE_REMOTE_APP - Set to "force" to make remote engine avoid forking section leader processes. Can avoid inheriting unwanted open resources from the conductor. Default is unset.
+        * ENABLE_DS_METRICS - Set to "true" to have the remote engine send metrics to a configured DataStage metrics repository. See the [IBM Cloud](https://dataplatform.cloud.ibm.com/docs/content/dstage/dsnav/topics/ds_metrics.html?context=cpdaas&audience=wdp) or [Cloud Pak for Data](https://www.ibm.com/docs/en/software-hub/5.1.x?topic=administering-storing-persisting-metrics) documentation for more information.
 
 
 ### 2. Update an engine
