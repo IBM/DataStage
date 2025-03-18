@@ -141,7 +141,7 @@ zen_url=<zen-url>
 # Specify the absolute location of the custom CA store for the specified proxy - if it is using a self signed certificate.
 # cacert_location=<cacert-location>
 
-# Specify your custom container registry to pull images from if you are image mirroring using a private registry. If using this option, you must set USE_DIGESTS as well.
+# Specify your custom container registry to pull images from if you are image mirroring using a private registry. If using this option, you must set USE_DIGESTS as well for IBM Cloud.
 # CUSTOM_DOCKER_REGISTRY=<docker-registry>
 
 # Custom operator registry suffix to use for the remote engine to pull ds-operator images from if using a custom container registry. Defaults to 'cpopen'.
@@ -150,7 +150,7 @@ zen_url=<zen-url>
 # Custom docker registry suffix to use for the remote engine to pull ds-px-runtime and ds-px-compute images from if using a custom container registry. Defaults to 'cp/cpd'.
 # DOCKER_REGISTRY_SUFFIX=<docker-suffix>
 
-# Custom digests to use for the remote engine. This option must be set if using a custom registry.
+# Custom digests to use for the remote engine. This option must be set if using a custom registry for IBM Cloud.
 # USE_DIGESTS=<ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>
 
 # the DNS name or IP of the EFS file system; omit if not deploying on AWS's EKS

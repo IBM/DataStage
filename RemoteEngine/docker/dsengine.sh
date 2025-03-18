@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.12
+TOOL_VERSION=1.0.13
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -99,8 +99,10 @@ STR_HELP='  help, --help                Print usage information'
 STR_ZEN_URL='  --zen-url                   CP4D zen url of the cluster (required if --home is used with "cp4d")'
 STR_CP4D_USER='  --cp4d-user                 CP4D username used to log into the cluster (required if --home is used with "cp4d")'
 STR_CP4D_APIKEY='  --cp4d-apikey               CP4D apikey used to authenticate with the cluster. Go to "Profile and settings" when logged in to get your api key for the connection. (required if --home is used with "cp4d")'
-STR_REGISTRY='  --registry                  Custom container registry to pull images from.'
-STR_REGISTRY_USER='  -u, --user          User to login to a custom container registry.'
+STR_REGISTRY='  --registry                  Custom container registry to pull images from. Must also set -u and -p options to login to the registry as well as either --digest or --image-tag for IBM Cloud.'
+STR_REGISTRY_USER='  -u, --user                  User to login to a custom container registry (required if --registry is set).'
+STR_DIGEST='  --digest                    Digest to pull the ds-px-runtime image from the registry (required if --registry is set and --image-tag is not set).'
+STR_IMAGE_TAG='  --image-tag                 Image tag to pull the ds-px-runtime image from the registry (required if --registry is set and --digest is not set).'
 STR_SKIP_DOCKER_LOGIN='  --skip-docker-login         [true | false]. Skips Docker login to container registry if that step is not needed.'
 STR_ENV_VARS='  --env-vars                  Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.'
 
@@ -161,9 +163,9 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--skip-docker-login] [--env-vars] \n                          [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -185,6 +187,8 @@ print_usage() {
         echo "${STR_PROD_APIKEY}"
         echo "${STR_REGISTRY}"
         echo "${STR_REGISTRY_USER}"
+        echo "${STR_DIGEST}"
+        echo "${STR_IMAGE_TAG}"
         echo "${STR_SKIP_DOCKER_LOGIN}"
         if [[ "${ACTION}" == 'start' ]]; then
             echo "${STR_DSNEXT_SEC_KEY}"
@@ -407,6 +411,10 @@ function start() {
             shift
             CUSTOM_DOCKER_REGISTRY="$1"
             ;;
+        --image-tag)
+            shift
+            USE_IMAGE_TAG="$1"
+            ;;
         --skip-docker-login)
             shift
             handle_skip_docker_login "${1}"
@@ -482,6 +490,10 @@ function update() {
         --registry)
             shift
             CUSTOM_DOCKER_REGISTRY="$1"
+            ;;
+        --image-tag)
+            shift
+            USE_IMAGE_TAG="$1"
             ;;
         --skip-docker-login)
             shift
@@ -2034,11 +2046,13 @@ if [[ ${ACTION} == "start" ]]; then
         get_all_px_versions_from_runtime
     elif [[ -v USE_DIGEST ]]; then
         PX_VERSION="${USE_DIGEST}"
+    elif [[ -v USE_IMAGE_TAG ]]; then
+        PX_VERSION="${USE_IMAGE_TAG}"
     else
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             retrieve_latest_px_version_from_runtime
         elif [[ -v CUSTOM_DOCKER_REGISTRY ]]; then
-            echo_error_and_exit "Must use --digest to set the digest for ds-px-runtime to use with custom registry for IBM Cloud."
+            echo_error_and_exit "Must use --digest or --image-tag to set the digest for ds-px-runtime to use with custom registry for IBM Cloud."
         else
             retrieve_latest_px_version
         fi
@@ -2046,10 +2060,10 @@ if [[ ${ACTION} == "start" ]]; then
 
     PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
     # update the image variables to use the PX_VERSION version
-    if [[ "$PX_VERSION" == "latest"* || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
-    else
+    if [[ $PX_VERSION = sha256* ]]; then
         PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
+    else
+        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
     fi
 
     check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
@@ -2283,11 +2297,13 @@ elif [[ ${ACTION} == "update" ]]; then
         get_all_px_versions_from_runtime
     elif [[ -v USE_DIGEST ]]; then
         PX_VERSION="${USE_DIGEST}"
+    elif [[ -v USE_IMAGE_TAG ]]; then
+        PX_VERSION="${USE_IMAGE_TAG}"
     else
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             retrieve_latest_px_version_from_runtime
         elif [[ -v CUSTOM_DOCKER_REGISTRY ]]; then
-            echo_error_and_exit "Must use --digest to set the digest for ds-px-runtime to use with custom registry for IBM Cloud."
+            echo_error_and_exit "Must use --digest or --image-tag to set the digest for ds-px-runtime to use with custom registry for IBM Cloud."
         else
             retrieve_latest_px_version
         fi
@@ -2295,10 +2311,10 @@ elif [[ ${ACTION} == "update" ]]; then
 
     PXRUNTIME_DOCKER_IMAGE_NAME="${DOCKER_REGISTRY}/ds-px-runtime"
     # update the image variables to use the PX_VERSION version
-    if [[ "$PX_VERSION" == "latest" || "$PX_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
-    else
+    if [[ $PX_VERSION = sha256* ]]; then
         PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}@${PX_VERSION}"
+    else
+        PXRUNTIME_DOCKER_IMAGE="${PXRUNTIME_DOCKER_IMAGE_NAME}:${PX_VERSION}"
     fi
     check_or_pull_image $PXRUNTIME_DOCKER_IMAGE
     print_header "Initializing ${TOOL_SHORTNAME} Runtime environment with name '${REMOTE_ENGINE_NAME}' ..."
