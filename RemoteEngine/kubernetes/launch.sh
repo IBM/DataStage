@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.0
+TOOL_VERSION=1.0.1
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -831,6 +831,7 @@ retrieve_px_image_digests_for_cp4d() {
 # retrieve asset version from cp4d to determine which digests to use
 check_version_for_cp4d() {
   asset_version=$($CURL_CMD -s "https://${DS_GATEWAY}/data_intg/v3/assets/version")
+  parsed_version=$(echo "${asset_version}" | jq .version)
 
   versionsArray=(${supported_versions})
   assetVersionsArray=(${asset_versions})
@@ -853,13 +854,13 @@ check_version_for_cp4d() {
       px_runtime_digest="${pxruntimeArray[$i]}"
       px_compute_digest="${pxcomputeArray[$i]}"
       echo "Version determined from control plane: $version"
-      echo "Retrieved operator digest: $operator_digest"
-      echo "Retrieved px-runtime digest: $px_runtime_digest"
-      echo "Retrieved px-compute digest: $px_compute_digest"
+      echo "Retrieved ds-operator digest: $operator_digest"
+      echo "Retrieved ds-px-runtime digest: $px_runtime_digest"
+      echo "Retrieved ds-px-compute digest: $px_compute_digest"
       break;
     fi
   done
-  [ -z $px_runtime_digest ] && echo_error_and_exit "Failed to retrieve operator, px-runtime, and px-compute digests. Aborting."
+  [ -z $px_runtime_digest ] && echo_error_and_exit "Failed to retrieve ds-operator, ds-px-runtime, and ds-px-compute digests. Asset version ${parsed_version} not supported for CP4D remote engine. Supported asset versions are [${asset_versions}]. Aborting."
 }
 
 # retrieve px image digests from ds-runtime
@@ -885,8 +886,8 @@ retrieve_px_image_digests() {
     echo "Retrieved digest for ds-px-runtime: ${px_runtime_digest}"
     echo "Retrieved digest for ds-px-compute: ${px_compute_digest}"
   fi
-  [ -z $px_runtime_digest ] && echo_error_and_exit "Failed to retrieve px-runtime digest. Aborting."
-  [ -z $px_compute_digest ] && echo_error_and_exit "Failed to retrieve px-compute digest. Aborting."
+  [ -z $px_runtime_digest ] && echo_error_and_exit "Failed to retrieve ds-px-runtime digest. Aborting."
+  [ -z $px_compute_digest ] && echo_error_and_exit "Failed to retrieve ds-px-compute digest. Aborting."
 }
 
 retrieve_latest() {
