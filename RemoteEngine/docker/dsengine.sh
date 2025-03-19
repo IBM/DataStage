@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.13
+TOOL_VERSION=1.0.14
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -744,14 +744,14 @@ retrieve_latest_px_version() {
     echo "Getting PX Version from Cloud Container Registry"
     icr_response=$($CURL_CMD -s -X GET -H "accept: application/json" -H "Account: d10b01a616ed4b73a9ac8a052424a345" -H "Authorization: Bearer $CR_IAM_TOKEN" --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=${PXRUNTIME_IMAGE_NAME}")
     PX_VERSION=$(echo "${icr_response}" | jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"')
-    [ -z $PX_VERSION ] && echo_error_and_exit "Failed to retrieve px-runtime digest. Aborting."
-    echo "Retrieved px-runtime digest = $PX_VERSION"
+    [ -z $PX_VERSION ] && echo_error_and_exit "Failed to retrieve ds-px-runtime digest. Aborting."
+    echo "Retrieved ds-px-runtime digest = $PX_VERSION"
 }
 
 retrieve_latest_px_version_from_runtime() {
     #echo "Getting PX Version to access Container Registry"
     #PX_VERSION=$($CURL_CMD -s -X GET -H "Authorization: Bearer $ACCESS_TOKEN" -H 'accept: application/json;charset=utf-8' "${GATEWAY_URL}/data_intg/v3/flows_runtime/remote_engine/versions" | jq -r '.versions[0].image_digests.px_runtime')
-    #echo "Retrieved px-runtime digest = $PX_VERSION"
+    #echo "Retrieved ds-px-runtime digest = $PX_VERSION"
     echo "Getting PX Version from CP4D API"
     check_version_for_cp4d
 }
@@ -759,6 +759,7 @@ retrieve_latest_px_version_from_runtime() {
 # retrieve asset version from cp4d to determine which digest to use
 check_version_for_cp4d() {
   asset_version=$($CURL_CMD -s "${GATEWAY_URL}/data_intg/v3/assets/version")
+  parsed_version=$(echo "${asset_version}" | jq .version)
 
   versionsArray=(${supported_versions})
   assetVersionsArray=(${asset_versions})
@@ -778,11 +779,11 @@ check_version_for_cp4d() {
       version="${versionsArray[$i]}"
       PX_VERSION="${pxruntimeArray[$i]}"
       echo "Version determined from control plane: $version"
-      echo "Retrieved px-runtime digest: $PX_VERSION"
+      echo "Retrieved ds-px-runtime digest: $PX_VERSION"
       break;
     fi
   done
-  [ -z $PX_VERSION ] && echo_error_and_exit "Failed to retrieve px-runtime digest. Aborting."
+  [ -z $PX_VERSION ] && echo_error_and_exit "Failed to retrieve ds-px-runtime digest. Asset version ${parsed_version} not supported for CP4D remote engine. Supported asset versions are [${asset_versions}]. Aborting."
 }
 
 get_all_px_versions_from_runtime() {
