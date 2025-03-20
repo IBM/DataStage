@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.14
+TOOL_VERSION=1.0.15
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -75,7 +75,7 @@ normal=$(tput sgr0)
 STR_ENGINE_NAME='  -n, --remote-engine-name    Name of the remote engine instance'
 STR_IAM_APIKEY='  -a, --apikey                IBM Cloud APIKey for the selected home argument'
 STR_PROD_APIKEY='  -p, --prod-apikey           IBM Cloud Production APIKey for image download from DataStage Container registry. It can be requested via IBM Cloud Support: https://cloud.ibm.com/unifiedsupport'
-STR_DSNEXT_SEC_KEY='  -e, --encryption key        Encryption key to be used'
+STR_DSNEXT_SEC_KEY='  -e, --encryption-key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            Comma separated list of DataPlatform Project IDs'
 STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, cp4d]'
