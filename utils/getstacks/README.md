@@ -14,7 +14,10 @@ Examples:
 ./getstackscpd.sh
 ./getstackscpd.sh inst1-small
 
-For DataStage Anywhere run the getstacksre.sh script. The script takes 1 optional argument which is the container command. If not given docker is used.
-Examples:
-./getstacksre.sh
-./getstacksre.sh podman
+For DataStage Anywhere run the getstacksre.sh script.
+Usage: getstacksre.sh [OPTIONS]
+Options:
+  -p, --podman   Use podman command instead of docker
+  -r, --repeat   Number of times to dump stacks (default: 1)
+  -d, --delay    Delay between dumping stacks in seconds (default: 60)
+
