@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.15
+TOOL_VERSION=1.0.16
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -57,13 +57,10 @@ PX_MEMORY='4g'
 PX_CPUS='2'
 PIDS_LIMIT='-1'
 COMPUTE_COUNT=0
-CONTAINER_SECURITY_OPT='NOT_SET'
-CONTAINER_CAP_DROP='NOT_SET'
-CONTAINER_USER='NOT_SET'
-PROXY_URL='NOT_SET'
 CURL_CMD="curl"
 FORCE_RENEW='false'
 PROXY_CACERT_LOCATION="/px-storage/proxy.pem"
+KRB5_CONF_FILE="/etc/krb5-config-files/krb5.conf"
 
 supported_versions="5.1.0 5.1.1 5.1.2"
 asset_versions="510 511 512"
@@ -94,6 +91,8 @@ STR_CPUS='  --cpus                      Specify CPU allocated to the docker cont
 STR_PIDS_LIMIT='  --pids-limit                Set the PID limit of the container (defaults to -1 for unlimited pids for the container)'
 STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>).'
 STR_PROXY_CACERT='  --proxy-cacert              Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.'
+STR_KRB5_CONF='  --krb5-conf                 Specify the location of the Kerberos config file if using Kerberos Authentication. (Only supported for --home set to "cp4d")'
+STR_KRB5_CONF_DIR='  --krb5-conf-dir             Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include "includedir /etc/krb5-config-files/krb5-config-dir" line)'
 STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
 STR_HELP='  help, --help                Print usage information'
 STR_ZEN_URL='  --zen-url                   CP4D zen url of the cluster (required if --home is used with "cp4d")'
@@ -163,9 +162,9 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                          [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -218,6 +217,8 @@ print_usage() {
             if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
                 echo "${STR_CP4D_USER}"
                 echo "${STR_CP4D_APIKEY}"
+                echo "${STR_KRB5_CONF}"
+                echo "${STR_KRB5_CONF_DIR}"
             fi
         fi
         echo "${STR_PROXY}"
@@ -391,6 +392,14 @@ function start() {
             shift
             PROXY_CACERT="$1"
             ;;
+        --krb5-conf)
+            shift
+            KRB5_CONF="$1"
+            ;;
+        --krb5-conf-dir)
+            shift
+            KRB5_CONF_DIR="$1"
+            ;;
         --zen-url)
             shift
             ZEN_URL="$1"
@@ -470,6 +479,18 @@ function update() {
         --proxy)
             shift
             PROXY_URL="$1"
+            ;;
+        --proxy-cacert)
+            shift
+            PROXY_CACERT="$1"
+            ;;
+        --krb5-conf)
+            shift
+            KRB5_CONF="$1"
+            ;;
+        --krb5-conf-dir)
+            shift
+            KRB5_CONF_DIR="$1"
             ;;
         -u | --user)
             shift
@@ -644,12 +665,11 @@ create_dir_if_not_exist() {
 set_permissions() {
     DIR_PATH=$1
     chmod -R 775 "${DIR_PATH}"
-    if [[ "${CONTAINER_USER}" != 'NOT_SET' ]]; then
+    if [[ ! -z ${CONTAINER_USER} ]]; then
         if [[ ! -z ${CONTAINER_GROUP} ]]; then
             RETRIEVED_GROUP=$(getent group "${CONTAINER_GROUP}" | cut -d: -f3)
             if [ -z $RETRIEVED_GROUP ]; then
-                echo "Unable to retrieve group ID for ${CONTAINER_GROUP}"
-                exit 1
+                echo_error_and_exit "Unable to retrieve group ID for ${CONTAINER_GROUP}"
             fi
             chown -R $(id -u "${CONTAINER_USER}"):${RETRIEVED_GROUP} "${DIR_PATH}"
         else
@@ -766,8 +786,7 @@ check_version_for_cp4d() {
   pxruntimeArray=(${px_runtime_digests})
 
   if [ ${#versionsArray[@]} -ne ${#assetVersionsArray[@]} ]; then
-    echo "Mismatch size for '${supportedVersions}' and '${assetVersions}'"
-    exit 1
+    echo_error_and_exit "Mismatch size for '${supportedVersions}' and '${assetVersions}'"
   fi
   arraylength=${#versionsArray[@]}
 
@@ -927,13 +946,12 @@ run_px_runtime_docker() {
     # -p 10000-${end_port_1}:10000-${end_port_1} -p 11000-${end_port_2}:11000-${end_port_2} -p 9443:9443 \
 
     CURRENT_USER=$(id -u)
-    if [[ "${CONTAINER_USER}" != 'NOT_SET' ]]; then
+    if [[ ! -z ${CONTAINER_USER} ]]; then
         CURRENT_USER=$(id -u "${CONTAINER_USER}")
         if [[ ! -z $CONTAINER_GROUP ]]; then
             CURRENT_GROUP=$(getent group "${CONTAINER_GROUP}" | cut -d: -f3)
             if [ -z $CURRENT_GROUP ]; then
-                echo "Unable to retrieve group ID for ${CONTAINER_GROUP}"
-                exit 1
+                echo_error_and_exit "Unable to retrieve group ID for ${CONTAINER_GROUP}"
             fi
             CURRENT_USER="${CURRENT_USER}:${CURRENT_GROUP}"
         fi
@@ -965,35 +983,35 @@ run_px_runtime_docker() {
         --user=${CURRENT_USER}
     )
 
-    if [[ "${CONTAINER_SECURITY_OPT}" != 'NOT_SET' ]]; then
+    if [[ ! -z $CONTAINER_SECURITY_OPT ]]; then
         echo "Setting --security-opt to ${CONTAINER_SECURITY_OPT} to run the container"
         runtime_docker_opts+=(
             --security-opt=${CONTAINER_SECURITY_OPT}
         )
     fi
 
-    if [[ "${CONTAINER_CAP_DROP}" != 'NOT_SET' ]]; then
+    if [[ ! -z $CONTAINER_CAP_DROP ]]; then
         echo "Setting --cap-drop to ${CONTAINER_CAP_DROP} to run the container"
         runtime_docker_opts+=(
             --cap-drop=${CONTAINER_CAP_DROP}
         )
     fi
 
-    if [[ ! -z  $ADDITIONAL_USERS ]]; then
+    if [[ ! -z $ADDITIONAL_USERS ]]; then
         echo "Adding additional users ${ADDITIONAL_USERS} to remote engine"
         runtime_docker_opts+=(
             --env ADDITIONAL_USERS=${ADDITIONAL_USERS}
         )
     fi
 
-    if [[ ! -z  $CUSTOM_DOCKER_REGISTRY ]]; then
+    if [[ ! -z $CUSTOM_DOCKER_REGISTRY ]]; then
         echo "Setting custom docker registry ${CUSTOM_DOCKER_REGISTRY} to remote engine"
         runtime_docker_opts+=(
             --env CUSTOM_DOCKER_REGISTRY=${CUSTOM_DOCKER_REGISTRY}
         )
     fi
 
-    if [[ ! -z  $CUSTOM_DOCKER_REGISTRY_USER ]]; then
+    if [[ ! -z $CUSTOM_DOCKER_REGISTRY_USER ]]; then
         echo "Setting custom docker registry user ${CUSTOM_DOCKER_REGISTRY_USER} to remote engine"
         runtime_docker_opts+=(
             --env CUSTOM_DOCKER_REGISTRY_USER=${CUSTOM_DOCKER_REGISTRY_USER}
@@ -1008,6 +1026,18 @@ run_px_runtime_docker() {
             --env SERVICE_API_KEY=${CP4D_API_KEY}
             --env GATEWAY=${GATEWAY}
         )
+
+        if [[ ! -z $KRB5_CONF ]]; then
+            runtime_docker_opts+=(
+                --env KRB5_CONF="${KRB5_CONF}"
+                --env KRB5_CONF_FILE="${KRB5_CONF_FILE}"
+            )
+            if [[ ! -z $KRB5_CONF_DIR ]]; then
+                runtime_docker_opts+=(
+                    --env KRB5_CONF_DIR="${KRB5_CONF_DIR}"
+                )
+            fi
+        fi
     else
         runtime_docker_opts+=(
             --env IAM_URL=${IAM_URL}
@@ -1015,16 +1045,16 @@ run_px_runtime_docker() {
         )
     fi
 
-    if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
+    if [[ ! -z $PROXY_URL ]]; then
         echo "Proxy URL specified, setting container env ..."
         runtime_docker_opts+=(
+            --env PROXY_URL="${PROXY_URL}"
             --env REMOTE_HTTPS_PROXY="${PROXY_URL}"
         )
         if [ ! -z $PROXY_CACERT ]; then
             runtime_docker_opts+=(
+                --env PROXY_CACERT="${PROXY_CACERT}"
                 --env REMOTE_PROXY_CERT_LOCATION="${PROXY_CACERT_LOCATION}"
-            )
-            runtime_docker_opts+=(
                 --env AWS_CA_FILE="${PROXY_CACERT_LOCATION}"
             )
         fi
@@ -1071,6 +1101,8 @@ run_px_runtime_docker() {
             -v "${DS_STORAGE_HOST_DIR}":/ds-storage
             -v "${PX_STORAGE_HOST_DIR}":/px-storage
             -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2
+            -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files
+            -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir
             --env DS_STORAGE_PATH=/ds-storage:/px-storage
             --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
             --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
@@ -1079,14 +1111,14 @@ run_px_runtime_docker() {
     fi
 
     ### must go last
-    if [[ ! -z  $ENV_VARS ]]; then
+    if [[ ! -z $ENV_VARS ]]; then
         runtime_docker_opts+=(
             --env ENV_VARS="${ENV_VARS}"
         )
         IFS=";" read -ra pairs <<< "$ENV_VARS"
         for pair in "${pairs[@]}"; do
             IFS='=' read -r key value <<< "$pair"
-            if [[ ! -z  $key ]] && [[ $key != "ENV_VARS" ]]; then
+            if [[ ! -z $key ]] && [[ $key != "ENV_VARS" ]]; then
                 echo "Setting custom environment variable $key = $value"
                 runtime_docker_opts+=(
                     --env "$key=$value"
@@ -1211,6 +1243,8 @@ run_px_compute() {
             -v "${DS_STORAGE_HOST_DIR}":/ds-storage
             -v "${PX_STORAGE_HOST_DIR}":/px-storage
             -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2
+            -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files
+            -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir
         )
     fi
     $DOCKER_CMD run "${compute_docker_opts[@]}"  $PXCOMPUTE_DOCKER_IMAGE
@@ -1644,6 +1678,8 @@ setup_docker_volumes() {
     PX_STORAGE_WLM_DIR="${PX_STORAGE_HOST_DIR}/PXRuntime/WLM"
     SCRATCH_DIR="${DOCKER_VOLUMES_DIR}/scratch"
     JDBC_JAR_DIR="${DOCKER_VOLUMES_DIR}/user-home/_global_/dbdrivers-v2"
+    KRB5_CONFIG_FILES_DIR="${DOCKER_VOLUMES_DIR}/krb5-config-files"
+    KRB5_CONFIG_DIR_DIR="${DOCKER_VOLUMES_DIR}/krb5-config-files/krb5-config-dir"
 
     if [[ "${ACTION}" == 'start' ]]; then
 
@@ -1653,7 +1689,10 @@ setup_docker_volumes() {
             create_dir_if_not_exist "${DS_STORAGE_HOST_DIR}"
             create_dir_if_not_exist "${PX_STORAGE_HOST_DIR}"
             create_dir_if_not_exist "${PX_STORAGE_WLM_DIR}"
+            create_dir_if_not_exist "${SCRATCH_DIR}"
             create_dir_if_not_exist "${JDBC_JAR_DIR}"
+            create_dir_if_not_exist "${KRB5_CONFIG_FILES_DIR}"
+            create_dir_if_not_exist "${KRB5_CONFIG_DIR_DIR}"
             set_permissions "${DOCKER_VOLUMES_DIR}"
         fi
 
@@ -1669,6 +1708,7 @@ setup_docker_volumes() {
         generate_init_volume_script
         generate_download_jdbc_jars_script
         copy_proxy_cacert
+        copy_krb5_conf
     fi
 }
 
@@ -1677,10 +1717,28 @@ copy_proxy_cacert() {
         # Java only supports x509 format
         #cat $PROXY_CACERT | openssl x509 > ${PX_STORAGE_HOST_DIR}/proxy.pem
         if [ ! -f $PROXY_CACERT ]; then
-            echo "The specified proxy certificate $PROXY_CACERT is not found."
-            exit 1
+            echo_error_and_exit "The specified proxy certificate $PROXY_CACERT is not found."
         fi
-        cp $PROXY_CACERT ${PX_STORAGE_HOST_DIR}/proxy.pem
+        \cp -f $PROXY_CACERT ${PX_STORAGE_HOST_DIR}/proxy.pem
+    fi
+}
+
+copy_krb5_conf() {
+    if [[ ! -z $KRB5_CONF ]]; then
+        if [[ "${DATASTAGE_HOME}" != 'cp4d' ]]; then
+          echo_error_and_exit "The option --krb5-conf is only supported for cp4d. Please set --home to 'cp4d'."
+        fi
+        if [[ ! -f $KRB5_CONF ]]; then
+            echo_error_and_exit "The specified Kerberos config file $KRB5_CONF is not found."
+        elif [[ ! -z $KRB5_CONF_DIR ]] && [[ ! -d $KRB5_CONF_DIR ]]; then
+            echo_error_and_exit "The specified Kerberos config directory $KRB5_CONF_DIR is not found."
+        fi
+        \cp -f $KRB5_CONF ${KRB5_CONFIG_FILES_DIR}/krb5.conf
+        if [[ ! -z $KRB5_CONF_DIR ]]; then
+            \cp -RLf $KRB5_CONF_DIR/* ${KRB5_CONFIG_DIR_DIR}
+        fi
+    elif [[ ! -z $KRB5_CONF_DIR ]]; then
+        echo_error_and_exit "The option --krb5-conf-dir is only supported when --krb5-conf is specified."
     fi
 }
 
@@ -1999,22 +2057,25 @@ setup_docker_volumes
 
 if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
     echo 'CP4D environment found, curl will be used without ssl validation ...'
-    CURL_CMD="curl -k"
+    CURL_CMD="${CURL_CMD} -k"
 fi
 
-if [[ "${PROXY_URL}" != 'NOT_SET' ]]; then
+if [[ ! -z $PROXY_URL ]]; then
     echo 'Found proxy url in arguments, will use curl with proxy ...'
-    CURL_CMD="curl --proxy ${PROXY_URL}"
+    CURL_CMD="${CURL_CMD} --proxy ${PROXY_URL}"
     # for some reason only get_remote_engine_id is getting ssl validation failure
     if [[ ! -z $PROXY_CACERT ]]; then
-       # CURL_CMD="${CURL_CMD} --proxy-cacert ${PROXY_CACERT}"
-       CURL_CMD="${CURL_CMD} --proxy-insecure"
+        echo 'Found proxy cacert in arguments, will use curl with --proxyinsecure ...'
+        # CURL_CMD="${CURL_CMD} --proxy-cacert ${PROXY_CACERT}"
+        CURL_CMD="${CURL_CMD} --proxy-insecure"
     fi
+elif [[ ! -z $PROXY_CACERT ]]; then
+    echo_error_and_exit "The option --proxy-cacert is only supported when --proxy is specified."
 fi
 
 if [[ ${ACTION} == "start" ]]; then
     if [[ "${FORCE_RENEW}" == 'true' ]]; then
-            echo "Flag --force-renew is specified"
+        echo "Flag --force-renew is specified"
         echo ""
         stop_px_runtime_docker
         remove_px_runtime_docker
@@ -2163,6 +2224,16 @@ elif [[ ${ACTION} == "update" ]]; then
     if [[ -v CP4D_USER && -v CP4D_API_KEY && -n "${CP4D_USER}" && -n "${CP4D_API_KEY}" ]]; then
         echo 'Datastage environment set to cp4d'
         DATASTAGE_HOME='cp4d'
+        if [[ ! "$CURL_CMD" =~ '\s-k' ]]; then
+            echo 'CP4D environment found, curl will be used without ssl validation ...'
+            CURL_CMD="${CURL_CMD} -k"
+        fi
+    fi
+    if [[ ! -v CUSTOM_DOCKER_REGISTRY ]]; then
+        CUSTOM_DOCKER_REGISTRY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^CUSTOM_DOCKER_REGISTRY= | cut -d'=' -f2-)
+    fi
+    if [[ ! -v CUSTOM_DOCKER_REGISTRY_USER ]]; then
+        CUSTOM_DOCKER_REGISTRY_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^CUSTOM_DOCKER_REGISTRY_USER= | cut -d'=' -f2-)
     fi
 
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
@@ -2176,40 +2247,56 @@ elif [[ ${ACTION} == "update" ]]; then
     PX_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/px-storage") | .Source')
     SCRATCH_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/opt/ibm/PXService/Server/scratch") | .Source')
     JDBC_JAR_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/user-home/_global_/dbdrivers-v2") | .Source')
-    # MOUNT_DIRS=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | "\(.Source):\(.Destination)"' | tr '\n' ' ')
+    KRB5_CONFIG_FILES_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/etc/krb5-config-files") | .Source')
+    KRB5_CONFIG_DIR_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/etc/krb5-config-files/krb5-config-dir") | .Source')
+    # MOUNT_DIRS=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | select(.Destination != "/etc/krb5-config-files") | select(.Destination != "/etc/krb5-config-files/krb5-config-dir") | "\(.Source):\(.Destination)"' | tr '\n' ' ')
     SAVEIFS=$IFS
     IFS=$'\n'
-    MOUNT_DIRS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | "\(.Source):\(.Destination)"' | while read object; do echo "$object"; done)
+    MOUNT_DIRS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | select(.Destination != "/etc/krb5-config-files") | select(.Destination != "/etc/krb5-config-files/krb5-config-dir") | "\(.Source):\(.Destination)"' | while read object; do echo "$object"; done)
     MOUNT_DIRS=($MOUNT_DIRS_STR)
     ADD_HOSTS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].HostConfig.ExtraHosts | .[]')
     ADD_HOSTS=($ADD_HOSTS_STR)
     IFS=$SAVEIFS
-    if [[ "${CONTAINER_SECURITY_OPT}" == 'NOT_SET' ]]; then
+    if [[ ! -v PROXY_URL ]]; then
+        PROXY_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^PROXY_URL= | cut -d'=' -f2-)
+        if [[ ! -z $PROXY_URL ]] && [[ ! "${CURL_CMD}" =~ '\s--proxy\s' ]]; then
+            echo 'Found proxy url in arguments, will use curl with proxy ...'
+            CURL_CMD="${CURL_CMD} --proxy ${PROXY_URL}"
+        fi
+    fi
+    if [[ ! -z $PROXY_URL ]] && [[ ! -v PROXY_CACERT ]]; then
+        PROXY_CACERT=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^PROXY_CACERT= | cut -d'=' -f2-)
+        if [[ ! -z $PROXY_CACERT ]] && [[ ! "${CURL_CMD}" =~ '\s--proxy-insecure' ]]; then
+            echo 'Found proxy cacert in arguments, will use curl with --proxyinsecure ...'
+            CURL_CMD="${CURL_CMD} --proxy-insecure"
+        fi
+    fi
+    if [[ ! -v KRB5_CONF ]]; then
+        KRB5_CONF=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^KRB5_CONF= | cut -d'=' -f2-)
+    fi
+    if [[ ! -v KRB5_CONF_DIR ]]; then
+        KRB5_CONF_DIR=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^KRB5_CONF_DIR= | cut -d'=' -f2-)
+    fi
+    if [[ ! -v CONTAINER_SECURITY_OPT ]]; then
         CONTAINER_SECURITY_OPT=$($DOCKER_CMD inspect --format='{{.HostConfig.SecurityOpt}}' "${PXRUNTIME_CONTAINER_NAME}" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//')
     fi
-    if [[ "${CONTAINER_CAP_DROP}" == 'NOT_SET' ]]; then
+    if [[ ! -v CONTAINER_CAP_DROP ]]; then
         CONTAINER_CAP_DROP=$($DOCKER_CMD inspect --format='{{.HostConfig.CapDrop}}' "${PXRUNTIME_CONTAINER_NAME}" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//')
     fi
     CONTAINER_USER=$($DOCKER_CMD inspect --format='{{.Config.User}}' "${PXRUNTIME_CONTAINER_NAME}")
     if [[ ! -v ADDITIONAL_USERS ]]; then
         ADDITIONAL_USERS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^ADDITIONAL_USERS= | cut -d'=' -f2-)
     fi
-    if [[ ! -v CUSTOM_DOCKER_REGISTRY ]]; then
-        CUSTOM_DOCKER_REGISTRY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^CUSTOM_DOCKER_REGISTRY= | cut -d'=' -f2-)
-    fi
-    if [[ ! -v CUSTOM_DOCKER_REGISTRY_USER ]]; then
-        CUSTOM_DOCKER_REGISTRY_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^CUSTOM_DOCKER_REGISTRY_USER= | cut -d'=' -f2-)
-    fi
     if [[ ! -v ENV_VARS ]]; then
         ENV_VARS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^ENV_VARS= | cut -d'=' -f2-)
     fi
     DOCKER_VOLUMES_DIR=$(dirname "$DS_STORAGE_HOST_DIR")
     SCRATCH_BASE_DIR=$(dirname "$SCRATCH_DIR")
-    if [[ -z $CONTAINER_CAP_DROP ]] || [[ "$CONTAINER_CAP_DROP" == "[]" ]]; then
-        CONTAINER_CAP_DROP="NOT_SET"
-    fi
     if [[ -z $CONTAINER_SECURITY_OPT ]] || [[ "$CONTAINER_SECURITY_OPT" == "[]" ]]; then
-        CONTAINER_SECURITY_OPT="NOT_SET"
+        CONTAINER_SECURITY_OPT=""
+    fi
+    if [[ -z $CONTAINER_CAP_DROP ]] || [[ "$CONTAINER_CAP_DROP" == "[]" ]]; then
+        CONTAINER_CAP_DROP=""
     fi
 
     # if scratch directory was overriden, put it back in MOUNT_DIRS
@@ -2241,6 +2328,8 @@ elif [[ ${ACTION} == "update" ]]; then
     [ -z $PX_STORAGE_HOST_DIR ] && "Could not retrieve PX_STORAGE_HOST_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $SCRATCH_DIR ] && "Could not retrieve SCRATCH_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $JDBC_JAR_DIR ] && "Could not retrieve JDBC_JAR_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $KRB5_CONFIG_FILES_DIR ] && "Could not retrieve KRB5_CONFIG_FILES_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $KRB5_CONFIG_DIR_DIR ] && "Could not retrieve KRB5_CONFIG_DIR_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $DOCKER_VOLUMES_DIR ] && "Could not retrieve DOCKER_VOLUMES_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $CONTAINER_USER ] && "Could not retrieve CONTAINER_USER from container ${PXRUNTIME_CONTAINER_NAME}"
 
@@ -2263,6 +2352,12 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "PX_STORAGE_HOST_DIR = ${PX_STORAGE_HOST_DIR}"
     echo "SCRATCH_DIR = ${SCRATCH_DIR}"
     echo "JDBC_JAR_DIR = ${JDBC_JAR_DIR}"
+    echo "KRB5_CONFIG_FILES_DIR = ${KRB5_CONFIG_FILES_DIR}"
+    echo "KRB5_CONFIG_DIR_DIR = ${KRB5_CONFIG_DIR_DIR}"
+    echo "PROXY_URL = ${PROXY_URL}"
+    echo "PROXY_CACERT = ${PROXY_CACERT}"
+    echo "KRB5_CONF = ${KRB5_CONF}"
+    echo "KRB5_CONF_DIR = ${KRB5_CONF_DIR}"
     echo "CONTAINER_SECURITY_OPT = ${CONTAINER_SECURITY_OPT}"
     echo "CONTAINER_CAP_DROP = ${CONTAINER_CAP_DROP}"
     echo "CONTAINER_USER = ${CONTAINER_USER}"
@@ -2349,12 +2444,17 @@ elif [[ ${ACTION} == "cleanup" ]]; then
         if [[ -v CP4D_USER && -v CP4D_API_KEY && -n "${CP4D_USER}" && -n "${CP4D_API_KEY}" ]]; then
             echo 'Datastage environment set to cp4d'
             DATASTAGE_HOME='cp4d'
+            if [[ ! "$CURL_CMD" =~ '\s-k' ]]; then
+                echo 'CP4D environment found, curl will be used without ssl validation ...'
+                CURL_CMD="${CURL_CMD} -k"
+            fi
         fi
 
         CUSTOM_DOCKER_REGISTRY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^CUSTOM_DOCKER_REGISTRY= | cut -d'=' -f2-)
         CUSTOM_DOCKER_REGISTRY_USER=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^CUSTOM_DOCKER_REGISTRY_USER= | cut -d'=' -f2-)
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             ZEN_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^GATEWAY_URL= | cut -d'=' -f2-)
+            [[ "${ZEN_URL}" != "http"* ]] && echo_error_and_exit "Container is not running or doesn't exist. Aborting."
             GATEWAY_URL=$ZEN_URL
             UI_GATEWAY_URL=$ZEN_URL
             PROJECT_CONTEXT='icp4data'
