@@ -14,7 +14,7 @@ This step compiles an existing pipeline as sequencer job. This command performs 
 The following syntax compiles a pipeline or all the pipeline in a project:
 
 ```
-cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID} {--pipeline PIPELINE | --pipeline-id PIPELINEID} [--code] [--threads <n>]  [--enable-inline]
+cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID} {--name PIPELINE | --id PIPELINEID} [--code] [--threads <n>]  [--enable-inline]
 
 ```
 -  `project` is the name of the project that contains the pipeline.
