@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.1
+TOOL_VERSION=1.0.2
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -579,13 +579,41 @@ create_proxy_secrets() {
     CURL_CMD="curl --proxy ${proxy_url}"
     $kubernetesCLI -n ${namespace} delete secret $DS_PROXY_URL --ignore-not-found=true ${dryRun}
     $kubernetesCLI -n ${namespace} create secret generic $DS_PROXY_URL --from-literal=proxy_url=${proxy_url}
-    if [ ! -z $cacert_location ] && [ -f $cacert_location ]; then
-      CURL_CMD="${CURL_CMD} --proxy-insecure"
-      $kubernetesCLI -n ${namespace} delete secret connection-ca-certs --ignore-not-found=true ${dryRun}
-      $kubernetesCLI -n ${namespace} create secret generic connection-ca-certs --from-file=${cacert_location}
-    else
-      echo "The specified proxy certificate $cacert_location is not found."
+    if [ ! -z $cacert_location ]; then
+      if [ -f $cacert_location ]; then
+        CURL_CMD="${CURL_CMD} --proxy-insecure"
+        $kubernetesCLI -n ${namespace} delete secret connection-ca-certs --ignore-not-found=true ${dryRun}
+        $kubernetesCLI -n ${namespace} create secret generic connection-ca-certs --from-file=${cacert_location}
+      else
+        echo_error_and_exit "The specified proxy certificate $cacert_location is not found."
+      fi
     fi
+  elif [ ! -z $cacert_location ]; then
+    echo_error_and_exit "The option --proxy-cacert is only supported when --proxy is specified."
+  fi
+}
+
+create_krb5_configmaps() {
+  if [[ ! -z $KRB5_CONF_FILE ]]; then
+    if [[ -z $zen_url ]]; then
+      echo_error_and_exit "The option --krb5-conf is only supported for cp4d. Please specify the --zen-url option."
+    fi
+    if [[ -f $KRB5_CONF_FILE ]]; then
+      $kubernetesCLI -n ${namespace} delete configmap krb5-config-files --ignore-not-found=true ${dryRun}
+      $kubernetesCLI -n ${namespace} create configmap krb5-config-files --from-file=${KRB5_CONF_FILE}
+      if [[ ! -z $KRB5_CONF_DIR ]]; then
+        if [[ -d $KRB5_CONF_DIR ]]; then
+          $kubernetesCLI -n ${namespace} delete configmap krb5-config-dir --ignore-not-found=true ${dryRun}
+          $kubernetesCLI -n ${namespace} create configmap krb5-config-dir --from-file=${KRB5_CONF_DIR}
+        else
+          echo_error_and_exit "The specified Kerberos config directory $KRB5_CONF_DIR is not found."
+        fi
+      fi
+    else
+      echo_error_and_exit "The specified Kerberos config file $KRB5_CONF_FILE is not found."
+    fi
+  elif [[ ! -z $KRB5_CONF_DIR ]]; then
+    echo_error_and_exit "The option --krb5-conf-dir is only supported when --krb5-conf is specified."
   fi
 }
 
@@ -674,7 +702,7 @@ fi
 
 handle_badusage() {
   echo ""
-  echo "Usage: $0 create-pull-secret|create-proxy-secrets|create-apikey-secret|install|create-instance|create-nfs-provisioner --help"
+  echo "Usage: $0 create-pull-secret|create-proxy-secrets|create-krb5-configmaps|create-apikey-secret|install|create-instance|create-nfs-provisioner --help"
   echo ""
   exit 3
 }
@@ -710,6 +738,17 @@ handle_proxy_usage() {
   echo "--namespace: the namespace to install the DataStage operator"
   echo "--proxy: Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>)"
   echo "--proxy-cacert: Specify the absolute location of the custom CA store for the specified proxy - if it is using a self signed certificate"
+  echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
+  exit 0
+}
+
+handle_krb5_usage() {
+  echo ""
+  echo "Description: create configmaps used for Kerberos authentication"
+  echo "Usage: $0 create-krb5-configmaps --namespace <namespace> --zen-url <zen-url> --krb5-conf <krb5_conf_location> [--krb5-conf-dir <krb5_config_dir_location>]"
+  echo "--namespace: the namespace to install the DataStage operator"
+  echo "--krb5-conf: Specify the location of the Kerberos config file if using Kerberos Authentication. (Only supported for cp4d)"
+  echo "--krb5-conf-dir: Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include 'includedir /etc/krb5-config-files/krb5-config-dir' line)"
   echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   exit 0
 }
@@ -1102,6 +1141,14 @@ do
             shift
             cacert_location="${1}"
             ;;
+        --krb5-conf)
+            shift
+            KRB5_CONF_FILE="${1}"
+            ;;
+        --krb5-conf-dir)
+            shift
+            KRB5_CONF_DIR="${1}"
+            ;;
         --project-id)
             shift
             projectId="${1}"
@@ -1179,6 +1226,9 @@ do
         create-proxy-secrets)
             action="create-proxy-secrets"
              ;;
+        create-krb5-configmaps)
+            action="create-krb5-configmaps"
+             ;;
         create-apikey-secret)
             action="create-apikey-secret"
              ;;
@@ -1237,6 +1287,9 @@ if [[ ! -z $dsdisplayHelp ]]; then
     create-proxy-secrets)
       handle_proxy_usage
       ;;
+    create-krb5-configmaps)
+      handle_krb5_usage
+      ;;
     create-apikey-secret)
       handle_apikey_usage
       ;;
@@ -1269,6 +1322,9 @@ create-pull-secret)
 create-proxy-secrets)
   create_proxy_secrets
   ;;
+create-krb5-configmaps)
+  create_krb5_configmaps
+  ;;
 create-apikey-secret)
   create_apikey_secret
   ;;
@@ -1293,6 +1349,7 @@ if [ ! -z $inputFile ]; then
   fi
   create_pull_secret
   create_proxy_secrets
+  create_krb5_configmaps
   create_apikey_secret
   determine_registry
   handle_action_install
