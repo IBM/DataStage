@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.16
+TOOL_VERSION=1.0.17
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -78,6 +78,7 @@ STR_PROJECT_UID='  -d, --project-id            Comma separated list of DataPlatf
 STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, cp4d]'
 STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
+STR_HOST_NETWORK="  --host-network              [true | false]. Set this to true to set the docker network to host."
 STR_ADD_HOST="  --add-host                  Add a <host>:<ip> entry to the /etc/hosts file of the container. This flag can be specified multiple times."
 STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
 STR_SECURITY_OPT='  --security-opt              Specify the security-opt to be used to run the container.'
@@ -162,7 +163,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--volume-dir] [--mount-dir] [--host-network] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
@@ -207,6 +208,7 @@ print_usage() {
             echo "${STR_PIDS_LIMIT}"
             echo "${STR_VOLUMES}"
             echo "${STR_MOUNT_DIR}"
+            echo "${STR_HOST_NETWORK}"
             echo "${STR_ADD_HOST}"
             echo "${STR_SECURITY_OPT}"
             echo "${STR_CAP_DROP}"
@@ -282,6 +284,14 @@ function handle_skip_docker_login() {
     fi
 }
 
+function handle_host_network() {
+    if [[ "${1}" == 'true' || "${1}" == 'false' ]]; then
+        HOST_NETWORK="${1}"
+    else
+        echo_error_and_exit 'Incorrect option specified for flag "--host-network". Acceptable values are: [true, false]'
+    fi
+}
+
 function start() {
     ACTION='start'
     if [[ "${#}" == 0 ]]; then
@@ -343,6 +353,10 @@ function start() {
         --mount-dir)
             shift
             MOUNT_DIRS+=("$1")
+            ;;
+        --host-network)
+            shift
+            handle_host_network "${1}"
             ;;
         --add-host)
             shift
@@ -979,9 +993,16 @@ run_px_runtime_docker() {
         --env IVSPEC=${IVSPEC}
         --env WLM_JOB_START=1
         --env WLM_JOB_COUNT=5
-        --network=${PXRUNTIME_CONTAINER_NAME}
         --user=${CURRENT_USER}
     )
+
+    if [[ "${HOST_NETWORK}" == 'true' ]]; then
+        echo "Setting --network to host to run the container"
+        runtime_docker_opts+=(
+            --env HOST_NETWORK=${HOST_NETWORK}
+            --network=host
+        )
+    fi
 
     if [[ ! -z $CONTAINER_SECURITY_OPT ]]; then
         echo "Setting --security-opt to ${CONTAINER_SECURITY_OPT} to run the container"
@@ -1160,30 +1181,18 @@ wait_readiness_px_runtime()
 
     export CURL_SSL_BACKEND="secure-transport"
     while (true); do
-        count=$(( $count + 1 ))
         echo "  waiting for ${PXRUNTIME_CONTAINER_NAME} to start... time elapsed: $(( $count * $WAIT_DURATION )) seconds"
-        $DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" bash -c "curl -ks ${PXRUNTIME_VERSION_ENDPOINT}" 2>&1 | grep -q '"status":"ok"'
+        pxruntime_version=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" bash -c "unset https_proxy HTTPS_PROXY; curl -ks ${PXRUNTIME_VERSION_ENDPOINT}" 2>&1)
+        echo "$pxruntime_version" | grep -q '"status":"ok"'
         ret=$?
         if [ ${ret} -eq 0 ]; then
-            while (true); do
-                count=$(( $count + 1 ))
-                sleep 5
-                echo "  waiting for ${PXRUNTIME_CONTAINER_NAME} to start... time elapsed: $(( $count * $WAIT_DURATION )) seconds"
-                if $DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" bash -c "curl -ks ${PXRUNTIME_VERSION_ENDPOINT}" | grep -q '"status":"ok"'; then
-                    $DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" bash -c "curl -ks ${PXRUNTIME_VERSION_ENDPOINT}"
-                    echo ""
-                    echo "Started container ${PXRUNTIME_CONTAINER_NAME} in $(( $count * $WAIT_DURATION )) seconds"
-                    break;
-                elif [ ${ret} -ne 0 ] && [ ${count} -gt $TOTAL_RETRIES ]; then
-                    echo_error_and_exit "Could not start container ${PXRUNTIME_CONTAINER_NAME} in $(( $count * $WAIT_DURATION )) seconds, aborting."
-                fi
-            done
-            if $DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" bash -c "curl -ks ${PXRUNTIME_VERSION_ENDPOINT}" 2>&1 | grep -q '"status":"ok"'; then
-                break;
-            fi
-        elif [ ${ret} -ne 0 ] && [ ${count} -lt $TOTAL_RETRIES ]; then
+            echo "$pxruntime_version"
+            echo "Started container ${PXRUNTIME_CONTAINER_NAME} in $(( $count * $WAIT_DURATION )) seconds"
+            break;
+        elif [ ${count} -lt $TOTAL_RETRIES ]; then
             sleep $WAIT_DURATION
-        elif [ ${ret} -ne 0 ] && [ ${count} -gt $TOTAL_RETRIES ]; then
+            count=$(( $count + 1 ))
+        else
             echo_error_and_exit "Could not start container ${PXRUNTIME_CONTAINER_NAME} in $(( $count * $WAIT_DURATION )) seconds, aborting."
         fi
     done
@@ -1283,15 +1292,15 @@ wait_readiness_px_compute() {
     done
 }
 
-initialize_docker_network() {
-    echo "Setting up docker network"
-    $DOCKER_CMD network inspect ${PXRUNTIME_CONTAINER_NAME} >/dev/null 2>&1 || $DOCKER_CMD network create -d bridge ${PXRUNTIME_CONTAINER_NAME}
-}
+#initialize_docker_network() {
+#    echo "Setting up docker network"
+#    $DOCKER_CMD network inspect ${PXRUNTIME_CONTAINER_NAME} >/dev/null 2>&1 || $DOCKER_CMD network create -d bridge ${PXRUNTIME_CONTAINER_NAME}
+#}
 
-cleanup_docker_network() {
-    echo "Cleaning docker network"
-    $DOCKER_CMD network rm ${PXRUNTIME_CONTAINER_NAME} >/dev/null 2>&1 || true
-}
+#cleanup_docker_network() {
+#    echo "Cleaning docker network"
+#    $DOCKER_CMD network rm ${PXRUNTIME_CONTAINER_NAME} >/dev/null 2>&1 || true
+#}
 
 #######################################################################
 # IBM Cloud functions
@@ -2133,7 +2142,7 @@ if [[ ${ACTION} == "start" ]]; then
     print_header "Initializing ${TOOL_SHORTNAME} Runtime environment with name '${REMOTE_ENGINE_NAME}' ..."
     echo "Setting up docker environment"
 
-    initialize_docker_network
+    # initialize_docker_network
 
     # docker run
     # ---------------------
@@ -2249,6 +2258,7 @@ elif [[ ${ACTION} == "update" ]]; then
     JDBC_JAR_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/user-home/_global_/dbdrivers-v2") | .Source')
     KRB5_CONFIG_FILES_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/etc/krb5-config-files") | .Source')
     KRB5_CONFIG_DIR_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/etc/krb5-config-files/krb5-config-dir") | .Source')
+    HOST_NETWORK=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^HOST_NETWORK= | cut -d'=' -f2-)
     # MOUNT_DIRS=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | select(.Destination != "/etc/krb5-config-files") | select(.Destination != "/etc/krb5-config-files/krb5-config-dir") | "\(.Source):\(.Destination)"' | tr '\n' ' ')
     SAVEIFS=$IFS
     IFS=$'\n'
@@ -2358,6 +2368,7 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "PROXY_CACERT = ${PROXY_CACERT}"
     echo "KRB5_CONF = ${KRB5_CONF}"
     echo "KRB5_CONF_DIR = ${KRB5_CONF_DIR}"
+    echo "HOST_NETWORK = ${HOST_NETWORK}"
     echo "CONTAINER_SECURITY_OPT = ${CONTAINER_SECURITY_OPT}"
     echo "CONTAINER_CAP_DROP = ${CONTAINER_CAP_DROP}"
     echo "CONTAINER_USER = ${CONTAINER_USER}"
@@ -2416,7 +2427,7 @@ elif [[ ${ACTION} == "update" ]]; then
     print_header "Initializing ${TOOL_SHORTNAME} Runtime environment with name '${REMOTE_ENGINE_NAME}' ..."
     echo "Setting up docker environment"
 
-    initialize_docker_network
+    # initialize_docker_network
 
     print_header "Starting instance '${REMOTE_ENGINE_NAME}' ..."
     run_px_runtime_docker
@@ -2472,7 +2483,7 @@ elif [[ ${ACTION} == "cleanup" ]]; then
 
         stop_px_runtime_docker
         remove_px_runtime_docker
-        cleanup_docker_network
+        # cleanup_docker_network
 
         print_header "Cleaning Remote Engine '${REMOTE_ENGINE_NAME}'..."
 
