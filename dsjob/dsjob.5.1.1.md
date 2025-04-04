@@ -1136,23 +1136,6 @@ cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID} {--name 
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
-## Clearing Pipeline Cache
-
-The following command clears the pipeline cache without running the pipeline.
-
-```
-cpdctl dsjob reset-pipeline-cache {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--job-name name | --job-id ID] [--run-id runid]
-```
-
-- `project` is the name of the project that contains the pipeline.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
-- `name` is the name of the pipeline.
-- `id` is the id of the pipeline. One of `name` or `id` must be specified.
-- `job-name` is the name of the pipeline job.
-- `job-id` is the id of the pipeline job. One of `job-name` or `job-id` must be specified.
-- `run-id` is the id of a particular pipeline job run. If not specified the last run of the pipeline job will be reset.
-
-This command does not reset nested pipelines.
 
 ## Imports and exports
 
