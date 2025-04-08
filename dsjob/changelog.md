@@ -4,13 +4,20 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
-[5.1.1](#511) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.1.1.md)
+[5.1.2](#512)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.1.2.md)
 
-[5.1.0](#510) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.1.0.md)
+[5.1.1](#511)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.1.1.md)
 
-[5.0.3](#503) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.3.md)
+[5.1.0](#510)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.1.0.md)
 
-[5.0.2](#502) [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.2.md)
+[5.0.3](#503)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.3.md)
+
+[5.0.2](#502)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.2.md)
 
 [5.0.1](#501)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.0.1.md)
@@ -59,6 +66,36 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 5.1.2
+
+### New commands
+
+The following commands are added:
+
+- `index-project` indexes all assets in a project to facilitate fast search.
+- `get-index-status` gets current status of indexed assets in a project.
+- `enable-project-indexing` enables a project for indexing.
+- `test-repository-connection` tests connection to the repository used by project indexing.
+- `copy-dataset` copies dataset into a new name.
+- `copy-fileset` copies fileset into a new name.
+
+### Command changes
+
+The following commands have changed:
+
+- `list-jobs` adds new flag `--last-run` to list the last run of the job, leaves empty if a job is never run.
+- `lognewest` uses environment variable ENABLE_IIS_EXITCODE to print output accordingly.
+- `upload-data-asset` takes arguments `--mime` and `--tag` to specify asset type and tag the asset for searching.
+- `migrate` command adds new option `migrate-bash-param` to migrate bash params.
+
+### Fixes
+
+- `upload-data-asset` and `download-data-asset` commands are fixed and will handle data assets as files.
+- `view-fileset` fixes issue with fetching an empty fileset and displays is corrected.
+- `git-status` command output change to address visibility in dark mode.
+- `update-paramset` and `update-paramset-valuset` now addresses empty strings without setting them as null.
+- `run-pipeline` is fixed to use correct suffix from project settings.
 
 ## 5.1.1
 
@@ -117,7 +154,7 @@ The following commands have changed:
 - `warn-limit` option is added to control warn limits before job is aborted at project level.
 - `create-job` optionally takes `optimize` parameter that creates a DataStage sequence runner job. It now take `enable-inline` flag to run nested pipelines inline instead of as separate jobs.
 - `folders` option is added to the following commands to allow asset to be created in a folder
-  - `create-flow`, `create-cff-schema`, `create-connection`, `create-build-stage` , `create-custom-stage`, `create-wrapped-stage`, `create-java-library`, `create-message-handler`, `create-paramset`, `create-pipeline-job`, `create-rule`, `create-subflow`, `create-tabledef`, `create-function-lib` and `create-job`.
+ - `create-flow`, `create-cff-schema`, `create-connection`, `create-build-stage` , `create-custom-stage`, `create-wrapped-stage`, `create-java-library`, `create-message-handler`, `create-paramset`, `create-pipeline-job`, `create-rule`, `create-subflow`, `create-tabledef`, `create-function-lib` and `create-job`.
 - `git-status` command changes to allow to display identical, changed and deleted objects using the flags `hide-identical`, `hide-modified` and `hide-deleted` respectively.
 - `migrate` now has two new flags `enable-autosave` to autosave migrated pipelines and `enable-jinja` to allow ninja templates in a bash script.
 - `run` commands now take list of paramfiles to allow to load job parameters from multiple files.
