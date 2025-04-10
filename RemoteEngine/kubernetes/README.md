@@ -16,7 +16,8 @@ DataStage Remote Engine supports deployment on the following platforms:
 * Amazon Elastic Kubernetes Service (EKS)
     * Details on setting up an EKS cluster: https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html
     * Setting up and Elastic file system: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.6.x?topic=storage-setting-up-amazon-elastic-file-system (see details below)
-
+      
+A file storage class with support for read-write-many(RWX) is required.
 ## Pre-Requisites
 The following software are required to be installed on the client from where you will be executing this script:
 
