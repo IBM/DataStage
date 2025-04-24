@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.2
+TOOL_VERSION=1.0.3
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -595,9 +595,6 @@ create_proxy_secrets() {
 
 create_krb5_configmaps() {
   if [[ ! -z $KRB5_CONF_FILE ]]; then
-    if [[ -z $zen_url ]]; then
-      echo_error_and_exit "The option --krb5-conf is only supported for cp4d. Please specify the --zen-url option."
-    fi
     if [[ -f $KRB5_CONF_FILE ]]; then
       $kubernetesCLI -n ${namespace} delete configmap krb5-config-files --ignore-not-found=true ${dryRun}
       $kubernetesCLI -n ${namespace} create configmap krb5-config-files --from-file=${KRB5_CONF_FILE}
@@ -745,11 +742,10 @@ handle_proxy_usage() {
 handle_krb5_usage() {
   echo ""
   echo "Description: create configmaps used for Kerberos authentication"
-  echo "Usage: $0 create-krb5-configmaps --namespace <namespace> --zen-url <zen-url> --krb5-conf <krb5_conf_location> [--krb5-conf-dir <krb5_config_dir_location>]"
+  echo "Usage: $0 create-krb5-configmaps --namespace <namespace> --krb5-conf <krb5_conf_location> [--krb5-conf-dir <krb5_config_dir_location>]"
   echo "--namespace: the namespace to install the DataStage operator"
-  echo "--krb5-conf: Specify the location of the Kerberos config file if using Kerberos Authentication. (Only supported for cp4d)"
+  echo "--krb5-conf: Specify the location of the Kerberos config file if using Kerberos Authentication."
   echo "--krb5-conf-dir: Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include 'includedir /etc/krb5-config-files/krb5-config-dir' line)"
-  echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   exit 0
 }
 
