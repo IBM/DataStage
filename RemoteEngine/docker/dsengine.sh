@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.17
+TOOL_VERSION=1.0.18
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -62,9 +62,9 @@ FORCE_RENEW='false'
 PROXY_CACERT_LOCATION="/px-storage/proxy.pem"
 KRB5_CONF_FILE="/etc/krb5-config-files/krb5.conf"
 
-supported_versions="5.1.0 5.1.1 5.1.2"
-asset_versions="510 511 512"
-px_runtime_digests="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a sha256:eda5ec48b2818d44b37b506297f2c5ce316f3ffa9b28202ea5746702f1132701"
+supported_versions="5.1.0 5.1.1 5.1.2 5.1.3"
+asset_versions="510 511 512 513"
+px_runtime_digests="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a sha256:eda5ec48b2818d44b37b506297f2c5ce316f3ffa9b28202ea5746702f1132701 sha256:2d320dee224cc4818a84493723f2262d259891bef89dedef09e1f1e6ae5686cb"
 
 bold=$(tput bold)
 normal=$(tput sgr0)
