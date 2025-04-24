@@ -620,7 +620,6 @@ create_db2z_license_secret() {
       $kubernetesCLI -n ${namespace} delete secret datastage-db2z-license --ignore-not-found=true ${dryRun}
       $kubernetesCLI -n ${namespace} create secret generic datastage-db2z-license --from-file=db2consv_ee.lic=${DB2Z_LICENSE}
       $kubernetesCLI -n ${namespace} delete pod -l app.kubernetes.io/component=px-runtime
-      $kubernetesCLI -n ${namespace} delete pod -l app.kubernetes.io/component=caslite
     else
       echo_error_and_exit "The specified DB2Z license $DB2Z_LICENSE is not found."
     fi
