@@ -614,6 +614,18 @@ create_krb5_configmaps() {
   fi
 }
 
+create_db2z_license_secret() {
+  if [ ! -z $DB2Z_LICENSE ]; then
+    if [ -f $DB2Z_LICENSE ]; then
+      $kubernetesCLI -n ${namespace} delete secret datastage-db2z-license --ignore-not-found=true ${dryRun}
+      $kubernetesCLI -n ${namespace} create secret generic datastage-db2z-license --from-file=db2consv_ee.lic=${DB2Z_LICENSE}
+      $kubernetesCLI -n ${namespace} delete pod -l app.kubernetes.io/component=px-runtime
+    else
+      echo_error_and_exit "The specified DB2Z license $DB2Z_LICENSE is not found."
+    fi
+  fi
+}
+
 remove_previous_resources() {
   $kubernetesCLI -n ${namespace} delete deploy ${name}-ibm-datastage-px-runtime --ignore-not-found=true
   $kubernetesCLI -n ${namespace} delete sts ${name}-ibm-datastage-px-compute --ignore-not-found=true
@@ -746,6 +758,15 @@ handle_krb5_usage() {
   echo "--namespace: the namespace to install the DataStage operator"
   echo "--krb5-conf: Specify the location of the Kerberos config file if using Kerberos Authentication."
   echo "--krb5-conf-dir: Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include 'includedir /etc/krb5-config-files/krb5-config-dir' line)"
+  exit 0
+}
+
+handle_import_db2z_license_usage() {
+  echo ""
+  echo "Description: create secret to import DB2Z license"
+  echo "Usage: $0 create-db2z-license-secret --namespace <namespace> --import-db2z-license <db2z_license_location>"
+  echo "--namespace: the namespace to install the DataStage operator"
+  echo "--import-db2z-license: Specify the location of the DB2Z license to import"
   exit 0
 }
 
@@ -1145,6 +1166,10 @@ do
             shift
             KRB5_CONF_DIR="${1}"
             ;;
+        --import-db2z-license)
+            shift
+            DB2Z_LICENSE="${1}"
+            ;;
         --project-id)
             shift
             projectId="${1}"
@@ -1225,6 +1250,9 @@ do
         create-krb5-configmaps)
             action="create-krb5-configmaps"
              ;;
+        create-db2z-license-secret)
+            action="create-db2z-license-secret"
+             ;;
         create-apikey-secret)
             action="create-apikey-secret"
              ;;
@@ -1286,6 +1314,9 @@ if [[ ! -z $dsdisplayHelp ]]; then
     create-krb5-configmaps)
       handle_krb5_usage
       ;;
+    create-db2z-license-secret)
+      handle_import_db2z_license_usage
+      ;;
     create-apikey-secret)
       handle_apikey_usage
       ;;
@@ -1321,6 +1352,9 @@ create-proxy-secrets)
 create-krb5-configmaps)
   create_krb5_configmaps
   ;;
+create-db2z-license-secret)
+  create_db2z_license_secret
+  ;;
 create-apikey-secret)
   create_apikey_secret
   ;;
@@ -1346,6 +1380,7 @@ if [ ! -z $inputFile ]; then
   create_pull_secret
   create_proxy_secrets
   create_krb5_configmaps
+  create_db2z_license_secret
   create_apikey_secret
   determine_registry
   handle_action_install

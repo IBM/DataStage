@@ -60,6 +60,9 @@ To deploy the DataStage operator on cluster without global pull secret configure
 # create the krb5 configmaps if Kerberos Authentication is used
 # ./launch.sh create-krb5-configmaps --namespace <namespace> --krb5-conf <krb5_conf_location> [--krb5-conf-dir <krb5_config_dir_location>]
 
+# create secret to import DB2Z license
+# ./launch.sh create-db2z-license-secret --namespace <namespace> --import-db2z-license <db2z_license_location>
+
 # create the api-key for dev or prod environment
 ./launch.sh create-apikey-secret --namespace <namespace> --apikey ${api-key} [--serviceid ${service-id}] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
 
@@ -150,6 +153,9 @@ zen_url=<zen-url>
 
 # Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include 'includedir /etc/krb5-config-files/krb5-config-dir' line).
 # KRB5_CONF_DIR=<krb5_config_dir_location>
+
+# Specify the location of the DB2Z license to import
+# DB2Z_LICENSE=<db2z_license_location>
 
 # Specify your custom container registry to pull images from if you are image mirroring using a private registry. If using this option, you must set USE_DIGESTS as well for IBM Cloud.
 # CUSTOM_DOCKER_REGISTRY=<docker-registry>

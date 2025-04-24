@@ -117,6 +117,7 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--proxy-cacert <cacert location>`: Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.
 1. `--krb5-conf <krb5.conf location>`: Specify the location of the Kerberos config file if using Kerberos Authentication.
 1. `--krb5-conf-dir <krb5-config-dir location>`: Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include "includedir /etc/krb5-config-files/krb5-config-dir" line).
+1. `--import-db2z-license <DB2Z license location>`: Specify the location of the DB2Z license to import.
 1. `--force-renew`: Set to true if you want to remove the existing remote engine container. By default, this flag is set to false and if a stopped existing container is found, it is restarted or if a running existing container is found, the script is aborted.
 1. `--zen-url`: CP4D zen url of the cluster (required if --home is used with "cp4d").
 1. `--cp4d-user`: CP4D username used to log into the cluster (required if --home is used with "cp4d").
@@ -155,6 +156,7 @@ While updating a remote engine, following optional flags can be used in addition
 1. `--proxy-cacert <cacert location>`: Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.
 1. `--krb5-conf <krb5.conf location>`: Specify the location of the Kerberos config file if using Kerberos Authentication.
 1. `--krb5-conf-dir <krb5-config-dir location>`: Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include "includedir /etc/krb5-config-files/krb5-config-dir" line).
+1. `--import-db2z-license <DB2Z license location>`: Specify the location of the DB2Z license to import.
 1. `--registry`: Custom container registry to pull images from. Must also set -u and -p options to login to the registry as well as either --digest or --image-tag for IBM Cloud.
 1. `-u | --user`: User to login to a custom container registry (required if --registry is set).
 1. `--digest`: Digest to pull the ds-px-runtime image from the registry (required if --registry is set and --image-tag is not set).

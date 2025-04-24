@@ -93,6 +93,7 @@ STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<user
 STR_PROXY_CACERT='  --proxy-cacert              Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.'
 STR_KRB5_CONF='  --krb5-conf                 Specify the location of the Kerberos config file if using Kerberos Authentication.'
 STR_KRB5_CONF_DIR='  --krb5-conf-dir             Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include "includedir /etc/krb5-config-files/krb5-config-dir" line)'
+STR_IMPORT_DB2Z_LICENSE='  --import-db2z-license       Specify the location of the DB2Z license to import.'
 STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
 STR_HELP='  help, --help                Print usage information'
 STR_ZEN_URL='  --zen-url                   CP4D zen url of the cluster (required if --home is used with "cp4d")'
@@ -162,9 +163,9 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--volume-dir] [--mount-dir] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                          [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -223,6 +224,7 @@ print_usage() {
         echo "${STR_PROXY_CACERT}"
         echo "${STR_KRB5_CONF}"
         echo "${STR_KRB5_CONF_DIR}"
+        echo "${STR_IMPORT_DB2Z_LICENSE}"
         echo "${STR_SELECT_PX_VERSION}"
         echo "${STR_ADDITIONAL_USERS}"
         echo "${STR_ENV_VARS}"
@@ -400,6 +402,10 @@ function start() {
             shift
             KRB5_CONF_DIR="$1"
             ;;
+        --import-db2z-license)
+            shift
+            DB2Z_LICENSE_PATH="$1"
+            ;;
         --zen-url)
             shift
             ZEN_URL="$1"
@@ -491,6 +497,10 @@ function update() {
         --krb5-conf-dir)
             shift
             KRB5_CONF_DIR="$1"
+            ;;
+        --import-db2z-license)
+            shift
+            DB2Z_LICENSE_PATH="$1"
             ;;
         -u | --user)
             shift
@@ -1707,8 +1717,10 @@ setup_docker_volumes() {
         generate_log_retention_cfg
         generate_init_volume_script
         generate_download_jdbc_jars_script
+        generate_import_license_script
         copy_proxy_cacert
         copy_krb5_conf
+        copy_DB2Z_license
     fi
 }
 
@@ -1739,6 +1751,15 @@ copy_krb5_conf() {
     fi
 }
 
+copy_DB2Z_license() {
+    if [ ! -z $DB2Z_LICENSE_PATH ]; then
+        if [ ! -f $DB2Z_LICENSE_PATH ]; then
+            echo_error_and_exit "The specified DB2Z license $DB2Z_LICENSE_PATH is not found."
+        fi
+        \cp -f $DB2Z_LICENSE_PATH ${PX_STORAGE_HOST_DIR}/db2consv_ee.lic
+    fi
+}
+
 generate_startup_script() {
     STARTUP_FILE="${PX_STORAGE_HOST_DIR}/startup.sh"
     if [ ! -f "${STARTUP_FILE}" ]; then
@@ -1762,6 +1783,12 @@ iterateSecrets() {
    # add support for using environment variable to extend LD_LIBRARY_PATH
    if [ ! -z \$ADDITIONAL_LD_LIRABRY_PATH ]; then
       export LD_LIRABRY_PATH="LD_LIRABRY_PATH:\${ADDITIONAL_LD_LIRABRY_PATH}"
+   fi
+}
+
+importDB2ZLicense() {
+   if [ -f "/px-storage/db2consv_ee.lic" ]; then
+      sh /px-storage/import_license.sh /px-storage/db2consv_ee.lic
    fi
 }
 
@@ -1798,6 +1825,7 @@ startMongoDBSQLEngine() {
    fi
 }
 iterateSecrets
+importDB2ZLicense
 startCassandraSQLENgine
 startMongoDBSQLEngine
 startContainer
@@ -2036,6 +2064,53 @@ done
 echo "Finished downloading \${count} files."
 EOL
         set_permissions "${DOWNLOAD_JARS_FILE}"
+    fi
+}
+
+generate_import_license_script() {
+    IMPORT_LICENSE_FILE="${PX_STORAGE_HOST_DIR}/import_license.sh"
+    if [ ! -f "${IMPORT_LICENSE_FILE}" ]; then
+cat <<EOL > "${IMPORT_LICENSE_FILE}"
+#!/bin/bash
+cd /home/dsuser
+cert_path=\$1
+cert_name=\${cert_path##*/}
+if [ -z "\$cert_path" ]; then
+  echo "License is not provided!"
+  echo "Usage: \$0 <LICENSE_PATH>"
+  exit 2
+fi
+
+if [ -x ./sqllib/adm/db2licm ]; then
+  echo "Importing \$cert_name certificate using db2licm..."
+  ./sqllib/adm/db2licm -a \$cert_path
+  if [ \$? -ne 0 ]; then
+    echo "Something went wrong during certificate import"
+    exit 1
+  fi
+  echo "Import completed successfully!"
+  exit 0
+fi
+
+echo "Importing \$cert_name certificate manually..."
+[ ! -d "./sqllib/.licbkup" ] && mkdir ./sqllib/.licbkup
+[ ! -d "./sqllib/license" ] && mkdir ./sqllib/license
+cp -f \$cert_path ./sqllib/.licbkup/\$cert_name
+
+VENDOR_ID=\$(grep VendorID ./sqllib/.licbkup/\$cert_name | awk -F '=' '{print \$2}')
+PRODUCT_PASSWORD=\$(grep ProductPassword ./sqllib/.licbkup/\$cert_name | awk -F '=' '{print \$2}')
+PRODUCT_ANNOTATION=\$(grep ProductAnnotation ./sqllib/.licbkup/\$cert_name | awk -F '=' '{print \$2}')
+PRODUCT_VERSION=\$(grep ProductVersion ./sqllib/.licbkup/\$cert_name | awk -F '=' '{print \$2}')
+
+echo "\$VENDOR_ID \$PRODUCT_PASSWORD \"\$PRODUCT_ANNOTATION\" \"\$PRODUCT_VERSION\"" > ./sqllib/license/nodelock
+if [ \$? -ne 0 ]; then
+  echo "Something went wrong during certificate import"
+  exit 1
+fi
+echo "Import completed successfully!"
+exit 0
+EOL
+        set_permissions "${IMPORT_LICENSE_FILE}"
     fi
 }
 
