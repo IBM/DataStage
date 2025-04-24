@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.16
+TOOL_VERSION=1.0.17
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -91,7 +91,7 @@ STR_CPUS='  --cpus                      Specify CPU allocated to the docker cont
 STR_PIDS_LIMIT='  --pids-limit                Set the PID limit of the container (defaults to -1 for unlimited pids for the container)'
 STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>).'
 STR_PROXY_CACERT='  --proxy-cacert              Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.'
-STR_KRB5_CONF='  --krb5-conf                 Specify the location of the Kerberos config file if using Kerberos Authentication. (Only supported for --home set to "cp4d")'
+STR_KRB5_CONF='  --krb5-conf                 Specify the location of the Kerberos config file if using Kerberos Authentication.'
 STR_KRB5_CONF_DIR='  --krb5-conf-dir             Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include "includedir /etc/krb5-config-files/krb5-config-dir" line)'
 STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
 STR_HELP='  help, --help                Print usage information'
@@ -217,12 +217,12 @@ print_usage() {
             if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
                 echo "${STR_CP4D_USER}"
                 echo "${STR_CP4D_APIKEY}"
-                echo "${STR_KRB5_CONF}"
-                echo "${STR_KRB5_CONF_DIR}"
             fi
         fi
         echo "${STR_PROXY}"
         echo "${STR_PROXY_CACERT}"
+        echo "${STR_KRB5_CONF}"
+        echo "${STR_KRB5_CONF_DIR}"
         echo "${STR_SELECT_PX_VERSION}"
         echo "${STR_ADDITIONAL_USERS}"
         echo "${STR_ENV_VARS}"
@@ -1026,18 +1026,6 @@ run_px_runtime_docker() {
             --env SERVICE_API_KEY=${CP4D_API_KEY}
             --env GATEWAY=${GATEWAY}
         )
-
-        if [[ ! -z $KRB5_CONF ]]; then
-            runtime_docker_opts+=(
-                --env KRB5_CONF="${KRB5_CONF}"
-                --env KRB5_CONF_FILE="${KRB5_CONF_FILE}"
-            )
-            if [[ ! -z $KRB5_CONF_DIR ]]; then
-                runtime_docker_opts+=(
-                    --env KRB5_CONF_DIR="${KRB5_CONF_DIR}"
-                )
-            fi
-        fi
     else
         runtime_docker_opts+=(
             --env IAM_URL=${IAM_URL}
@@ -1056,6 +1044,18 @@ run_px_runtime_docker() {
                 --env PROXY_CACERT="${PROXY_CACERT}"
                 --env REMOTE_PROXY_CERT_LOCATION="${PROXY_CACERT_LOCATION}"
                 --env AWS_CA_FILE="${PROXY_CACERT_LOCATION}"
+            )
+        fi
+    fi
+
+    if [[ ! -z $KRB5_CONF ]]; then
+        runtime_docker_opts+=(
+            --env KRB5_CONF="${KRB5_CONF}"
+            --env KRB5_CONF_FILE="${KRB5_CONF_FILE}"
+        )
+        if [[ ! -z $KRB5_CONF_DIR ]]; then
+            runtime_docker_opts+=(
+                --env KRB5_CONF_DIR="${KRB5_CONF_DIR}"
             )
         fi
     fi
@@ -1725,9 +1725,6 @@ copy_proxy_cacert() {
 
 copy_krb5_conf() {
     if [[ ! -z $KRB5_CONF ]]; then
-        if [[ "${DATASTAGE_HOME}" != 'cp4d' ]]; then
-          echo_error_and_exit "The option --krb5-conf is only supported for cp4d. Please set --home to 'cp4d'."
-        fi
         if [[ ! -f $KRB5_CONF ]]; then
             echo_error_and_exit "The specified Kerberos config file $KRB5_CONF is not found."
         elif [[ ! -z $KRB5_CONF_DIR ]] && [[ ! -d $KRB5_CONF_DIR ]]; then

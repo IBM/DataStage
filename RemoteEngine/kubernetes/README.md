@@ -58,7 +58,7 @@ To deploy the DataStage operator on cluster without global pull secret configure
 # ./launch.sh create-proxy-secrets --namespace <namespace> --proxy <proxy_url> [--proxy-cacert <cacert_location>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
 
 # create the krb5 configmaps if Kerberos Authentication is used
-# ./launch.sh create-krb5-configmaps --namespace <namespace> --zen-url <zen-url> --krb5-conf <krb5_conf_location> [--krb5-conf-dir <krb5_config_dir_location>]
+# ./launch.sh create-krb5-configmaps --namespace <namespace> --krb5-conf <krb5_conf_location> [--krb5-conf-dir <krb5_config_dir_location>]
 
 # create the api-key for dev or prod environment
 ./launch.sh create-apikey-secret --namespace <namespace> --apikey ${api-key} [--serviceid ${service-id}] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)]
@@ -145,7 +145,7 @@ zen_url=<zen-url>
 # Specify the absolute location of the custom CA store for the specified proxy - if it is using a self signed certificate.
 # cacert_location=<cacert-location>
 
-# Specify the location of the Kerberos config file if using Kerberos Authentication. (Only supported for cp4d).
+# Specify the location of the Kerberos config file if using Kerberos Authentication.
 # KRB5_CONF_FILE=<krb5_conf_location>
 
 # Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include 'includedir /etc/krb5-config-files/krb5-config-dir' line).
