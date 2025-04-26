@@ -1474,9 +1474,8 @@ patch_environment() {
     if [[ -z "${_project_env_patch_response_status}" || "${_project_env_patch_response_status}" != "200" ]]; then
         echo "Response: ${_project_env_patch_response}"
         echo ""
-        echo "Unable to patch environment runtime with id: ${PROJECT_ENV_ASSET_ID}. Deleting environment runtime and recreating a new one ..."
-        remove_environment
-        create_environment
+        echo "WARNING: Unable to patch environment runtime with id: ${PROJECT_ENV_ASSET_ID}. Ignoring ..."
+        echo ""
     else
         echo "Patched environment runtime with id: ${PROJECT_ENV_ASSET_ID}"
     fi
