@@ -196,6 +196,24 @@ This is NOT needed use this if you want to update the engine. This is only neede
                       --home "cp4d"
 ```
 
+### Logs
+#### Container-level logs
+   * Location: Stored under /var/lib/containers/storage/overlay/... on the host.
+   * Purpose: Captures minimal container-level output (stdout/stderr) and can be accessed using podman logs <container-name>. (this is often empty or non-critical)
+#### Primary Remote Engine logs
+   * Initial Location: Typically written to /logs directory on the container and bind-mounted to /var/lib/containers/storage/overlay/... on the host (by default).
+   * Archived Location: Older logs are rotated and archived as ZIP files under /ds-storage/service_log_archive in the container, which is bind-mounted to <volume-dir>/ds-storage/service_log_archive on the host.
+   * Purpose:
+      * trace.log – Active detailed trace log of Remote Engine runtime (job interactions, service calls).
+      * messages.log – Higher-level system logs (job polling activity, engine heartbeats, etc.).
+#### Workload Management (WLM) logs
+   * Location: Stored in /px-storage/PXRuntime/WLM/logs/ inside the container, bind-mounted to <volume-dir>/px-storage/PXRuntime/WLM/logs on the host.
+   * Purpose: Captures CPU and memory usage metrics, job scheduling events, and system resource distribution among running DataStage pods.
+#### Extracting Service Logs as Archive to Local Machine
+   ```bash
+   docker cp {container id}:/logs - > remoteenginelogs.tar
+   ```
+
 ### Troubleshooting
 
 1. Flow execution fails with incorrect host or IP Address in the log
@@ -221,7 +239,7 @@ If the script finishes succesfully, and you are able to see the engine in your p
     1. Retry the flow.
 Note that this fix will need to be re-applied whenever the current container is removed, eg. updating to a new image.
 
-2. Making sure the URLs are allowlisted
+1. Making sure the URLs are allowlisted
 For URLs mentioned in the [pre-requisites](https://github.com/IBM/DataStage/blob/main/RemoteEngine/docker/README.md#pre-requisites) section above, you can use ping from the host vm to make sure the URLs are accessible. Eg.
     ```
     $ ping api.dataplatform.cloud.ibm.com
@@ -236,3 +254,267 @@ For URLs mentioned in the [pre-requisites](https://github.com/IBM/DataStage/blob
     5 packets transmitted, 5 received, 0% packet loss, time 4007ms
     rtt min/avg/max/mdev = 6.662/6.806/6.898/0.081 ms
     ```
+
+1. If the API Key Changes in DataStage aaS with Anywhere
+If your API Key changes in DataStage aaS with Anywhere, you have to recreate the remote engine with the new API Key. In order to keep your remote engine with the same engine ID:
+    1. Stop the remote engine container
+    1. Remove/delete the remote engine container
+    1. Run `dsengine.sh start` again with the new API key
+
+1. Insufficient storage for the Remote Engine container image
+   ```bash
+   Error: writing blob: adding layer with blob "sha256:a8698704d0df7dd5be511fe1d9ed25f4801aa235b313cce295605a068bbf26c0"/""/"sha256:ac8a65b88f9323576d8c7978f45a3f1ea070f0d09a6428447fc8fd87eb5af13e": unpacking failed (error: exit status 1; output: open /usr/share/zoneinfo/zone.tab: no space left on device)
+   docker run return code: 125.
+   ```
+   Docker/Podman container storage layers, metadata, and volumes are stored in `/var` by default. It is recommended to have at least **50 GB** of free space in `/var` for installing the Remote Engine container image.
+   
+   Check the available storage:
+   ```bash
+   df -h /var
+   ```
+   Example output:
+   ```bash
+   Filesystem      Size  Used Avail Use% Mounted on
+   /dev/xvda4       8.8G 42.4G 52.8G 81% /
+   ```
+   #### Option 1: Clean up container storage
+   To help cleanup used disk space within `/var`, run:
+   ```bash
+   podman system prune
+   ```
+   > [!IMPORTANT] This removes all unused images, including manually pulled ones.
+
+   > [!TIP] Caution your client on the purpose of this command before executing.
+   #### Option 2: Modify storage.conf
+   Storage.conf is the configuration file that controls how container runtimes like Podman handle storage — particularly how and where they store images, layers, containers, and temporary files.
+   ###### Part 1 - Mounting additional volumes
+   If the customer has an additional volume that has been mounted already, then skip these steps.
+   1. Check for the volume that needs to be mounted:
+      ```bash
+      lsblk
+      ```
+      Example output:
+      ```
+      NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+      xvda    202:0    0   10G  0 disk
+      ├─xvda1 202:1    0    1M  0 part
+      ├─xvda2 202:2    0  200M  0 part /boot/efi
+      ├─xvda3 202:3    0  500M  0 part /boot
+      └─xvda4 202:4    0  9.3G  0 part /
+      xvdb    202:16   0   20G  0 disk 
+      ```
+      In this example, xvdb has 20GB needs to be mounted.
+   1. Create a XFS file system to enable the mount:
+      ```bash
+      sudo mkfs.xfs /dev/xvdb
+      ```
+   1. Make the new directory for container storage:
+      ```bash
+      sudo mkdir -p /mnt/data
+      ```
+   1. Mount the volume to the newly created root directory:
+      ```bash
+      sudo mount /dev/xvdb /mnt/data
+      ```
+   1. Verify the changes:
+      ```bash
+      df -h
+      ```
+      Expected Output:
+      ```
+      Filesystem      Size  Used Avail Use% Mounted on
+      ...
+      /dev/xvdb        20G  175M   20G   1% /mnt/data
+      ```
+   1. Persist the mount settings after reboot by adding it to the `/etc/fstab` file:
+      ```
+      /dev/xvdb /mnt/data xfs defaults 0 0
+      ```
+   ###### Part 2 - Creating the new directories for container storage
+   Create the directory which will be used for container storage:
+
+   If running Podman as rootful:
+   ```bash
+   sudo mkdir -p /mnt/data/containers/storage_root
+   ```
+   If running Podman as rootless:
+   ```bash
+   sudo mkdir -p /mnt/data/containers/storage_rootless
+   ```
+   > [!NOTE] If you're unsure whether the client is running rootful or rootless Podman, you can create both directories, just in case.
+
+   When changing the location for rootful user's container storage on an SELINUX-enabled system:
+   1. Verify if the customer has SELinux enabled:
+      ```bash
+      getenforce
+      ```
+      Output will be:
+      - **Enforcing** → SELinux is active and enforcing policies
+      - **Permissive** → SELinux logs but doesn't enforce
+      - **Disabled** → SELinux is off
+   1. If Enforcing, run these commands to translate the SELinux policies:
+      ```bash
+      sudo semanage fcontext -a -e /var/lib/containers/storage /mnt/data/containers/storage_root
+      sudo restorecon -R -v /mnt/data/containers/storage_root
+      ```
+   1. For rootless containers, ensure ownership is granted to the rootless user:
+      ```bash
+      sudo chown -R amin:amin /mnt/data/containers/storage_rootless
+      ```
+    ###### Part 3 - Modifying storage.conf
+   1. Edit the storage.conf file:
+      ```bash
+      sudo nano /etc/containers/storage.conf
+      ```
+      1. For rootful users, change the graphroot setting:
+      ```
+      graphroot = "/mnt/data/containers/storage_root"
+      ```
+   1. For rootless users, uncomment and modify the rootless_storage_path:
+      
+      Before:
+      ```
+      #rootless_storage_path = "$HOME/.local/share/containers/storage"
+      ```
+      After:
+      ```
+      rootless_storage_path = "/mnt/data/containers/storage_rootless"
+      ```
+   1. Verify the changes:
+      ```bash
+      podman info
+      ```
+      Expected output:
+      ```
+      store:
+        ....
+        graphRoot: /mnt/data/containers/storage_rootless
+        ....
+        runRoot: /run/user/1000/containers
+        transientStore: false
+        volumePath: /mnt/data/containers/storage_rootless/volumes
+      ```
+   ##### Option 3: Symlink container storage to larger drive
+   1. If necessary, add additional storage to the machine. Use the lsblk command to find the drive:
+      ```bash
+      lsblk
+      ```
+   1. Create a XFS file system:
+      ```bash
+      sudo mkfs.xfs /dev/vdc
+      ```
+   1. Make a directory for the symbolic link:
+      ```bash
+      sudo mkdir -p /mnt/data
+      ```
+   1. Mount the drive:
+      ```bash
+      sudo mount /dev/vdc /mnt/data
+      df -h
+      ```
+   1. Change the owner of your new directory:
+      ```bash
+      sudo chown itzuser:itzuser /mnt/data
+      ```
+   1. Add to fstab for persistence:
+      ```bash
+      echo "/dev/vdc /mnt/data xfs defaults 0 0" | sudo tee -a /etc/fstab
+      ```
+   1. Make a directory that we will symlink to:
+      ```bash
+      mkdir -p /mnt/data/containers
+      ```
+   1. Copy all data from existing containers directory:
+      ```bash
+      rsync -avP /var/lib/containers/ /mnt/data/containers/
+      ```
+   1. Backup the original directory:
+      ```bash
+      mv /var/lib/containers /var/lib/containers.old
+      ```
+   1. Create the symbolic link:
+      ```bash
+      sudo ln -s /mnt/data/containers /var/lib/containers
+      ```
+   1. Verify that it worked:
+      ```bash
+      cd /var/lib
+      ls -ltr
+      ```
+
+1. Insufficient subgids/subuids for user namespace
+   ```bash
+   Error: writing blob: adding layer with blob "sha256:a9089747d5ad599b773f9bfca2a647fe03b75db371c637b5b650c96283e9a36e": processing tar file(potentially insufficient UIDs or GIDs available in user namespace (requested 1000321001:1000321001 for /home/dsuser): Check /etc/subuid and /etc/subgid if configured locally and run "podman system migrate": lchown /home/dsuser: invalid argument): exit status 1
+   ```
+   Starting the Remote Engine with rootless Podman requires the user running it to have a specific range of UIDs (1000321001) listed in the files `/etc/subuid` and `/etc/subgid`.
+   1. Install `shadow-utils`:
+      ```bash
+      sudo yum -y install shadow-utils
+      ```
+   1. Edit `/etc/subuid`:
+      ```bash
+      sudo vi /etc/subuid
+      ```
+      Add:
+      ```text
+      etlpoc:100000:1001321001
+      ```
+   1. Verify the change:
+      ```bash
+      cat /etc/subuid
+      ```
+   1. Edit `/etc/subgid`:
+      ```bash
+      sudo vi /etc/subgid
+      ```
+      Add:
+      ```text
+      etlpoc:100000:1001321001
+      ```
+   1. Verify:
+      ```bash
+      cat /etc/subgid
+      ```
+   1. Apply changes:
+      ```bash
+      podman system migrate
+      ```
+   > [!TIP] Ensure the UID/GID ranges are properly configured and match across both files.
+
+1. Insufficient 'cpu' and 'cpuset' permissions
+   ```bash
+   Error: OCI runtime error: crun: the requested cgroup controller `cpu` is not available
+   ```
+   On some systemd-based systems, non-root users do not have resource limit delegation permissions. This causes setting resource limits in rootless Podman to fail (for example, configuring the Remote Engine to have 8 cores).
+   1. Log into the affected user.
+   1. Verify if resource limit delegation is enabled:
+      ```bash
+      cat "/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/cgroup.controllers"
+      ```
+      Example Output:
+      ```
+      memory pids
+      ```
+   1. If cpu and cpuset are not listed, we need to add them to the .conf file:
+      ```bash
+      sudo mkdir -p /etc/systemd/system/user@.service.d/
+      sudo nano /etc/systemd/system/user@.service.d/delegate.conf
+      ```
+   1. Modify the file:
+      ```ini
+      [Service]
+      Delegate=memory pids cpu cpuset
+      ```
+   1. Persist the changes:
+      ```bash
+      sudo systemctl daemon-reexec
+      sudo systemctl daemon-reload
+      ```
+   1. Log out of the session and log back in to test the changes:
+      ```bash
+      cat "/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/cgroup.controllers"
+      ```
+      Expected Output:
+      ```
+      cpuset cpu memory pids
+      ```

@@ -209,3 +209,27 @@ To increase the ephemeral storage limit to the target size, eg. 20GB, use the fo
 ```
 oc patch pxre <cr-name> --patch '{"spec":{"ephemeralStorageLimit": "20Gi"}}' --type=merge
 ```
+
+## Troubleshooting
+1. If the API Key Changes in DataStage aaS with Anywhere
+    1. Rerun the launch.sh script again with the updated input file with the new API Key
+    1. Make sure to restart the px-runtime pod to mount the updated apikey secret
+
+1. If the px-runtime or px-compute pods are stuck waiting for certs
+   ```
+   $ kubectl -n amintest logs testamin01-ibm-datastage-px-compute-0
+   rm: cannot remove '/opt/ibm/PXService/Server/DSEngine/isjdbc.config.biginsights': No such file or directory
+   Use CPD_JAVA_CACERTS...
+   Custom WDP certs folder found.  Will import certs to jre /opt/java...
+   Additional cert folder  not found.
+   Waiting for certs...
+   Waiting for certs...
+   Waiting for certs...
+   Waiting for certs...
+   ```
+   You can work around the issue by doing the following:
+   1. Log into the shell for either px-runtime or px-compute
+   1. Run the following command:
+      ```bash
+      touch /opt/ibm/PXService/Server/PXEngine/etc/certs/pxesslcert.p12
+      ```
