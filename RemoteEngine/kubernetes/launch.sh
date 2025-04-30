@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.4
+TOOL_VERSION=1.0.5
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -549,6 +549,7 @@ EOF
 }
 
 create_pull_secret() {
+  $kubernetesCLI -n ${namespace} delete secret $DS_REGISTRY_SECRET --ignore-not-found=true ${dryRun}
   if [ -z $password ]; then
     display_missing_arg "password"
   fi
@@ -558,31 +559,30 @@ create_pull_secret() {
   if [[ ! -z ${CUSTOM_DOCKER_REGISTRY} ]]; then
     DOCKER_REGISTRY="${CUSTOM_DOCKER_REGISTRY}"
   fi
-  $kubernetesCLI -n ${namespace} delete secret $DS_REGISTRY_SECRET --ignore-not-found=true ${dryRun}
   $kubernetesCLI -n ${namespace} create secret docker-registry $DS_REGISTRY_SECRET --docker-server=${DOCKER_REGISTRY} --docker-username=${username} --docker-password=${password} --docker-email=cpd@us.ibm.com ${dryRun}
 }
 
 create_apikey_secret() {
-  if [ -z $api_key ]; then
-    display_missing_arg "apikey"
-  fi
   # name is used for cr name in inputFile
   if [[ ! -z $name ]] && [[ -z $inputFile ]]; then
     DS_API_KEY_SECRET="${name}"
   fi
   $kubernetesCLI -n ${namespace} delete secret $DS_API_KEY_SECRET --ignore-not-found=true ${dryRun}
+  if [ -z $api_key ]; then
+    display_missing_arg "apikey"
+  fi
   $kubernetesCLI -n ${namespace} create secret generic $DS_API_KEY_SECRET --from-literal=api-key=${api_key} --from-literal=service-id=${service_id}
 }
 
 create_proxy_secrets() {
+  $kubernetesCLI -n ${namespace} delete secret $DS_PROXY_URL --ignore-not-found=true ${dryRun}
+  $kubernetesCLI -n ${namespace} delete secret connection-ca-certs --ignore-not-found=true ${dryRun}
   if [ ! -z $proxy_url ]; then
     CURL_CMD="curl --proxy ${proxy_url}"
-    $kubernetesCLI -n ${namespace} delete secret $DS_PROXY_URL --ignore-not-found=true ${dryRun}
     $kubernetesCLI -n ${namespace} create secret generic $DS_PROXY_URL --from-literal=proxy_url=${proxy_url}
     if [ ! -z $cacert_location ]; then
       if [ -f $cacert_location ]; then
         CURL_CMD="${CURL_CMD} --proxy-insecure"
-        $kubernetesCLI -n ${namespace} delete secret connection-ca-certs --ignore-not-found=true ${dryRun}
         $kubernetesCLI -n ${namespace} create secret generic connection-ca-certs --from-file=${cacert_location}
       else
         echo_error_and_exit "The specified proxy certificate $cacert_location is not found."
@@ -594,13 +594,13 @@ create_proxy_secrets() {
 }
 
 create_krb5_configmaps() {
+  $kubernetesCLI -n ${namespace} delete configmap krb5-config-files --ignore-not-found=true ${dryRun}
+  $kubernetesCLI -n ${namespace} delete configmap krb5-config-dir --ignore-not-found=true ${dryRun}
   if [[ ! -z $KRB5_CONF_FILE ]]; then
     if [[ -f $KRB5_CONF_FILE ]]; then
-      $kubernetesCLI -n ${namespace} delete configmap krb5-config-files --ignore-not-found=true ${dryRun}
       $kubernetesCLI -n ${namespace} create configmap krb5-config-files --from-file=${KRB5_CONF_FILE}
       if [[ ! -z $KRB5_CONF_DIR ]]; then
         if [[ -d $KRB5_CONF_DIR ]]; then
-          $kubernetesCLI -n ${namespace} delete configmap krb5-config-dir --ignore-not-found=true ${dryRun}
           $kubernetesCLI -n ${namespace} create configmap krb5-config-dir --from-file=${KRB5_CONF_DIR}
         else
           echo_error_and_exit "The specified Kerberos config directory $KRB5_CONF_DIR is not found."
@@ -615,9 +615,9 @@ create_krb5_configmaps() {
 }
 
 create_db2z_license_secret() {
+  $kubernetesCLI -n ${namespace} delete secret datastage-db2z-license --ignore-not-found=true ${dryRun}
   if [ ! -z $DB2Z_LICENSE ]; then
     if [ -f $DB2Z_LICENSE ]; then
-      $kubernetesCLI -n ${namespace} delete secret datastage-db2z-license --ignore-not-found=true ${dryRun}
       $kubernetesCLI -n ${namespace} create secret generic datastage-db2z-license --from-file=db2consv_ee.lic=${DB2Z_LICENSE}
       $kubernetesCLI -n ${namespace} delete pod -l app.kubernetes.io/component=px-runtime
     else
