@@ -217,49 +217,57 @@ This is NOT needed use this if you want to update the engine. This is only neede
 ### Troubleshooting
 
 1. Flow execution fails with incorrect host or IP Address in the log
-If the script finishes succesfully, and you are able to see the engine in your project but the run still fails, you can check if container hosts file contains the host IP address. If so, you can remove the host IP address mapping so that the container uses 127.0.0.1 to resolve the hostname. This issue has been seen primarily when using podman. You can edit this file using the below steps
-    1. Find the running container name or id using
-       ```bash
-       docker ps
-       # OR
-       podman ps
-       ```
-    1. Exec into the container:
-       ```bash
-       docker exec -it <container-name-or-id> bash
-       # OR
-       podman exec -it <container-name-or-id> bash
-       ```
-    1. Edit the hosts file inside the container
-       ```bash
-       nano /etc/hosts
-       ```
-    1. Remove the line that contains the IP address of the host and the host name
-    1. Press `ctrl + x` to save and press `y` to exit from nano.
-    1. Retry the flow.
-Note that this fix will need to be re-applied whenever the current container is removed, eg. updating to a new image.
+
+   If the script finishes succesfully, and you are able to see the engine in your project but the run still fails, you can check if container hosts file contains the host IP address. If so, you can remove the host IP address mapping so that the container uses 127.0.0.1 to resolve the hostname. This issue has been seen primarily when using podman. You can edit this file using the below steps
+      1. Find the running container name or id using
+         ```bash
+         docker ps
+         # OR
+         podman ps
+         ```
+      1. Exec into the container:
+         ```bash
+         docker exec -it <container-name-or-id> bash
+         # OR
+         podman exec -it <container-name-or-id> bash
+         ```
+      1. Edit the hosts file inside the container
+         ```bash
+         nano /etc/hosts
+         ```
+      1. Remove the line that contains the IP address of the host and the host name
+      1. Press `ctrl + x` to save and press `y` to exit from nano.
+      1. Retry the flow.
+
+   Note that this fix will need to be re-applied whenever the current container is removed, eg. updating to a new image.
 
 1. Making sure the URLs are allowlisted
-For URLs mentioned in the [pre-requisites](https://github.com/IBM/DataStage/blob/main/RemoteEngine/docker/README.md#pre-requisites) section above, you can use ping from the host vm to make sure the URLs are accessible. Eg.
-    ```
-    $ ping api.dataplatform.cloud.ibm.com
-    PING api.dataplatform.cloud.ibm.com (172.66.129.176) 56(84) bytes of data.
-    64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=1 ttl=53 time=6.66 ms
-    64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=2 ttl=53 time=6.90 ms
-    64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=3 ttl=53 time=6.82 ms
-    64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=4 ttl=53 time=6.79 ms
-    64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=5 ttl=53 time=6.87 ms
-    ^C
-    --- api.dataplatform.cloud.ibm.com ping statistics ---
-    5 packets transmitted, 5 received, 0% packet loss, time 4007ms
-    rtt min/avg/max/mdev = 6.662/6.806/6.898/0.081 ms
-    ```
 
-1. If the API Key Changes in DataStage aaS with Anywhere
-If your API Key changes in DataStage aaS with Anywhere, you have to recreate the remote engine with the new API Key. In order to keep your remote engine with the same engine ID:
-    1. Stop the remote engine container
-    1. Remove/delete the remote engine container
-    1. Run `dsengine.sh start` again with the new API key
+   For URLs mentioned in the [pre-requisites](https://github.com/IBM/DataStage/blob/main/RemoteEngine/docker/README.md#pre-requisites) section above, you can use ping from the host vm to make sure the URLs are accessible. Eg.
+      ```
+      $ ping api.dataplatform.cloud.ibm.com
+      PING api.dataplatform.cloud.ibm.com (172.66.129.176) 56(84) bytes of data.
+      64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=1 ttl=53 time=6.66 ms
+      64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=2 ttl=53 time=6.90 ms
+      64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=3 ttl=53 time=6.82 ms
+      64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=4 ttl=53 time=6.79 ms
+      64 bytes from 172.66.129.176 (172.66.129.176): icmp_seq=5 ttl=53 time=6.87 ms
+      ^C
+      --- api.dataplatform.cloud.ibm.com ping statistics ---
+      5 packets transmitted, 5 received, 0% packet loss, time 4007ms
+      rtt min/avg/max/mdev = 6.662/6.806/6.898/0.081 ms
+      ```
+
+1. If the API Key Changes in DataStage aaS with Anywhere:
+
+   If your API Key changes in DataStage aaS with Anywhere, you have to recreate the remote engine with the new API Key. In order to keep your remote engine with the same engine ID:
+      1. Stop the remote engine container
+      1. Remove/delete the remote engine container
+      1. Run `dsengine.sh start` again with the new API key
+
+1. If you are getting "password missing" errors when running flows after stopping, removing, then restarting remote engine containers:
+
+   We strongly encourage you keep the same remote engine and just run `./dsengine.sh update` whenever you need to update the remote engine. Stopping a remote engine, removing/deleting it, and then running `./dsengine.sh start` again with the same remote engine name (-n), but with a new encryption key (-e) and a new initialization vector (-i), you are essentially creating a new remote engine and may cause unexpected behaviors with old remote engine environments with the same name. If for some reason you absolutely need to stop, remove, and start a container with the same name, please reuse the same encryption key (-e) and initialization vector (-i) as the old remote engine to prevent "password missing" errors when running flows.
 
 1. Insufficient storage for the Remote Engine container image
    ```bash
