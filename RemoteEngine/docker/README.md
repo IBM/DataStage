@@ -227,9 +227,9 @@ This is NOT needed use this if you want to update the engine. This is only neede
          ```
       1. Exec into the container:
          ```bash
-         docker exec -it <container-name-or-id> bash
+         docker exec --user root -it <container-name-or-id> bash
          # OR
-         podman exec -it <container-name-or-id> bash
+         podman exec --user root -it <container-name-or-id> bash
          ```
       1. Edit the hosts file inside the container
          ```bash
@@ -465,7 +465,7 @@ This is NOT needed use this if you want to update the engine. This is only neede
       ```
       Add:
       ```text
-      etlpoc:100000:1001321001
+      <username>:100000:1001321001
       ```
    1. Verify the change:
       ```bash
@@ -477,7 +477,7 @@ This is NOT needed use this if you want to update the engine. This is only neede
       ```
       Add:
       ```text
-      etlpoc:100000:1001321001
+      <username>:100000:1001321001
       ```
    1. Verify:
       ```bash
@@ -487,7 +487,7 @@ This is NOT needed use this if you want to update the engine. This is only neede
       ```bash
       podman system migrate
       ```
-   > [!TIP] Ensure the UID/GID ranges are properly configured and match across both files.
+   > [!TIP] Ensure the UID/GID ranges are properly configured and match across both files. Replace <username> with the name of the user.
 
 1. Insufficient 'cpu' and 'cpuset' permissions
    ```bash
