@@ -4,6 +4,9 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.1.3](#513)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.1.3.md)
+
 [5.1.2](#512)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.1.2.md)
 
@@ -66,6 +69,30 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 5.1.3
+
+### New commands
+
+The following commands are added:
+
+- `list-ds-runs`  provides a report of DataStage job runs and pipeline runs.
+- `reset-pipeline-cache` allows to reset pipeline optimizer cache.
+- `describe-seq-file` describes the metadata information for a sequence file.
+- `view-data-file` allows to browse data from a sequential file or a CFF file.
+
+### Command changes
+
+The following commands have changed:
+
+- `import` command now takes a new flag `ok-to-replace` for user to acknowledge that it is ok to replace asset that already exist.
+- `run`, `run-pipeline(optimizer)` commands changed to interpret `warn-limit` value of 0 as no limit.
+- `compile-pipeline` takes new flag `enable-cache` to enable caching on optimizer pipelines.
+- `waitforjob` command has been enhanced to support pipelines.
+
+### Fixes
+
+- `run-pipeline` command has been reworked for a better performance for optimized runs.
 
 ## 5.1.2
 
