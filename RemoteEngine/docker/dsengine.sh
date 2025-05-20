@@ -2180,14 +2180,14 @@ if [[ ${ACTION} == "start" ]]; then
     print_header "Checking docker images ..."
     if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
-    elif [[ -v USE_DIGEST ]]; then
+    elif [[ -n $USE_DIGEST ]]; then
         PX_VERSION="${USE_DIGEST}"
-    elif [[ -v USE_IMAGE_TAG ]]; then
+    elif [[ -n $USE_IMAGE_TAG ]]; then
         PX_VERSION="${USE_IMAGE_TAG}"
     else
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             retrieve_latest_px_version_from_runtime
-        elif [[ -v CUSTOM_DOCKER_REGISTRY ]]; then
+        elif [[ -n $CUSTOM_DOCKER_REGISTRY ]]; then
             echo_error_and_exit "Must use --digest or --image-tag to set the digest for ds-px-runtime to use with custom registry for IBM Cloud."
         else
             retrieve_latest_px_version
@@ -2465,14 +2465,14 @@ elif [[ ${ACTION} == "update" ]]; then
 
     if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
-    elif [[ -v USE_DIGEST ]]; then
+    elif [[ -n $USE_DIGEST ]]; then
         PX_VERSION="${USE_DIGEST}"
-    elif [[ -v USE_IMAGE_TAG ]]; then
+    elif [[ -n $USE_IMAGE_TAG ]]; then
         PX_VERSION="${USE_IMAGE_TAG}"
     else
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             retrieve_latest_px_version_from_runtime
-        elif [[ -v CUSTOM_DOCKER_REGISTRY ]]; then
+        elif [[ -n $CUSTOM_DOCKER_REGISTRY ]]; then
             echo_error_and_exit "Must use --digest or --image-tag to set the digest for ds-px-runtime to use with custom registry for IBM Cloud."
         else
             retrieve_latest_px_version
