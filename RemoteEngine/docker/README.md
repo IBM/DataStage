@@ -375,19 +375,19 @@ This is NOT needed use this if you want to update the engine. This is only neede
       sudo nano /etc/containers/storage.conf
       ```
       1. For rootful users, change the graphroot setting:
-      ```
-      graphroot = "/mnt/data/containers/storage_root"
-      ```
-   1. For rootless users, uncomment and modify the rootless_storage_path:
+         ```
+         graphroot = "/mnt/data/containers/storage_root"
+         ```
+      1. For rootless users, uncomment and modify the rootless_storage_path:
       
-      Before:
-      ```
-      #rootless_storage_path = "$HOME/.local/share/containers/storage"
-      ```
-      After:
-      ```
-      rootless_storage_path = "/mnt/data/containers/storage_rootless"
-      ```
+         Before:
+         ```
+         #rootless_storage_path = "$HOME/.local/share/containers/storage"
+         ```
+         After:
+         ```
+         rootless_storage_path = "/mnt/data/containers/storage_rootless"
+         ```
    1. Verify the changes:
       ```bash
       podman info

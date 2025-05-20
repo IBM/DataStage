@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.19
+TOOL_VERSION=1.0.20
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -62,9 +62,9 @@ FORCE_RENEW='false'
 PROXY_CACERT_LOCATION="/px-storage/proxy.pem"
 KRB5_CONF_FILE="/etc/krb5-config-files/krb5.conf"
 
-supported_versions="5.1.0 5.1.1 5.1.2 5.1.3"
-asset_versions="510 511 512 513"
-px_runtime_digests="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a sha256:eda5ec48b2818d44b37b506297f2c5ce316f3ffa9b28202ea5746702f1132701 sha256:2d320dee224cc4818a84493723f2262d259891bef89dedef09e1f1e6ae5686cb"
+supported_versions="5.1.0 5.1.1 5.1.2 5.1.3 5.2.0"
+asset_versions="510 511 512 513 520"
+px_runtime_digests="sha256:73180ec11026587bd4c04b3b7991834724085dd3a7a235ca93445e1c055b20ea sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a sha256:eda5ec48b2818d44b37b506297f2c5ce316f3ffa9b28202ea5746702f1132701 sha256:2d320dee224cc4818a84493723f2262d259891bef89dedef09e1f1e6ae5686cb sha256:c7b0693a855c4b0d185ad718e528ca2134b8c769b433f0be864642e4c98a8536"
 
 bold=$(tput bold)
 normal=$(tput sgr0)
@@ -2180,14 +2180,14 @@ if [[ ${ACTION} == "start" ]]; then
     print_header "Checking docker images ..."
     if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
-    elif [[ -v USE_DIGEST ]]; then
+    elif [[ -n $USE_DIGEST ]]; then
         PX_VERSION="${USE_DIGEST}"
-    elif [[ -v USE_IMAGE_TAG ]]; then
+    elif [[ -n $USE_IMAGE_TAG ]]; then
         PX_VERSION="${USE_IMAGE_TAG}"
     else
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             retrieve_latest_px_version_from_runtime
-        elif [[ -v CUSTOM_DOCKER_REGISTRY ]]; then
+        elif [[ -n $CUSTOM_DOCKER_REGISTRY ]]; then
             echo_error_and_exit "Must use --digest or --image-tag to set the digest for ds-px-runtime to use with custom registry for IBM Cloud."
         else
             retrieve_latest_px_version
@@ -2465,14 +2465,14 @@ elif [[ ${ACTION} == "update" ]]; then
 
     if [[ "${SELECT_PX_VERSION}" == 'true' ]]; then
         get_all_px_versions_from_runtime
-    elif [[ -v USE_DIGEST ]]; then
+    elif [[ -n $USE_DIGEST ]]; then
         PX_VERSION="${USE_DIGEST}"
-    elif [[ -v USE_IMAGE_TAG ]]; then
+    elif [[ -n $USE_IMAGE_TAG ]]; then
         PX_VERSION="${USE_IMAGE_TAG}"
     else
         if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
             retrieve_latest_px_version_from_runtime
-        elif [[ -v CUSTOM_DOCKER_REGISTRY ]]; then
+        elif [[ -n $CUSTOM_DOCKER_REGISTRY ]]; then
             echo_error_and_exit "Must use --digest or --image-tag to set the digest for ds-px-runtime to use with custom registry for IBM Cloud."
         else
             retrieve_latest_px_version
