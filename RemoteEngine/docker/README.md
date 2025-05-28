@@ -213,6 +213,8 @@ This is NOT needed use this if you want to update the engine. This is only neede
 #### Extracting Service Logs as Archive to Local Machine
    ```bash
    docker cp {container id}:/logs - > remoteenginelogs.tar
+   # OR
+   podman cp {container id}:/logs - > remoteenginelogs.tar
    ```
 
 ### Troubleshooting
@@ -289,6 +291,8 @@ This is NOT needed use this if you want to update the engine. This is only neede
    #### Option 1: Clean up container storage
    To help cleanup used disk space within `/var`, run:
    ```bash
+   docker system prune
+   # OR
    podman system prune
    ```
    > [!IMPORTANT] This removes all unused images, including manually pulled ones.
