@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.21
+TOOL_VERSION=1.0.22
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -79,6 +79,7 @@ STR_PROJECT_UID='  -d, --project-id            Comma separated list of DataPlatf
 STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, cp4d]'
 STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
+STR_RELABEL_SELINUX_MOUNTS='  --relabel-selinux-mounts    [true]. Appends the :z option to SELinux volume bind mounts.'
 STR_HOST_NETWORK="  --host-network              Set this to the port number the docker remote engine should use on the host VM to connect with the network. Enabling this will set the docker network to host."
 STR_ADD_HOST="  --add-host                  Add a <host>:<ip> entry to the /etc/hosts file of the container. This flag can be specified multiple times."
 STR_SELECT_PX_VERSION='  --select-version            [true | false]. Select the remote engine version to use from a list of given choices (default is false).'
@@ -165,7 +166,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--volume-dir] [--mount-dir] [--host-network] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--volume-dir] [--mount-dir] [--relabel-selinux-mounts] [--host-network] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
@@ -210,6 +211,7 @@ print_usage() {
             echo "${STR_PIDS_LIMIT}"
             echo "${STR_VOLUMES}"
             echo "${STR_MOUNT_DIR}"
+            echo "${STR_RELABEL_SELINUX_MOUNTS}"
             echo "${STR_HOST_NETWORK}"
             echo "${STR_ADD_HOST}"
             echo "${STR_SECURITY_OPT}"
@@ -287,6 +289,14 @@ function handle_skip_docker_login() {
     fi
 }
 
+function handle_relabel_selinux_mounts() {
+    if [[ "${1}" == 'true' ]]; then
+        RELABEL_SELINUX_MOUNTS="${1}"
+    else
+        echo_error_and_exit 'Incorrect option specified for flag "--relabel-selinux-mounts". Acceptable values are: [true]'
+    fi
+}
+
 function start() {
     ACTION='start'
     if [[ "${#}" == 0 ]]; then
@@ -348,6 +358,10 @@ function start() {
         --mount-dir)
             shift
             MOUNT_DIRS+=("$1")
+            ;;
+        --relabel-selinux-mounts)
+            shift
+            handle_relabel_selinux_mounts "${1}"
             ;;
         --host-network)
             shift
@@ -1084,6 +1098,13 @@ run_px_runtime_docker() {
         fi
     fi
 
+    if [[ "${RELABEL_SELINUX_MOUNTS}" == 'true' ]]; then
+        echo "Using :z option to modify the SELinux label of the bind mounts"
+        runtime_docker_opts+=(
+            --env RELABEL_SELINUX_MOUNTS="${RELABEL_SELINUX_MOUNTS}"
+        )
+    fi
+
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
         for mount in "${MOUNT_DIRS[@]}"; do
             if [[ -n "$mount" && -v mount && ! -z $mount ]]; then
@@ -1092,7 +1113,7 @@ run_px_runtime_docker() {
                     SCRATCH_DIR_OVERRIDE='true'
                 fi
                 runtime_docker_opts+=(
-                    -v "${mount}"
+                    -v "${mount}""${RELABEL_SELINUX_MOUNTS:+:z}"
                 )
             fi
         done
@@ -1102,7 +1123,7 @@ run_px_runtime_docker() {
         create_dir_if_not_exist "${SCRATCH_DIR}"
         set_permissions "${DOCKER_VOLUMES_DIR}"
         runtime_docker_opts+=(
-            -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch
+            -v "${SCRATCH_DIR}":/opt/ibm/PXService/Server/scratch"${RELABEL_SELINUX_MOUNTS:+:z}"
         )
     fi
 
@@ -1122,11 +1143,11 @@ run_px_runtime_docker() {
             --env WLM_CONTINUE_ON_COMMS_ERROR=0
             --env WLM_CONTINUE_ON_QUEUE_ERROR=0
             --env WLM_QUEUE_WAIT_TIMEOUT=0
-            -v "${DS_STORAGE_HOST_DIR}":/ds-storage
-            -v "${PX_STORAGE_HOST_DIR}":/px-storage
-            -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2
-            -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files
-            -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir
+            -v "${DS_STORAGE_HOST_DIR}":/ds-storage"${RELABEL_SELINUX_MOUNTS:+:z}"
+            -v "${PX_STORAGE_HOST_DIR}":/px-storage"${RELABEL_SELINUX_MOUNTS:+:z}"
+            -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2"${RELABEL_SELINUX_MOUNTS:+:z}"
+            -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files"${RELABEL_SELINUX_MOUNTS:+:z}"
+            -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir"${RELABEL_SELINUX_MOUNTS:+:z}"
             --env DS_STORAGE_PATH=/ds-storage:/px-storage
             --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
             --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
@@ -1252,11 +1273,11 @@ run_px_compute() {
             --env WLM_CONTINUE_ON_COMMS_ERROR=0
             --env WLM_CONTINUE_ON_QUEUE_ERROR=0
             --env WLM_QUEUE_WAIT_TIMEOUT=0
-            -v "${DS_STORAGE_HOST_DIR}":/ds-storage
-            -v "${PX_STORAGE_HOST_DIR}":/px-storage
-            -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2
-            -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files
-            -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir
+            -v "${DS_STORAGE_HOST_DIR}":/ds-storage"${RELABEL_SELINUX_MOUNTS:+:z}"
+            -v "${PX_STORAGE_HOST_DIR}":/px-storage"${RELABEL_SELINUX_MOUNTS:+:z}"
+            -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2"${RELABEL_SELINUX_MOUNTS:+:z}"
+            -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files"${RELABEL_SELINUX_MOUNTS:+:z}"
+            -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir"${RELABEL_SELINUX_MOUNTS:+:z}"
         )
     fi
     $DOCKER_CMD run "${compute_docker_opts[@]}"  $PXCOMPUTE_DOCKER_IMAGE
@@ -2335,6 +2356,7 @@ elif [[ ${ACTION} == "update" ]]; then
     ADD_HOSTS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].HostConfig.ExtraHosts | .[]')
     ADD_HOSTS=($ADD_HOSTS_STR)
     IFS=$SAVEIFS
+    RELABEL_SELINUX_MOUNTS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^RELABEL_SELINUX_MOUNTS= | cut -d'=' -f2-)
     if [[ ! -v PROXY_URL ]]; then
         PROXY_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^PROXY_URL= | cut -d'=' -f2-)
         if [[ ! -z $PROXY_URL ]] && [[ ! "${CURL_CMD}" =~ '\s--proxy\s' ]]; then
@@ -2453,6 +2475,7 @@ elif [[ ${ACTION} == "update" ]]; then
     if [[ -v ADD_HOSTS && ! -z $ADD_HOSTS ]]; then
         echo "ADD_HOSTS=${ADD_HOSTS[@]}"
     fi
+    echo "RELABEL_SELINUX_MOUNTS = ${RELABEL_SELINUX_MOUNTS}"
 
     echo ""
     stop_px_runtime_docker
