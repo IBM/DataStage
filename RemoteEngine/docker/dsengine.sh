@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.22
+TOOL_VERSION=1.0.23
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -1113,7 +1113,7 @@ run_px_runtime_docker() {
                     SCRATCH_DIR_OVERRIDE='true'
                 fi
                 runtime_docker_opts+=(
-                    -v "${mount}""${RELABEL_SELINUX_MOUNTS:+:z}"
+                    -v "${mount}"
                 )
             fi
         done
