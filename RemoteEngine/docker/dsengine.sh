@@ -60,6 +60,7 @@ COMPUTE_COUNT=0
 REMOTE_ENGINE_PORT='9443'
 CURL_CMD="curl"
 FORCE_RENEW='false'
+RESTART_STOPPED_CONTAINER='false'
 PROXY_CACERT_LOCATION="/px-storage/proxy.pem"
 KRB5_CONF_FILE="/etc/krb5-config-files/krb5.conf"
 
@@ -302,6 +303,14 @@ function start() {
     if [[ "${#}" == 0 ]]; then
         print_usage
         exit 1
+    fi
+
+    if [[ "${#}" == 2 ]]; then
+        case "$1" in
+        -n | --remote-engine-name)
+            RESTART_STOPPED_CONTAINER='true'
+            ;;
+        esac
     fi
 
     # process options
@@ -1636,74 +1645,76 @@ check_platform() {
 }
 
 validate_action_arguments() {
-    if [[ "${ACTION}" == 'start' || "${ACTION}" == 'cleanup' ]]; then
-        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-            if [[ "${ACTION}" == 'start' ]]; then
-                [ -z $CP4D_USER ] && echo_error_and_exit "Please specify CP4D User (--cp4d-user) for the respective environment. Aborting."
-                [ -z $CP4D_API_KEY ] && echo_error_and_exit "Please specify CP4D APIKey (--cp4d-apikey) for the respective environment. Aborting."
-                [ -z $ZEN_URL ] && echo_error_and_exit "Please specify CP4D Zen URL (--zen-url) for the respective environment. Aborting."
-            fi
-        else
-            [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify an IBM Cloud IAM APIKey (-a | --apikey) for the respective environment. Aborting."
-        fi
-    fi
-
-    if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
-        # TODO - this should be removed once the runtime versioning strategy in place for appropriate validation
-        if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-            [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify a valid IBM Cloud Container Registry APIKey (-p | --prod-apikey). Aborting."
-        fi
-    fi
-
-    if [[ "${ACTION}" == 'start' ]]; then
-        [ -z $DSNEXT_SEC_KEY ] && echo_error_and_exit "Please specify an encryption key (-e | --encryption-key. Aborting."
-        [ -z $IVSPEC ] && echo_error_and_exit "Please specify the initialization vector for the encryption key (-i | --ivspec). Aborting."
-        [ -z $PROJECT_IDS ] && echo_error_and_exit "Please specify the comma separated list of project IDs in which you want to create the Remote Engine environment (-d | --project-id). Aborting."
-    fi
-
-    # needed for all options
-    [ -z $REMOTE_ENGINE_NAME ] && echo_error_and_exit "Please specify a name for the Remote Engine instance (-n | --remote-engine-name). Aborting."
-
-    # validate values of choice arguments
-    check_datastage_home
-    check_platform
-
-    # If everything is available, make sure docker daemon is running before proceeding
-    check_docker_daemon
-
-    # print in the console
-    if [[ "${ACTION}" == 'start' ]]; then
-        echo "DATASTAGE_HOME=${DATASTAGE_HOME}"
-        echo "GATEWAY_URL=${GATEWAY_URL}"
-        echo "PROJECT_IDS=${PROJECT_IDS}"
-        echo "REMOTE_ENGINE_PREFIX=${REMOTE_ENGINE_NAME}"
-        echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
-        echo "CONTAINER_MEMORY=${PX_MEMORY}"
-        echo "CONTAINER_CPUS=${PX_CPUS}"
-        echo "PIDS_LIMIT=${PIDS_LIMIT}"
-        echo "DOCKER_VOLUMES_DIR=${DOCKER_VOLUMES_DIR}"
-        if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
-            echo "MOUNT_DIRS=${MOUNT_DIRS[@]}"
-            for mount in "${MOUNT_DIRS[@]}"; do
-                if [[ -n "$mount" && -v mount && ! -z $mount ]]; then
-                    echo "${mount}"
-                fi
-            done
-        fi
-        if [[ -v ADD_HOSTS && ! -z $ADD_HOSTS ]]; then
-            echo "ADD_HOSTS=${ADD_HOSTS[@]}"
-            for host in "${ADD_HOSTS[@]}"; do
-                if [[ -n "$host" && -v host && ! -z $host ]]; then
-                    echo "${host}"
-                fi
-            done
-        fi
-        echo ""
-    fi
-
     # finalize constants if all arguments are valid
     PXRUNTIME_CONTAINER_NAME="${REMOTE_ENGINE_NAME//[ ]/_}_runtime"
     PXCOMPUTE_CONTAINER_NAME="${REMOTE_ENGINE_NAME//[ ]/_}_compute"
+
+    if [[ $(check_pxruntime_container_exists) == "false" ]] || [[ "${RESTART_STOPPED_CONTAINER}" == 'false' ]]; then
+        if [[ "${ACTION}" == 'start' || "${ACTION}" == 'cleanup' ]]; then
+            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+                if [[ "${ACTION}" == 'start' ]]; then
+                    [ -z $CP4D_USER ] && echo_error_and_exit "Please specify CP4D User (--cp4d-user) for the respective environment. Aborting."
+                    [ -z $CP4D_API_KEY ] && echo_error_and_exit "Please specify CP4D APIKey (--cp4d-apikey) for the respective environment. Aborting."
+                    [ -z $ZEN_URL ] && echo_error_and_exit "Please specify CP4D Zen URL (--zen-url) for the respective environment. Aborting."
+                fi
+            else
+                [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify an IBM Cloud IAM APIKey (-a | --apikey) for the respective environment. Aborting."
+            fi
+        fi
+
+        if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
+            # TODO - this should be removed once the runtime versioning strategy in place for appropriate validation
+            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+                [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify a valid IBM Cloud Container Registry APIKey (-p | --prod-apikey). Aborting."
+            fi
+        fi
+
+        if [[ "${ACTION}" == 'start' ]]; then
+            [ -z $DSNEXT_SEC_KEY ] && echo_error_and_exit "Please specify an encryption key (-e | --encryption-key. Aborting."
+            [ -z $IVSPEC ] && echo_error_and_exit "Please specify the initialization vector for the encryption key (-i | --ivspec). Aborting."
+            [ -z $PROJECT_IDS ] && echo_error_and_exit "Please specify the comma separated list of project IDs in which you want to create the Remote Engine environment (-d | --project-id). Aborting."
+        fi
+
+        # needed for all options
+        [ -z $REMOTE_ENGINE_NAME ] && echo_error_and_exit "Please specify a name for the Remote Engine instance (-n | --remote-engine-name). Aborting."
+
+        # validate values of choice arguments
+        check_datastage_home
+        check_platform
+
+        # If everything is available, make sure docker daemon is running before proceeding
+        check_docker_daemon
+
+        # print in the console
+        if [[ "${ACTION}" == 'start' ]]; then
+            echo "DATASTAGE_HOME=${DATASTAGE_HOME}"
+            echo "GATEWAY_URL=${GATEWAY_URL}"
+            echo "PROJECT_IDS=${PROJECT_IDS}"
+            echo "REMOTE_ENGINE_PREFIX=${REMOTE_ENGINE_NAME}"
+            echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
+            echo "CONTAINER_MEMORY=${PX_MEMORY}"
+            echo "CONTAINER_CPUS=${PX_CPUS}"
+            echo "PIDS_LIMIT=${PIDS_LIMIT}"
+            echo "DOCKER_VOLUMES_DIR=${DOCKER_VOLUMES_DIR}"
+            if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
+                echo "MOUNT_DIRS=${MOUNT_DIRS[@]}"
+                for mount in "${MOUNT_DIRS[@]}"; do
+                    if [[ -n "$mount" && -v mount && ! -z $mount ]]; then
+                        echo "${mount}"
+                    fi
+                done
+            fi
+            if [[ -v ADD_HOSTS && ! -z $ADD_HOSTS ]]; then
+                echo "ADD_HOSTS=${ADD_HOSTS[@]}"
+                for host in "${ADD_HOSTS[@]}"; do
+                    if [[ -n "$host" && -v host && ! -z $host ]]; then
+                        echo "${host}"
+                    fi
+                done
+            fi
+            echo ""
+        fi
+    fi
 }
 
 setup_docker_volumes() {
@@ -2176,10 +2187,10 @@ if [[ ${ACTION} == "start" ]]; then
         echo ""
         stop_px_runtime_docker
         remove_px_runtime_docker
-    else
-        if [[ $(check_pxruntime_container_exists_and_running) == "true" ]]; then
-            echo_error_and_exit "Container '${PXRUNTIME_CONTAINER_NAME}' is already running. Aborting."
-        elif [[ $(check_pxruntime_container_exists) == "true" ]]; then
+    elif [[ $(check_pxruntime_container_exists_and_running) == "true" ]]; then
+        echo_error_and_exit "Container '${PXRUNTIME_CONTAINER_NAME}' is already running. Aborting."
+    elif [[ $(check_pxruntime_container_exists) == "true" ]]; then
+        if [[ "${RESTART_STOPPED_CONTAINER}" == 'true' ]]; then
             start_px_runtime_docker
             wait_readiness_px_runtime
 
@@ -2187,6 +2198,8 @@ if [[ ${ACTION} == "start" ]]; then
             echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is available, and can be used to run DataStage flows"
 
             exit 0
+        else
+            echo_error_and_exit "A container with the same name as '${PXRUNTIME_CONTAINER_NAME}' is currently in stopped state. To restart the container with it's previous options (CAUTION: configuration options may have changed since the last time this container was stopped!), please run the command with the container name as the only option. To redeploy with the current options, please run with the '--force-renew true' option."
         fi
     fi
 
