@@ -4,6 +4,9 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.2.0](#520)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.2.0.md)
+
 [5.1.3](#513)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.1.3.md)
 
@@ -69,6 +72,33 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 5.2.0
+
+### New commands
+
+The following commands are added:
+
+- `replace-stp` and `isx-replace-stp` provides in place replace of a scapi connector using stored procedure to a stored procedure plugin.
+
+### Command changes
+
+The following commands have changed:
+
+- `run-pipeline` command now takes environment variable `ENABLE_IIS_EXITCODE` to map command return code to legacy exit code.
+- `run` method now supports to run pipeline optimizer jobs.
+- `run` and `run-pipeline` have been optimized for improved performance.
+- `compile-pipeline` and `run-pipeline` with optimized runs now takes new flag `--enable-versioning` to allow versioning on pipelines.
+- `list-ds-runs` now supports new sorting flags: `sort-by-jobfolder-name`, `sort-by-compiled`, `sort-by-assetname`. Aditionally, a `--show-only` flag has been introduced to filter the report for jobs that are no-run, not-compiled, out-of-date, or based on the last-run status.
+- `create-job` and `create-pipeline-job` added flag `--add-suffix` to honor project suffixes when creating jobs.
+- `delete-XXX` command now checks the input to ensure that either an asset name or ID is provided.
+- `migrate` command now supports `--enable-stp-plugin` flag to convert SCAPI connectors to stored procedure plugins.
+- `update-ds-settings` commands allows users to set empty values for job suffixes.
+- `schedule-job` will now validate the input provided.
+  
+### Fixes
+
+- `run-pipeline` the output displays the time taken to submit a job when no wait time is defined.
 
 ## 5.1.3
 
