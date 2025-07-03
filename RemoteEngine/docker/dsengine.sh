@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.24
+TOOL_VERSION=1.0.25
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -45,6 +45,9 @@ GATEWAY_DOMAIN_YPPROD='dataplatform.cloud.ibm.com'
 GATEWAY_DOMAIN_FRPROD='eu-de.dataplatform.cloud.ibm.com'
 GATEWAY_DOMAIN_SYDPROD='au-syd.dai.cloud.ibm.com'
 GATEWAY_DOMAIN_TORPROD='ca-tor.dai.cloud.ibm.com'
+GATEWAY_DOMAIN_AWSDEV='dev.aws.data.ibm.com'
+GATEWAY_DOMAIN_AWSTEST='test.aws.data.ibm.com'
+GATEWAY_DOMAIN_AWSPROD='ap-south-1.aws.data.ibm.com'
 
 # cp4d constants
 ZEN_URL='dummyzenurl'
@@ -52,7 +55,6 @@ ZEN_URL='dummyzenurl'
 # Defaults
 DATASTAGE_HOME="https://${GATEWAY_DOMAIN_YPPROD}"
 IAM_URL='https://iam.cloud.ibm.com'
-PLATFORM='icp4d'
 PX_MEMORY='4g'
 PX_CPUS='2'
 PIDS_LIMIT='-1'
@@ -77,7 +79,7 @@ STR_PROD_APIKEY='  -p, --prod-apikey           IBM Cloud Production APIKey for i
 STR_DSNEXT_SEC_KEY='  -e, --encryption-key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            Comma separated list of DataPlatform Project IDs'
-STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, cp4d]'
+STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, awsprod, cp4d]'
 STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
 STR_RELABEL_SELINUX_MOUNTS='  --relabel-selinux-mounts    [true]. Appends the :z option to SELinux volume bind mounts.'
@@ -89,7 +91,6 @@ STR_CAP_DROP='  --cap-drop                  Specify the cap-drop to be used to r
 STR_SET_USER='  --set-user                  Specify the username to be used to run the container. If not set, the current user is used.'
 STR_SET_GROUP='  --set-group                 Specify the group to be used to run the container.'
 STR_ADDITIONAL_USERS='  --additional-users          Comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner.'
-# STR_PLATFORM='  --platform                  Platform to executed against: [cloud (default), icp4d]'
 STR_MEMORY='  --memory                    Specify memory allocated to the docker container (default is 4G).'
 STR_CPUS='  --cpus                      Specify CPU allocated to the docker container (default is 2 cores).'
 STR_PIDS_LIMIT='  --pids-limit                Set the PID limit of the container (defaults to -1 for unlimited pids for the container)'
@@ -108,6 +109,7 @@ STR_REGISTRY_USER='  -u, --user                  User to login to a custom conta
 STR_DIGEST='  --digest                    Digest to pull the ds-px-runtime image from the registry (required if --registry is set and --image-tag is not set).'
 STR_IMAGE_TAG='  --image-tag                 Image tag to pull the ds-px-runtime image from the registry (required if --registry is set and --digest is not set).'
 STR_SKIP_DOCKER_LOGIN='  --skip-docker-login         [true | false]. Skips Docker login to container registry if that step is not needed.'
+STR_MCSP_ACCOUNT_ID='  --mcsp-account-id         The account ID of the AWS governing owner account (required if --home is used with "awsprod").'
 STR_ENV_VARS='  --env-vars                  Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.'
 
 
@@ -167,7 +169,7 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--volume-dir] [--mount-dir] [--relabel-selinux-mounts] [--host-network] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--volume-dir] [--mount-dir] [--relabel-selinux-mounts] [--host-network] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--mcsp-account-id]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
@@ -221,6 +223,7 @@ print_usage() {
             echo "${STR_SET_GROUP}"
             echo "${STR_FORCE_RENEW}"
             echo "${STR_ZEN_URL}"
+            echo "${STR_MCSP_ACCOUNT_ID}"
             if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
                 echo "${STR_CP4D_USER}"
                 echo "${STR_CP4D_APIKEY}"
@@ -234,8 +237,6 @@ print_usage() {
         echo "${STR_SELECT_PX_VERSION}"
         echo "${STR_ADDITIONAL_USERS}"
         echo "${STR_ENV_VARS}"
-        # echo "${STR_USE_ENT_KEY}"
-        # echo "${STR_PLATFORM}"
     fi
 
     echo "${STR_HELP}"
@@ -380,10 +381,6 @@ function start() {
             shift
             ADD_HOSTS+=("$1")
             ;;
-        # --platform)
-        #     shift
-        #     PLATFORM="$1"
-        #     ;;
         --select-version)
             shift
             handle_select_version "${1}"
@@ -464,6 +461,10 @@ function start() {
             shift
             handle_skip_docker_login "${1}"
             ;;
+        --mcsp-account-id)
+            shift
+            MCSP_ACCOUNT_ID="$1"
+            ;;
         --env-vars)
             shift
             ENV_VARS="${1// /}"
@@ -495,10 +496,6 @@ function update() {
         -n | --remote-engine-name)
             shift
             REMOTE_ENGINE_NAME="$1"
-            ;;
-        -a | --apikey)
-            shift
-            IAM_APIKEY="$1"
             ;;
         -p | --prod-apikey)
             shift
@@ -630,10 +627,6 @@ function cleanup() {
         --home)
             shift
             DATASTAGE_HOME="$1"
-            ;;
-        --platform)
-            shift
-            PLATFORM="$1"
             ;;
         --volume-dir)
             shift
@@ -1008,7 +1001,7 @@ run_px_runtime_docker() {
         --env COMPONENT_ID=ds-px-runtime
         --env WLP_SKIP_UMASK=true
         --env ENVIRONMENT_TYPE=CLOUD
-        --env ENVIRONMENT_NAME=${PLATFORM}
+        --env ENVIRONMENT_NAME="icp4d"
         --env ICP4D_URL=""
         --env REMOTE_ENGINE=yes
         --env USE_EXTERNAL_SERVICE=true
@@ -1068,7 +1061,7 @@ run_px_runtime_docker() {
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
         GATEWAY=$(printf %s "$GATEWAY_URL" | cut -d'/' -f3-)
         runtime_docker_opts+=(
-            --env REMOTE_CONTROLPLANE_ENV=${PLATFORM}
+            --env REMOTE_CONTROLPLANE_ENV="icp4d"
             --env SERVICE_ID=${CP4D_USER}
             --env SERVICE_API_KEY=${CP4D_API_KEY}
             --env GATEWAY=${GATEWAY}
@@ -1077,6 +1070,13 @@ run_px_runtime_docker() {
         runtime_docker_opts+=(
             --env IAM_URL=${IAM_URL}
             --env SERVICE_API_KEY=${IAM_APIKEY}
+        )
+    fi
+
+    if [[ "${DATASTAGE_HOME}" == 'aws'* ]]; then
+        runtime_docker_opts+=(
+            --env REMOTE_CONTROLPLANE_ENV="aws"
+            --env MCSP_ACCOUNT_ID=${MCSP_ACCOUNT_ID}
         )
     fi
 
@@ -1146,23 +1146,21 @@ run_px_runtime_docker() {
         done
     fi
 
-    if [[ "${PLATFORM}" == 'icp4d' ]]; then
-        runtime_docker_opts+=(
-            --env WLMON=1
-            --env WLM_CONTINUE_ON_COMMS_ERROR=0
-            --env WLM_CONTINUE_ON_QUEUE_ERROR=0
-            --env WLM_QUEUE_WAIT_TIMEOUT=0
-            -v "${DS_STORAGE_HOST_DIR}":/ds-storage"${RELABEL_SELINUX_MOUNTS:+:z}"
-            -v "${PX_STORAGE_HOST_DIR}":/px-storage"${RELABEL_SELINUX_MOUNTS:+:z}"
-            -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2"${RELABEL_SELINUX_MOUNTS:+:z}"
-            -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files"${RELABEL_SELINUX_MOUNTS:+:z}"
-            -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir"${RELABEL_SELINUX_MOUNTS:+:z}"
-            --env DS_STORAGE_PATH=/ds-storage:/px-storage
-            --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
-            --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
-            --env ENABLE_DS_METRICS=false
-        )
-    fi
+    runtime_docker_opts+=(
+        --env WLMON=1
+        --env WLM_CONTINUE_ON_COMMS_ERROR=0
+        --env WLM_CONTINUE_ON_QUEUE_ERROR=0
+        --env WLM_QUEUE_WAIT_TIMEOUT=0
+        -v "${DS_STORAGE_HOST_DIR}":/ds-storage"${RELABEL_SELINUX_MOUNTS:+:z}"
+        -v "${PX_STORAGE_HOST_DIR}":/px-storage"${RELABEL_SELINUX_MOUNTS:+:z}"
+        -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2"${RELABEL_SELINUX_MOUNTS:+:z}"
+        -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files"${RELABEL_SELINUX_MOUNTS:+:z}"
+        -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir"${RELABEL_SELINUX_MOUNTS:+:z}"
+        --env DS_STORAGE_PATH=/ds-storage:/px-storage
+        --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
+        --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
+        --env ENABLE_DS_METRICS=false
+    )
 
     ### must go last
     if [[ ! -z $ENV_VARS ]]; then
@@ -1264,7 +1262,7 @@ run_px_compute() {
         --name ${CONTAINER_NAME}
         --env APT_ORCHHOME=/opt/ibm/PXService/Server/PXEngine
         --env DSHOME=/opt/ibm/PXService/Server/DSEngine
-        --env ENVIRONMENT_NAME=${PLATFORM}
+        --env ENVIRONMENT_NAME="icp4d"
         --env HOME=/tmp
         --env JAVA_HOME=/opt/java
         --env JAVA_TOOL_OPTIONS=-XX:+IgnoreUnrecognizedVMOptions -XX:+UseContainerSupport -XX:+IdleTuningCompactOnIdle -XX:+IdleTuningGcOnIdle
@@ -1276,19 +1274,17 @@ run_px_compute() {
         --env HOSTNAME=ds-px-compute-$i
         # --network=${PXRUNTIME_CONTAINER_NAME}
     )
-    if [[ "${PLATFORM}" == 'icp4d' ]]; then
-        compute_docker_opts+=(
-            --env WLMON=1
-            --env WLM_CONTINUE_ON_COMMS_ERROR=0
-            --env WLM_CONTINUE_ON_QUEUE_ERROR=0
-            --env WLM_QUEUE_WAIT_TIMEOUT=0
-            -v "${DS_STORAGE_HOST_DIR}":/ds-storage"${RELABEL_SELINUX_MOUNTS:+:z}"
-            -v "${PX_STORAGE_HOST_DIR}":/px-storage"${RELABEL_SELINUX_MOUNTS:+:z}"
-            -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2"${RELABEL_SELINUX_MOUNTS:+:z}"
-            -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files"${RELABEL_SELINUX_MOUNTS:+:z}"
-            -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir"${RELABEL_SELINUX_MOUNTS:+:z}"
-        )
-    fi
+    compute_docker_opts+=(
+        --env WLMON=1
+        --env WLM_CONTINUE_ON_COMMS_ERROR=0
+        --env WLM_CONTINUE_ON_QUEUE_ERROR=0
+        --env WLM_QUEUE_WAIT_TIMEOUT=0
+        -v "${DS_STORAGE_HOST_DIR}":/ds-storage"${RELABEL_SELINUX_MOUNTS:+:z}"
+        -v "${PX_STORAGE_HOST_DIR}":/px-storage"${RELABEL_SELINUX_MOUNTS:+:z}"
+        -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2"${RELABEL_SELINUX_MOUNTS:+:z}"
+        -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files"${RELABEL_SELINUX_MOUNTS:+:z}"
+        -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir"${RELABEL_SELINUX_MOUNTS:+:z}"
+    )
     $DOCKER_CMD run "${compute_docker_opts[@]}"  $PXCOMPUTE_DOCKER_IMAGE
     status=$?
     if [ $status -ne 0 ]; then
@@ -1341,16 +1337,28 @@ wait_readiness_px_compute() {
 
 get_iam_token() {
 
-    IAM_URL="${IAM_URL%/}"
-    IAM_URL="${IAM_URL%/identity/token}"
+    if [[ "${DATASTAGE_HOME}" == 'aws'* ]]; then
+        IAM_URL="${IAM_URL%/}"
+        IAM_URL="${IAM_URL%/api/2.0/accounts/*/apikeys/token}"
 
-    _iam_response=$($CURL_CMD -sS -X POST \
-                -H 'Content-Type: application/x-www-form-urlencoded' \
-                -H 'Accept: application/json' \
-                --data-urlencode 'grant_type=urn:ibm:params:oauth:grant-type:apikey' \
-                --data-urlencode "apikey=${IAM_APIKEY}" \
-                "${IAM_URL}/identity/token")
-    ACCESS_TOKEN=$(printf "%s" ${_iam_response} | jq -r .access_token | tr -d '"')
+        _iam_response=$($CURL_CMD -sS -L -X POST \
+                    -H 'Content-Type: application/json' \
+                    -H 'Accept: application/json' \
+                    -H "Mcsp-ApiKey: ${IAM_APIKEY}" \
+                    "${IAM_URL}/api/2.0/accounts/${MCSP_ACCOUNT_ID}/apikeys/token")
+        ACCESS_TOKEN=$(printf "%s" ${_iam_response} | jq -r .token | tr -d '"')
+    else
+        IAM_URL="${IAM_URL%/}"
+        IAM_URL="${IAM_URL%/identity/token}"
+
+        _iam_response=$($CURL_CMD -sS -X POST \
+                    -H 'Content-Type: application/x-www-form-urlencoded' \
+                    -H 'Accept: application/json' \
+                    --data-urlencode 'grant_type=urn:ibm:params:oauth:grant-type:apikey' \
+                    --data-urlencode "apikey=${IAM_APIKEY}" \
+                    "${IAM_URL}/identity/token")
+        ACCESS_TOKEN=$(printf "%s" ${_iam_response} | jq -r .access_token | tr -d '"')
+    fi
 
     if [[ -z "${ACCESS_TOKEN}" || "${ACCESS_TOKEN}" == "null" ]]; then
         echo ""
@@ -1618,6 +1626,24 @@ check_datastage_home() {
         UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_TORPROD}"
         GATEWAY_URL="https://api.${GATEWAY_DOMAIN_TORPROD}"
 
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_AWSDEV}" || "$DATASTAGE_HOME" == "awsdev" ]]; then
+        DATASTAGE_HOME='awsdev'
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_AWSDEV}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_AWSDEV}"
+        IAM_URL='https://account-iam.platform.test.saas.ibm.com'
+
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_AWSTEST}" || "$DATASTAGE_HOME" == "awstest" ]]; then
+        DATASTAGE_HOME='awstest'
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_AWSTEST}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_AWSTEST}"
+        IAM_URL='https://account-iam.platform.test.saas.ibm.com'
+
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_AWSPROD}" || "$DATASTAGE_HOME" == "awsprod" ]]; then
+        DATASTAGE_HOME='awsprod'
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_AWSPROD}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_AWSPROD}"
+        IAM_URL='https://account-iam.platform.saas.ibm.com'
+
     elif [[ "$DATASTAGE_HOME" == 'CP4D' || "$DATASTAGE_HOME" == 'cp4d' || "$DATASTAGE_HOME" == 'Cp4d' ]]; then
         DATASTAGE_HOME='cp4d'
         UI_GATEWAY_URL="${ZEN_URL}"
@@ -1631,17 +1657,12 @@ check_datastage_home() {
         - https://api.${GATEWAY_DOMAIN_FRPROD}
         - https://api.${GATEWAY_DOMAIN_SYDPROD}
         - https://api.${GATEWAY_DOMAIN_TORPROD}
+        - https://api.${GATEWAY_DOMAIN_AWSDEV}
+        - https://api.${GATEWAY_DOMAIN_AWSTEST}
+        - https://api.${GATEWAY_DOMAIN_AWSPROD}
         - cp4d"
     fi
 
-}
-
-check_platform() {
-    if [[ "$PLATFORM" != 'cloud' && "$PLATFORM" != 'icp4d' ]]; then
-        echo_error_and_exit "Incorrect value specified: '--platform ${PLATFORM}', aborting. Use one of the allowed values:
-        - cloud (default)
-        - icp4d"
-    fi
 }
 
 validate_action_arguments() {
@@ -1651,13 +1672,7 @@ validate_action_arguments() {
 
     if [[ $(check_pxruntime_container_exists) == "false" ]] || [[ "${RESTART_STOPPED_CONTAINER}" == 'false' ]]; then
         if [[ "${ACTION}" == 'start' || "${ACTION}" == 'cleanup' ]]; then
-            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
-                if [[ "${ACTION}" == 'start' ]]; then
-                    [ -z $CP4D_USER ] && echo_error_and_exit "Please specify CP4D User (--cp4d-user) for the respective environment. Aborting."
-                    [ -z $CP4D_API_KEY ] && echo_error_and_exit "Please specify CP4D APIKey (--cp4d-apikey) for the respective environment. Aborting."
-                    [ -z $ZEN_URL ] && echo_error_and_exit "Please specify CP4D Zen URL (--zen-url) for the respective environment. Aborting."
-                fi
-            else
+            if [[ "${DATASTAGE_HOME}" != 'cp4d' ]]; then
                 [ -z $IAM_APIKEY ] && echo_error_and_exit "Please specify an IBM Cloud IAM APIKey (-a | --apikey) for the respective environment. Aborting."
             fi
         fi
@@ -1665,6 +1680,8 @@ validate_action_arguments() {
         if [[ "${ACTION}" == 'start' || "${ACTION}" == 'update' ]]; then
             # TODO - this should be removed once the runtime versioning strategy in place for appropriate validation
             if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+                [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify a valid IBM Entitlement APIKey (-p | --prod-apikey). Aborting."
+            else
                 [ -z $IAM_APIKEY_PROD ] && echo_error_and_exit "Please specify a valid IBM Cloud Container Registry APIKey (-p | --prod-apikey). Aborting."
             fi
         fi
@@ -1673,6 +1690,14 @@ validate_action_arguments() {
             [ -z $DSNEXT_SEC_KEY ] && echo_error_and_exit "Please specify an encryption key (-e | --encryption-key. Aborting."
             [ -z $IVSPEC ] && echo_error_and_exit "Please specify the initialization vector for the encryption key (-i | --ivspec). Aborting."
             [ -z $PROJECT_IDS ] && echo_error_and_exit "Please specify the comma separated list of project IDs in which you want to create the Remote Engine environment (-d | --project-id). Aborting."
+            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+                [ -z $CP4D_USER ] && echo_error_and_exit "Please specify CP4D User (--cp4d-user) for the respective environment. Aborting."
+                [ -z $CP4D_API_KEY ] && echo_error_and_exit "Please specify CP4D APIKey (--cp4d-apikey) for the respective environment. Aborting."
+                [ -z $ZEN_URL ] && echo_error_and_exit "Please specify CP4D Zen URL (--zen-url) for the respective environment. Aborting."
+            fi
+            if [[ "${DATASTAGE_HOME}" == 'aws'* ]]; then
+                [ -z $MCSP_ACCOUNT_ID ] && echo_error_and_exit "Please specify an AWS MCSP Account ID (--mcsp-account-id) for the respective environment. Aborting."
+            fi
         fi
 
         # needed for all options
@@ -1680,7 +1705,6 @@ validate_action_arguments() {
 
         # validate values of choice arguments
         check_datastage_home
-        check_platform
 
         # If everything is available, make sure docker daemon is running before proceeding
         check_docker_daemon
@@ -1695,6 +1719,9 @@ validate_action_arguments() {
             echo "CONTAINER_MEMORY=${PX_MEMORY}"
             echo "CONTAINER_CPUS=${PX_CPUS}"
             echo "PIDS_LIMIT=${PIDS_LIMIT}"
+            if [[ "${DATASTAGE_HOME}" == 'aws'* ]]; then
+                echo "MCSP_ACCOUNT_ID=${MCSP_ACCOUNT_ID}"
+            fi
             echo "DOCKER_VOLUMES_DIR=${DOCKER_VOLUMES_DIR}"
             if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
                 echo "MOUNT_DIRS=${MOUNT_DIRS[@]}"
@@ -1729,18 +1756,16 @@ setup_docker_volumes() {
 
     if [[ "${ACTION}" == 'start' ]]; then
 
-        if [[ "${PLATFORM}" == 'icp4d' ]]; then
-            create_dir_if_not_exist "${DOCKER_VOLUMES_DIR}"
-            create_dir_if_not_exist "${CONTAINER_HOST_DIR}"
-            create_dir_if_not_exist "${DS_STORAGE_HOST_DIR}"
-            create_dir_if_not_exist "${PX_STORAGE_HOST_DIR}"
-            create_dir_if_not_exist "${PX_STORAGE_WLM_DIR}"
-            create_dir_if_not_exist "${SCRATCH_DIR}"
-            create_dir_if_not_exist "${JDBC_JAR_DIR}"
-            create_dir_if_not_exist "${KRB5_CONFIG_FILES_DIR}"
-            create_dir_if_not_exist "${KRB5_CONFIG_DIR_DIR}"
-            set_permissions "${DOCKER_VOLUMES_DIR}"
-        fi
+        create_dir_if_not_exist "${DOCKER_VOLUMES_DIR}"
+        create_dir_if_not_exist "${CONTAINER_HOST_DIR}"
+        create_dir_if_not_exist "${DS_STORAGE_HOST_DIR}"
+        create_dir_if_not_exist "${PX_STORAGE_HOST_DIR}"
+        create_dir_if_not_exist "${PX_STORAGE_WLM_DIR}"
+        create_dir_if_not_exist "${SCRATCH_DIR}"
+        create_dir_if_not_exist "${JDBC_JAR_DIR}"
+        create_dir_if_not_exist "${KRB5_CONFIG_FILES_DIR}"
+        create_dir_if_not_exist "${KRB5_CONFIG_DIR_DIR}"
+        set_permissions "${DOCKER_VOLUMES_DIR}"
 
         # Mount an empty file for running computes since they aren't supported locally
         touch "${PX_STORAGE_WLM_DIR}/.compute_running"
@@ -2354,6 +2379,9 @@ elif [[ ${ACTION} == "update" ]]; then
         IAM_URL=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^IAM_URL= | cut -d'=' -f2-)
         IAM_APIKEY=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^SERVICE_API_KEY= | cut -d'=' -f2-)
     fi
+    if [[ "${DATASTAGE_HOME}" == 'aws'* ]]; then
+        MCSP_ACCOUNT_ID=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^MCSP_ACCOUNT_ID= | cut -d'=' -f2-)
+    fi
     DS_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/ds-storage") | .Source')
     PX_STORAGE_HOST_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/px-storage") | .Source')
     SCRATCH_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/opt/ibm/PXService/Server/scratch") | .Source')
@@ -2438,6 +2466,9 @@ elif [[ ${ACTION} == "update" ]]; then
         [ -z $IAM_URL ] && "Could not retrieve IAM_URL from container ${PXRUNTIME_CONTAINER_NAME}"
         [ -z $IAM_APIKEY ] && "Could not retrieve IAM_APIKEY from container ${PXRUNTIME_CONTAINER_NAME}"
     fi
+    if [[ "${DATASTAGE_HOME}" == 'aws'* ]]; then
+        [ -z $MCSP_ACCOUNT_ID ] && "Could not retrieve MCSP_ACCOUNT_ID from container ${PXRUNTIME_CONTAINER_NAME}"
+    fi
     [ -z $DS_STORAGE_HOST_DIR ] && "Could not retrieve DS_STORAGE_HOST_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $PX_STORAGE_HOST_DIR ] && "Could not retrieve PX_STORAGE_HOST_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $SCRATCH_DIR ] && "Could not retrieve SCRATCH_DIR from container ${PXRUNTIME_CONTAINER_NAME}"
@@ -2462,6 +2493,9 @@ elif [[ ${ACTION} == "update" ]]; then
     else
         echo "IAM_URL = ${IAM_URL}"
         echo "IAM_APIKEY = ${MASKED_IAM_APIKEY}"
+    fi
+    if [[ "${DATASTAGE_HOME}" == 'aws'* ]]; then
+        echo "MCSP_ACCOUNT_ID = ${MCSP_ACCOUNT_ID}"
     fi
     echo "DS_STORAGE_HOST_DIR = ${DS_STORAGE_HOST_DIR}"
     echo "PX_STORAGE_HOST_DIR = ${PX_STORAGE_HOST_DIR}"
@@ -2576,6 +2610,10 @@ elif [[ ${ACTION} == "cleanup" ]]; then
             echo "Getting cp4d access token"
             get_cp4d_access_token
         else
+            if [[ "${DATASTAGE_HOME}" == 'aws'* ]]; then
+                MCSP_ACCOUNT_ID=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^MCSP_ACCOUNT_ID= | cut -d'=' -f2-)
+                [ -z $MCSP_ACCOUNT_ID ] && echo_error_and_exit "Container is not running or doesn't exist. Aborting."
+            fi
             PROJECT_CONTEXT='cpdaas'
             echo "Getting IAM token"
             get_iam_token
