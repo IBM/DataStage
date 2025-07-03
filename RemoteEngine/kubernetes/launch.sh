@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.6
+TOOL_VERSION=1.0.7
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -32,6 +32,7 @@ DS_REGISTRY_SECRET="datastage-pull-secret"
 DS_API_KEY_SECRET="datastage-api-key-secret"
 DS_PROXY_URL="datastage-proxy-url"
 DS_GATEWAY="api.dataplatform.cloud.ibm.com"
+IAM_URL="https://iam.cloud.ibm.com"
 data_center="dallas"
 
 operator_digest="sha256:99e45f8f94834d8f0ed2e9dbba9724bd79726eb292c0f2cef30844c072e178dc"
@@ -571,7 +572,10 @@ create_apikey_secret() {
   if [ -z $api_key ]; then
     display_missing_arg "apikey"
   fi
-  $kubernetesCLI -n ${namespace} create secret generic $DS_API_KEY_SECRET --from-literal=api-key=${api_key} --from-literal=service-id=${service_id}
+  if [ -z $service_id ]; then
+    display_missing_arg "serviceid"
+  fi
+  $kubernetesCLI -n ${namespace} create secret generic $DS_API_KEY_SECRET --from-literal=api-key=${api_key} --from-literal=service-id=${service_id} --from-literal=mcsp-account-id=${MCSP_ACCOUNT_ID}
 }
 
 create_proxy_secrets() {
@@ -718,8 +722,9 @@ handle_badusage() {
 
 handle_install_usage() {
   echo ""
-  echo "Usage: $0 install --namespace <namespace> [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--zen-url <zen-url>]"
+  echo "Usage: $0 install --namespace <namespace> [--data-center <data-center>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--zen-url <zen-url>]"
   echo "--namespace: the namespace to install the DataStage operator"
+  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, toronto, or awsprod"
   echo "--registry: Custom container registry to pull images from if you are image mirroring using a private registry. If using this option, you must set --digests as well for IBM Cloud."
   echo "--operator-registry-suffix: Custom operator registry suffix to use for the remote engine to pull ds-operator images from if using a custom container registry. Defaults to 'cpopen'."
   echo "--docker-registry-suffix: Custom docker registry suffix to use for the remote engine to pull ds-px-runtime and ds-px-compute images from if using a custom container registry. Defaults to 'cp/cpd'."
@@ -773,10 +778,11 @@ handle_import_db2z_license_usage() {
 handle_apikey_usage() {
   echo ""
   echo "Description: creates a secret with the api key for the remote engine to use when calling DataStage services"
-  echo "Usage: $0 create-apikey-secret --namespace <namespace> --apikey <api-key> [--serviceid <service-id>] [--zen-url <zen-url>]"
+  echo "Usage: $0 create-apikey-secret --namespace <namespace> --apikey <api-key> [--serviceid <service-id>] [--mcsp-account-id <mcsp-account-id>] [--zen-url <zen-url>]"
   echo "--namespace: the namespace to create the api-key secret"
   echo "--apikey: the api-key for the remote engine to use when communicating with DataStage services"
   echo "--serviceid: the username to use with the apikey"
+  echo "--mcsp-account-id: The account ID of the AWS governing owner account (required for awsprod)."
   echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   exit 0
 }
@@ -791,7 +797,7 @@ handle_create_instance_usage() {
   echo "--storageClass: the file storageClass to use"
   echo "--storageSize: the storage size to use (in GB); defaults to 10"
   echo "--size: the size of the instance (small, medium, large); defaults to small"
-  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, or toronto"
+  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, toronto, or awsprod"
   echo "--license-accept: set the to true to indicate that you have accepted the license for IBM DataStage as a Service Anywhere - https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en"
   echo "--additional-users: comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner"
   echo "--registry: Custom container registry to pull images from if you are image mirroring using a private registry. If using this option, you must set --digests as well for IBM Cloud."
@@ -926,10 +932,15 @@ retrieve_px_image_digests() {
     # retrieve apikey from secret
     api_key=`$kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET -o=jsonpath="{.data.api-key}" | base64 -d`
   fi
-  if [ $DS_GATEWAY = "api.dataplatform.cloud.ibm.com" ]; then
-    cloud_access_token=`$CURL_CMD -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
+  if [[ "${data_center}" == 'aws'* ]]; then
+    if [ -z $MCSP_ACCOUNT_ID ]; then
+      # retrieve mcsp-account-id from secret
+      MCSP_ACCOUNT_ID=`$kubernetesCLI -n $namespace get secret $DS_API_KEY_SECRET -o=jsonpath="{.data.mcsp-account-id}" | base64 -d`
+    fi
+    [ -z $MCSP_ACCOUNT_ID ] && display_missing_arg "mcsp-account-id"
+    cloud_access_token=`$CURL_CMD -s -X POST --header "Content-Type: application/json" --header "Accept: application/json" --header "Mcsp-ApiKey: $api_key" "${IAM_URL}/api/2.0/accounts/${MCSP_ACCOUNT_ID}/apikeys/token" | jq .token | cut -d\" -f2`
   else
-    cloud_access_token=`$CURL_CMD -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "https://iam.test.cloud.ibm.com/identity/token" | jq .access_token | cut -d\" -f2`
+    cloud_access_token=`$CURL_CMD -s -X POST --header "Content-Type: application/x-www-form-urlencoded" --header "Accept: application/json" --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" --data-urlencode "apikey=$api_key" "${IAM_URL}/identity/token" | jq .access_token | cut -d\" -f2`
   fi
   if [ -z $cloud_access_token ]; then
     echo_error_and_exit "Unable to retrieve access token from IBM Cloud."
@@ -1025,6 +1036,7 @@ retrieve_latest_image_digests() {
 # determine registry from pull secret
 determine_registry() {
 # TODO - select version is not yet supported on cp4d as we do not have a versioning strategy
+  configure_data_center
   if [[ ! -z ${CUSTOM_DOCKER_REGISTRY} ]]; then
     DOCKER_REGISTRY="${CUSTOM_DOCKER_REGISTRY}"
   fi
@@ -1109,6 +1121,7 @@ check_namespace() {
 
 configure_data_center() {
 if [[ "$remote_controlplane_env" != "icp4d" ]]; then
+  [ -z $data_center ] && display_missing_arg "data-center"
   if [ $data_center = "frankfurt" ]; then
     # eu-de
     DS_GATEWAY="api.eu-de.dataplatform.cloud.ibm.com"
@@ -1118,8 +1131,27 @@ if [[ "$remote_controlplane_env" != "icp4d" ]]; then
   elif [ $data_center = "toronto" ]; then
     # ca-tor
     DS_GATEWAY="api.ca-tor.dai.cloud.ibm.com"
+  elif [ $data_center = "ys1dev" ]; then
+    # dataplatform.dev
+    DS_GATEWAY="api.dataplatform.dev.cloud.ibm.com"
+    IAM_URL="https://iam.test.cloud.ibm.com"
+  elif [ $data_center = "ypqa" ]; then
+    # dataplatform.test
+    DS_GATEWAY="api.dataplatform.test.cloud.ibm.com"
+  elif [ $data_center = "awsdev" ]; then
+    # dev.aws
+    DS_GATEWAY="api.dev.aws.data.ibm.com"
+    IAM_URL="https://account-iam.platform.test.saas.ibm.com"
+  elif [ $data_center = "awstest" ]; then
+    # test.aws
+    DS_GATEWAY="api.test.aws.data.ibm.com"
+    IAM_URL="https://account-iam.platform.test.saas.ibm.com"
+  elif [ $data_center = "awsprod" ]; then
+    # ap-south-1.aws
+    DS_GATEWAY="api.ap-south-1.aws.data.ibm.com"
+    IAM_URL="https://account-iam.platform.saas.ibm.com"
   elif [ $data_center != "dallas" ]; then
-    echo_error_and_exit "Unknown value for data center '${data_center}'. Please specified either dallas, frankfurt, sydney, or toronto."
+    echo_error_and_exit "Unknown value for data center '${data_center}'. Please specified either dallas, frankfurt, sydney, toronto, or awsprod."
   fi
 fi
 }
@@ -1238,6 +1270,10 @@ do
             shift
             zen_url="${1}"
             ;;
+        --mcsp-account-id)
+            shift
+            MCSP_ACCOUNT_ID="$1"
+            ;;
         install)
             action="install"
             ;;
@@ -1334,6 +1370,8 @@ determine_cli
 if [ -z $inputFile ]; then
   if [[ ! -z $zen_url ]]; then
     validate_and_setup_cp4d_args
+  elif [[ "${data_center}" == 'aws'* ]]; then
+    remote_controlplane_env="aws"
   fi
   validate_common_args
   determine_k8s
@@ -1371,6 +1409,8 @@ if [ ! -z $inputFile ]; then
   source $inputFile
   if [[ ! -z $zen_url ]]; then
     validate_and_setup_cp4d_args
+  elif [[ "${data_center}" == 'aws'* ]]; then
+    remote_controlplane_env="aws"
   fi
   validate_common_args
   determine_k8s
