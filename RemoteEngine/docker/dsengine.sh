@@ -109,7 +109,8 @@ STR_REGISTRY_USER='  -u, --user                  User to login to a custom conta
 STR_DIGEST='  --digest                    Digest to pull the ds-px-runtime image from the registry (required if --registry is set and --image-tag is not set).'
 STR_IMAGE_TAG='  --image-tag                 Image tag to pull the ds-px-runtime image from the registry (required if --registry is set and --digest is not set).'
 STR_SKIP_DOCKER_LOGIN='  --skip-docker-login         [true | false]. Skips Docker login to container registry if that step is not needed.'
-STR_MCSP_ACCOUNT_ID='  --mcsp-account-id         The account ID of the AWS governing owner account (required if --home is used with "awsprod").'
+STR_MCSP_ACCOUNT_ID='  --mcsp-account-id           The account ID of the AWS governing owner account (required if --home is used with "awsprod").'
+STR_SYSCTL_SETTINGS='  --sysctl                    Semi-colon separated list of key=value pairs of sysctl settings (eg. net.ipv4.tcp_keepalive_time=120;net.core.somaxconn=16384;...). Whitespaces are ignored.'
 STR_ENV_VARS='  --env-vars                  Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.'
 
 
@@ -236,7 +237,8 @@ print_usage() {
         echo "${STR_IMPORT_DB2Z_LICENSE}"
         echo "${STR_SELECT_PX_VERSION}"
         echo "${STR_ADDITIONAL_USERS}"
-        echo "${STR_ENV_VARS}"
+        echo "${STR_SYSCTL_SETTINGS}"
+        echo "${STR_ENV_VARS}"        
     fi
 
     echo "${STR_HELP}"
@@ -465,6 +467,10 @@ function start() {
             shift
             MCSP_ACCOUNT_ID="$1"
             ;;
+        --sysctl)
+            shift
+            SYSCTL_SETTINGS="${1// /}"
+            ;;
         --env-vars)
             shift
             ENV_VARS="${1// /}"
@@ -556,6 +562,10 @@ function update() {
         --skip-docker-login)
             shift
             handle_skip_docker_login "${1}"
+            ;;
+        --sysctl)
+            shift
+            SYSCTL_SETTINGS="${1// /}"
             ;;
         --env-vars)
             shift
@@ -1161,6 +1171,22 @@ run_px_runtime_docker() {
         --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
         --env ENABLE_DS_METRICS=false
     )
+
+    if [[ ! -z $SYSCTL_SETTINGS ]]; then
+        runtime_docker_opts+=(
+            --env SYSCTL_SETTINGS="${SYSCTL_SETTINGS}"
+        )
+        IFS=";" read -ra pairs <<< "$SYSCTL_SETTINGS"
+        for pair in "${pairs[@]}"; do
+            IFS='=' read -r key value <<< "$pair"
+            if [[ ! -z $key ]] && [[ $key != "SYSCTL_SETTINGS" ]]; then
+                echo "Setting custom sysctl setting $key = $value"
+                runtime_docker_opts+=(
+                    --sysctl "$key=$value"
+                )
+            fi
+        done
+    fi
 
     ### must go last
     if [[ ! -z $ENV_VARS ]]; then
@@ -2428,6 +2454,9 @@ elif [[ ${ACTION} == "update" ]]; then
     if [[ ! -v ADDITIONAL_USERS ]]; then
         ADDITIONAL_USERS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^ADDITIONAL_USERS= | cut -d'=' -f2-)
     fi
+    if [[ ! -v SYSCTL_SETTINGS ]]; then
+        SYSCTL_SETTINGS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^SYSCTL_SETTINGS= | cut -d'=' -f2-)
+    fi
     if [[ ! -v ENV_VARS ]]; then
         ENV_VARS=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^ENV_VARS= | cut -d'=' -f2-)
     fi
@@ -2514,6 +2543,7 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "ADDITIONAL_USERS = ${ADDITIONAL_USERS}"
     echo "CUSTOM_DOCKER_REGISTRY = ${CUSTOM_DOCKER_REGISTRY}"
     echo "CUSTOM_DOCKER_REGISTRY_USER = ${CUSTOM_DOCKER_REGISTRY_USER}"
+    echo "SYSCTL_SETTINGS = ${SYSCTL_SETTINGS}"
     echo "ENV_VARS = ${ENV_VARS}"
     echo "DOCKER_VOLUMES_DIR = ${DOCKER_VOLUMES_DIR}"
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
