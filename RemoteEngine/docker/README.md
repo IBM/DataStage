@@ -131,6 +131,7 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--image-tag`: Image tag to pull the ds-px-runtime image from the registry (required if --registry is set and --digest is not set).
 1. `--skip-docker-login`: [true | false]. Skips Docker login to container registry if that step is not needed.
 1. `--mcsp-account-id`: The account ID of the AWS governing owner account (required if --home is used with "awsprod").
+1. `--sysctl`: Semi-colon separated list of key=value pairs of sysctl settings (eg. net.ipv4.tcp_keepalive_time=120;net.core.somaxconn=16384;...). Whitespaces are ignored.
 1. `--env-vars`: Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.
     * Remote Engine specific environment variables:
         * REMOTE_ENGINE_BATCH_SIZE - Set to an integer representing the maximum number of jobs that remote engine will pull at one time. Default value is 5.
