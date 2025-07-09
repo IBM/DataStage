@@ -10,9 +10,10 @@
 DataStage Remote Engine supports deployment on the following platforms:
 * OpenShift 4.12 and above
     * Details on setting up an OpenShift cluster: https://docs.openshift.com/container-platform/4.12/welcome/index.html
-* IBM Cloud Kubernetes Service (IKS)
+* IBM Cloud Kubernetes Service (IKS) - Classic or VPC
     * Details on setting up an IKS cluster: https://cloud.ibm.com/docs/containers?topic=containers-getting-started&interface=ui
-    * Setting up file Storage: https://cloud.ibm.com/docs/containers?topic=containers-file_storage
+    * Setting up file Storage for Classic: https://cloud.ibm.com/docs/containers?topic=containers-file_storage
+    * Setting up file Storage for VPC: https://cloud.ibm.com/docs/containers?group=setting-up-file-storage-for-vpc
 * Amazon Elastic Kubernetes Service (EKS)
     * Details on setting up an EKS cluster: https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html
     * Setting up and Elastic file system: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.6.x?topic=storage-setting-up-amazon-elastic-file-system (see details below)
