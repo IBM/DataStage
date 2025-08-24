@@ -4,6 +4,9 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.2.1](#521)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.2.1.md)
+
 [5.2.0](#520)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.2.0.md)
 
@@ -73,13 +76,48 @@ interface.
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
 
+## 5.2.1
+
+### New commands
+
+The following commands are added:
+
+- Project Caching can be enabled using environment variable `DSJobCacheProjects=true` on the shell. This allows users to use caching on the server side to fetch projects and avoid rate limit issues.
+- New commands `list-vaults`, `get-vault`, `list-vault-secrets`, `get-vault-secret`, `create-vault-secret` and `delete-vault-secret` are added to perform vault management.
+
+### Command changes
+
+The following commands have changed:
+
+- `compile-pipeline` command now takes `recursive` option to compile all nested pipelines. New field `unified` compiles this pipeline into unified pipeline.
+- `describe-dataset`, `view-dataset`, `truncate-dataset`, `download-dataset`, `rename-dataset`, `copy-dataset`, `describe-fileset`, `get-fileset`, `view-fileset`, `truncate-fileset`, `rename-fileset` and `copy-fileset` now takes `location` option to identify duplicated dataset/fileset when duplicates are turned on in a project.
+- `view-dataset` and `view-fileset` takes new flag `dump` to dump all records in a dataset. Previously it only fetched partial records. Additional flags `limit` and `offset` can be used to specify fetch size and start at an offset.
+- `rename-dataset`, `copy-dataset`, `rename-fileset` and `copy-fileset` takes a new option `override` to overwrite existing dataset/fileset.
+- `rename-dataset` and `rename-fileset` has now deprecated `deep` option.
+- `migrate` command takes a new option `enable-folders` to allow users to use project level folders to assign assets to respective folder. New option `user-status`, when set to true, uses DSSetUserStatus in bash scripts.
+- `update-ds-settings` takes new options:
+  - `allow-duplicates` to allow duplicate dataset/fileset asset with same name in different locations in a project,
+  - `define-parameters` when true, prompt to define parameters when running the flow,
+  - `disable-params-refresh-cache` use cached parameter values for preview data, test, and browse connections,
+  - `flow-acp-control` when you change a column metadata, the changes are automatically propagated downstream,
+  - `testdata-connectiontype` type of testcase connection used,
+  - `testcase-jobname-suffix` default DataStage testcase job suffix,
+  - `save-frequency` determines save changes frequency.
+- `run-pipeline` now uses new flag `unified` to run unified pipeline jobs allowing users to seamlessly switch between normal pipeline run to optimized pipeline run.
+
+### Fixes
+
+- `run-pipeline` the output displays the time taken to submit a job when no wait time is defined.
+- `prune` the command is fixed to work with new api changes.
+- `get-paramset` fixed to display field values correctly when type is not string.
+
 ## 5.2.0
 
 ### New commands
 
 The following commands are added:
 
-- `replace-stp` and `isx-replace-stp` provides in place replace of a scapi connector using stored procedure to a stored procedure plugin.
+- `replace-stp` and `isx-replace-stp` provides in-place replace of a scapi connector using stored procedure to a stored procedure plugin.
 
 ### Command changes
 

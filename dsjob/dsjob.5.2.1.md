@@ -98,6 +98,8 @@ When you set up the `dsjob` command line environment, you must escape any specia
 For example, `myPa$$word` must be written as `myPa\$\$word`.
 When Name conflicts exist, dsjob commands must use ID's inplace of Names to identify specifc object, for example `--project-id` in place of `--project` if two project have the same name, or `--id` inplace of `--name` if two objects have the same name.
 
+Note: You can enable caching project API calls by setting environment variable `DSJobCacheProjects`. This will help avoid rate limiting issues with project api.
+
 ## Projects
 
 ### Listing projects
@@ -754,17 +756,17 @@ cpdctl dsjob migrate {{--project PROJECT | --project-id PROJID} | {--space SPACE
 
 - `project` is the name of the project.
 - `project-id` is the id of the project. One of `project` or `project-id` must be specified.
-- `on-failure` indicates what action to taken if the import process fails. Possible options are either `continue` or `stop`. This field is optional.
-- `conflict-resolution` specifies the resolution when the data flow to be imported has a name conflict with an existing data flow in the project or catalog. Possible resolutions are `skip`, `rename`, or `replace`. This field is optional.
+- `on-failure` indicates what action to take if the import process fails. Possible options are `continue` or `stop`. This field is optional.
+- `conflict-resolution` specifies the resolution when the imported data flow has a name conflict with an existing data flow in the project or catalog. Possible resolutions are  `skip`,  `rename`, or  `replace`. This field is optional. If not specified, the default behavior is `skip`.
 - `attachment-type` is the type of attachment. The default attachment type is `isx`. This field is optional.
-- `asset-type` specify a comma-separated list of asset types to migrate, ex: `--asset-type data_intg_flow,parameter_set`.
+- `asset-type` specify a comma-separated list of asset types to migrate, ex: `--asset-type data_intg_flow,parameter_set`. When specified, only asset of specified type is imported, if not, all assets are imported.
 - `import-only` when specified imports flows without compiling them or creating a job.
 - `create-missing` when specified creates missing parameter sets and job parameters.
 - `enable-local-connection` enables migrating a connection into a flow as a flow connection.
 - `enable-dataquality-rule` when specified migrates a data rule from Information Analyzer as a Datahub rule.
 - `create-connection-paramsets` when specified creates parameter sets for missing properties in connections.
-- `use-dsn-name` when specified enables migration to use dsn-type names for connections.
-- `migrate_hive_impala` when true enables Hive Impala for migration.
+- `use-dsn-name` when specified, it enables migration to use dsn-type names for ODBC connections.
+- `migrate_hive_impala`  when true, it migrates hive isx connections to impala.
 - `enable-notifications` when true allows notifications to be sent during migration.
 - `jobname-with-invocation-id` when true, job name includes invocation id after migration.
 - `storage-path` directory path on the storage volume for scripts and other data assets. This fields is optional.
@@ -1093,7 +1095,7 @@ A status code is printed to the output. A status code of 0 indicates successful 
 A pipeline run is triggered by creating a job for the pipeline and running it. The following syntax runs a pipeline in the specified project:
 
 ```
-cpdctl dsjob run-pipeline {{--project PROJECT | --project-id PROJID} | {--space SPACE | --space-id SPACEID}} {--name NAME | --id ID} [--job-name JOBNAME] [--description DESCRIPTION] [--version VERSION] [--run-name RUNNAME] [--param PARAM] [--param-file FILENAME] [--env ENVJSON] [--paramset PARAMSET] [--wait SEC] [--reset-cache] [--no-logs] [[--optimize] [--enable-inline] [--enable-cache] [--enable-versioning] [--skip-compile] [--job-suffix SUFFIX] [--warn-limit <n>]]
+cpdctl dsjob run-pipeline {{--project PROJECT | --project-id PROJID} | {--space SPACE | --space-id SPACEID}} {--name NAME | --id ID} [--job-name JOBNAME] [--description DESCRIPTION] [--version VERSION] [--run-name RUNNAME] [--param PARAM] [--param-file FILENAME] [--env ENVJSON] [--paramset PARAMSET] [--wait SEC] [--reset-cache] [--no-logs] [[--optimize] [--enable-inline] [--enable-cache] [--enable-versioning] [--skip-compile] [--unified] [--job-suffix SUFFIX] [--warn-limit <n>]]
 ```
 
 - `project` is the name of the project that contains the pipeline.
@@ -1109,14 +1111,17 @@ cpdctl dsjob run-pipeline {{--project PROJECT | --project-id PROJID} | {--space 
 - `env` specifies the environment in which job is run. `env` is specified as a key=value pair. Key `env` or `env-id` can be used to chose a runtime environment. Example: `--env $APT_DUMP_SCORE=true --env env=ds-px-default`
 - `paramset` when specified passes a parameter set to the pipeline.
 - `wait` the job run waits for the specified amount of time for the job to finish. The job logs are printed to the output until the job is completed or the wait time expires. The return status indicates whether the job has finished, finished with warning, raised an error, or timed out after waiting. For example: `--wait 200` waits for a maximum of 200 secs, polling the job for completion, and if the job does not complete it returns a status code other than zero. You may specify `--wait -1` to wait indefinitely for the job to finish. This field is optional.
-- `reset-cache` when set to true, cache is reset before the pipeline run.
-- `no-logs` when this and `wait` are specified, pipeline run will not produce output logs while waiting for the run to finish. This field is optional.
-- `optimize` when specified pipeline is run as a DataStage sequencer job. For more information check this [document](https://github.com/IBM/DataStage/blob/main/dsjob/blogs/sequencer.md).
-- `skip-compile` if true, the DataStage sequencer job will not be compiled. This option can only be used when `optimize` is true, for more information check this [document](https://github.com/IBM/DataStage/blob/main/dsjob/blogs/sequencer.md).
+- `reset-cache` when set to true, cache is reset before the pipeline run. This field is optional, the default value is false.
+- `no-logs` when this and `wait` are specified, pipeline run does not produce output logs while waiting for the run to finish. This field is optional, the default value is false.
+- `optimize` when specified pipeline is run as a DataStage sequencer job. The default value is false. When set to true it ignores `unified` option. For more information see: [Run pipelines using optimized runner](https://github.com/IBM/DataStage/blob/main/dsjob/blogs/sequencer.md).
+- `skip-compile` if true, the DataStage sequencer job is not compiled. This option can only be used when `optimize` is set to true. The default value is false. For more information see  [Run pipelines using optimized runner](https://github.com/IBM/DataStage/blob/main/dsjob/blogs/sequencer.md).
 - `job-suffix` when specified, the job is created with this suffix to run the pipeline.
 - `enable-cache` when true, cache is enabled on the pipeline when it is compiled. This flag has no effect when `skip-compile` is set to true.
 - `warn-limit` specifies the number of warnings and after that a job is terminated. A value of 0 means no limit.
-- `enable-versioning` when true enables versioning on pipelines.
+- `enable-versioning` when true, it enables versioning on pipelines. The default value is false.
+- `enable-inline` when true, it runs nested pipelines as part of the same job. The default value is true. If false each nested pipeline is run as a separate job.
+- `unified` when true, the job uses the unified pipeline to run either as a pipeline runner or as an orchestration pipeline job. The default value is false. If enabled, the pipeline execution follows the configuration specified under Project Settings.
+- `recursive` when true, compiles all the nested pipelines that this pipeline is dependent on. The default value is true. This flag is used when `skip-compile` is false.
 
 **Note**: Options `enable-inline`, `enable-cache`, `skip-compile` are effective for only pipelines run as DataStage sequencer jobs.
 
@@ -1162,7 +1167,7 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax allows you to compile pipelines into DataStage sequence runner
 
 ```
-cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID} {--name PIPELINE | --id PIPELINEID} [--code] [--threads <n>] [--enable-inline] [--enable-cache] [--enable-versioning] [--job-suffix] 
+cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID} {--name PIPELINE | --id PIPELINEID} [--code] [--threads <n>] [--enable-inline] [--enable-cache] [--recursive] [--enable-versioning] [--job-suffix] [--unified] 
 ```
 
 - `project` is the name of the project.
@@ -1175,6 +1180,8 @@ cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID} {--name 
 - `enable-cache` when true, compiles pipeline optimizer with cache enabled at runtime.
 - `enable-inline` if false, compiles pipeline optimizer to run nested pipelines as independent sequence jobs. (default true).
 - `enable-versioning` when true it enables versioning on pipelines.
+- `recursive` when true, it compiles all nested pipelines.
+- `unified` when true, it compiles pipelines to an unified pipeline. It does not create job by default.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2360,7 +2367,7 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax provides a description of the dataset schema definition in a given project.
 
 ```
-cpdctl dsjob describe-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME]
+cpdctl dsjob describe-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  [--location DATASETLOCATION] [--output json|file] [--file-name FILENAME]
 ```
 
 - `project` is the name of the project.
@@ -2369,6 +2376,7 @@ cpdctl dsjob describe-dataset {--project PROJECT | --project-id PROJID} {--name 
 - `id` is the asset id of the dataset. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
+- `location` specifies path to the physical location of the dataset. It is used when duplicate names are allowed.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2377,7 +2385,7 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax provides the metadata and sample data of a dataset in the given project.
 
 ```
-cpdctl dsjob view-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file --file-name FILENAME --delim char] 
+cpdctl dsjob view-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location DATASETLOCATION] [--output json|file --file-name FILENAME --delim CHAR --dump --offset <NUM> --limit <NUM>]
 ```
 
 - `project` is the name of the project.
@@ -2387,6 +2395,11 @@ cpdctl dsjob view-dataset {--project PROJECT | --project-id PROJID} {--name NAME
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `delim` a single character, when specified will be used as delimiter for the fields in each record/row.
+- `location` is a path to the physical location of the dataset. It is used when duplicate names are allowed.
+- `delim` is the field delimiter character for output records.
+- `dump` when set to true, it outputs all records in the dataset.
+- `offset` reads data from the offset provided, the default is 0.
+- `limit` reads number of records specified in each read.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2427,7 +2440,7 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax is used to fetch the asset definition for a dataset.
 
 ```
-cpdctl dsjob get-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata]
+cpdctl dsjob get-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location DATASETLOCATION] [--output json|file] [--file-name FILENAME] [--with-metadata]
 ```
 
 - `project` is the name of the project that contains the dataset.
@@ -2437,6 +2450,7 @@ cpdctl dsjob get-dataset {--project PROJECT | --project-id PROJID} {--name NAME 
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `with-metadata` when specified adds metadata to the output.
+- `location` is a path to the physical location of the dataset. It is used when duplicate names are allowed
 
 ### Exporting dataset
 
@@ -2492,13 +2506,14 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax truncates data from a dataset in the specified project.
 
 ```
-cpdctl dsjob truncate-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}
+cpdctl dsjob truncate-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location FILESETLOCATION]
 ```
 
 - `project` is the name of the project.
 - `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the dataset.
 - `id` is the asset id of the dataset. One of `name` or `id` must be specified.
+- `location` is a path to the physical location of the dataset. It is used when duplicate names are allowed.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2507,7 +2522,7 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax renames a dataset in the specified project.
 
 ```
-cpdctl dsjob rename-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} --to-name NEWNAME --deep
+cpdctl dsjob rename-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  [--location FILESETLOCATION] --to-name NEWNAME [--override] [--deep]
 ```
 
 - `project` is the name of the project.
@@ -2515,7 +2530,9 @@ cpdctl dsjob rename-dataset {--project PROJECT | --project-id PROJID} {--name NA
 - `name` is the name of the dataset.
 - `id` is the asset id of the dataset. One of `name` or `id` must be specified.
 - `to-name` is the new name to which the dataset is renamed.
-- `deep` if set to true, it renames also the underlying dataset files on disk, default value is false.
+- `deep` this option is deprecated, it does not affect the operation being perfomed.
+- `location` is a path to the physical location of the dataset. It is used when duplicate names are allowed.
+- `override` when set to true, it overwrites the file if it already exists.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2524,7 +2541,7 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following commands allows copy of a dataset to a new name while keeping the original dataset.
 
 ```
-cpdctl dsjob copy-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  --to-name NEWNAME
+cpdctl dsjob copy-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  [--location DATASETLOCATION] --to-name NEWNAME [--override]
 ```
 
 - `project`  is the name of the project.
@@ -2532,6 +2549,8 @@ cpdctl dsjob copy-dataset {--project PROJECT | --project-id PROJID} {--name NAME
 - `name`  is the name of the dataset.
 - `id`  is the asset id of the dataset. One of  `name`  or  `id`  must be specified.
 - `to-name`  is the new name to which the dataset is copied.
+- `location` is a path to the physical location of the dataset. It is used when duplicate names are allowed.
+- `override` when set to true, it overwrites the file if it already exists.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2540,13 +2559,14 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax provides a description of the fileset schema definition in a given project.
 
 ```
-cpdctl dsjob describe-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}
+cpdctl dsjob describe-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location FILESETLOCATION]
 ```
 
 - `project` is the name of the project.
 - `project-id` is the id of the project. One of `project` or `project-id` must be specified.
 - `name` is the name of the fileset.
 - `id` is the asset id of the fileset. One of `name` or `id` must be specified.
+- `location` is a path to the physical location of the fileset. It is used when duplicate names are allowed.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2555,7 +2575,7 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax provides the metadata and sample data of a fileset in the given project.
 
 ```
-cpdctl dsjob view-fileset {{--project PROJECT | --project-id PROJID} | {--space SPACE | --space-id SPACEID}} {--name NAME | --id ID} [--output json|table]
+cpdctl dsjob view-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location FILESETLOCATION] [--output json|file --file-name FILENAME --delim CHAR]
 ```
 
 - `project` is the name of the project.
@@ -2565,6 +2585,11 @@ cpdctl dsjob view-fileset {{--project PROJECT | --project-id PROJID} | {--space 
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `delim` a single character, when specified will be used as delimiter for the fields in each record/row.
+- `location` is a path to the physical location of the fileset. It is used when duplicate names are allowed.
+- `delim` is a field delimiter character for output records.
+- `dump` when set to true, it outputs all records in the fileset.
+- `offset` reads data from the offset provided, default is 0.
+- `limit` reads number of records specified in each read.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2605,7 +2630,7 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax is used to fetch the asset definition for a fileset.
 
 ```
-cpdctl dsjob get-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata]
+cpdctl dsjob get-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location FILESETLOCATION] [--output json|file] [--file-name FILENAME] [--with-metadata]
 ```
 
 - `project` is the name of the project that contains the fileset.
@@ -2615,6 +2640,7 @@ cpdctl dsjob get-fileset {--project PROJECT | --project-id PROJID} {--name NAME 
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `with-metadata` when specified adds metadata to the output.
+- `location` is a path to the physical location of the fileset. It is used when duplicate names are allowed.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2639,7 +2665,7 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax downloads a fileset to a file. This downloads the fileset along with the backend fileset schema and data files.
 
 ```
-cpdctl dsjob download-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} --file-name ZIPFile
+cpdctl dsjob download-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location FILESETLOCATION] --file-name ZIPFile
 
 ```
 
@@ -2648,6 +2674,7 @@ cpdctl dsjob download-fileset {--project PROJECT | --project-id PROJID} {--name 
 - `name` is the name of the fileset.
 - `id` is the asset id of the fileset. One of name or id must be specified.
 - `file-name` name of the .zip file to which exported content is written.
+- `location` it is a path to the physical location of the fileset. It is used when duplicate names are allowed.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2705,7 +2732,7 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following commands allows copy of a fileset to a new name while keeping the original fileset. 
 
 ```
-cpdctl dsjob copy-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  --to-name NEWNAME
+cpdctl dsjob copy-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  [--location FILESETLOCATION] --to-name NEWNAME [--override]
 ```
 
 - `project`  is the name of the project.
@@ -2713,6 +2740,8 @@ cpdctl dsjob copy-fileset {--project PROJECT | --project-id PROJID} {--name NAME
 - `name`  is the name of the fileset.
 - `id`  is the asset id of the fileset. One of  `name`  or  `id`  must be specified.
 - `to-name`  is the new name to which the fileset is copied.
+- `location` is a path to the physical location of the fileset. It is used when duplicate names are allowed.
+- `override` when set to true, it overwrites the file if it already exists.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -4326,7 +4355,7 @@ The asset id of the newly created data asset is printed to the output. A status 
 The following syntax downloads a data asset from a project. The data asset along with schema and data is downloaded from the project.
 
 ```
-cpdctl dsjob download-data-asset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} --file-name ZIPFile
+cpdctl dsjob download-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location DATASETLOCATION] --file-name ZIPFile
 ```
 
 - `project` is the name of the project.
@@ -4334,6 +4363,7 @@ cpdctl dsjob download-data-asset {--project PROJECT | --project-id PROJID} {--na
 - `name` name of the data asset to download
 - `id` is the asset id of the data asset. One of name or id must be specified.
 - `file-name` name of the .zip file to which data asset content is written.
+- `location` is a path to the physical location of the dataset. It is used when duplicate names are allowed.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -4645,6 +4675,76 @@ cpdctl dsjob clear-vault-cache
 ```
 
 Note: this command does not take arguments.
+
+### Serialization of Vault api calls
+The following command can be used to serialize calls to vault api to avoid flooding api request when many concurrent jobs are run and use vault.
+
+```
+cpdctl dsjob serialize-vault-secrets --enable
+```
+
+- `enable` when set to true, it enables serialization of vault api calls avoid too many concurrent calls to vault.
+
+### List Vaults
+The following command lists all vaults on the platform.
+
+```
+cpdctl dsjob list-vaults  [--sort | --sort-by-time]
+```
+
+- `sort` when it is specified it returns the list of vaults sorted in alphabetical order. This field is optional.
+- `sort-by-time` when specified sorts the list by create or update time. One of `sort` or  `sort-by-time` can be specified.
+
+### Get Vault
+The following command return details on a given vault.
+
+```
+cpdctl dsjob get-vault  --name VAULT-URN
+```
+
+- `name` URN of the vault.
+
+### List Vault Secrets
+The following command lists all the secrets in a vault.
+
+```
+cpdctl dsjob list-vault-secrets [--name VAULT_URN] [--sort | --sort-by-time]
+```
+
+- `name` URN of the vault.
+- `sort` when it is specified it returns the list of vaults secrets sorted in alphabetical order. This field is optional.
+- `sort-by-time` when specified sorts the list by create or update time. One of `sort` or  `sort-by-time` can be specified.
+
+### Create a Vault Secret
+The following command can be used to create a secret in a vault
+
+```
+cpdctl dsjob create-vault-secret  --name NAME [--description DESCRIPTION] --secret-tye TYPE --vault-urn URN {--value name=value}...
+```
+
+- `name` name of the secret.
+- `description` description of the secret to be created.
+- `vault-urn` URN of the vault.
+- `secret-type` should be a valid value for the secret type, ex: generic, credentials, certificate or token (default: credentials).
+- `value` list of name-value pairs, ex: `--value password=<password>`, `--value username=<user>` when secret-type is 'credentials'.
+
+### Get a Vault Secret
+The following command is used to get details of a secret in the vault.
+
+```
+cpdctl dsjob get-vault-secret  --name SECRET-URN
+```
+
+- `name` URN of the vault secret.
+
+### Delete a Vault Secret
+The following command is used to delete a secret in the vault.
+
+```
+cpdctl dsjob delete-vault-secret  --name SECRET-URN
+```
+
+- `name` URN of the vault secret.
 
 ## Working with Workload Management Configuration
 
