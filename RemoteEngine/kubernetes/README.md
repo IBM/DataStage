@@ -221,7 +221,19 @@ If the shutdown is temporary, then the shutdown flag can be set on the CR - this
 oc patch pxre <cr-name> --type='json' -p='[{"op": "replace", "path": "/spec/shutdown", value: true}]'
 ```
 
-If it's for uninstall, then they can delete the CR. With CR deletion, the finalizer should only be removed if the deletion is taking too long (stuck); the finalizer handles the cleanup of unregistering the engine and deleting the runtime environment that it created previously.
+To uninstall the engine, delete the PXRemoteEngine(pxre) CR with the same name. With CR deletion, the finalizer should only be removed if the deletion is taking too long (stuck); the finalizer handles the cleanup of unregistering the engine and deleting the runtime environment that it created previously.
+
+Command to delete CR:
+
+```
+oc delete pxre <cr-name>
+```
+
+Command to remove finalizers:
+
+```
+oc patch pxre <cr-name> --type='json' -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
+```
 
 ## Troubleshooting
 1. If the API Key Changes in DataStage aaS with Anywhere
