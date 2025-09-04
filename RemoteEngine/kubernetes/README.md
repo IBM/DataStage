@@ -218,7 +218,7 @@ oc patch pxre <cr-name> --patch '{"spec":{"ephemeralStorageLimit": "20Gi"}}' --t
 If the shutdown is temporary, then the shutdown flag can be set on the CR - this will scale down the px-runtime and px-compute to 0.
 
 ```
-oc patch pxre <cr-name> --type='json' -p='[{"op": "replace", "path": "/spec/shutdown", value: true}]'
+oc patch pxre <cr-name> --patch '{"spec":{"shutdown":true}}' --type=merge
 ```
 
 To uninstall the engine, delete the PXRemoteEngine(pxre) CR with the same name. With CR deletion, the finalizer should only be removed if the deletion is taking too long (stuck); the finalizer handles the cleanup of unregistering the engine and deleting the runtime environment that it created previously.
