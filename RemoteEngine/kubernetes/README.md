@@ -214,6 +214,15 @@ To increase the ephemeral storage limit to the target size, eg. 20GB, use the fo
 oc patch pxre <cr-name> --patch '{"spec":{"ephemeralStorageLimit": "20Gi"}}' --type=merge
 ```
 
+## Shutting Down/Uninstalling a Kubernetes Remote Engine
+If the shutdown is temporary, then the shutdown flag can be set on the CR - this will scale down the px-runtime and px-compute to 0.
+
+```
+oc patch pxre <cr-name> --type='json' -p='[{"op": "replace", "path": "/spec/shutdown", value: true}]'
+```
+
+If it's for uninstall, then they can delete the CR. With CR deletion, the finalizer should only be removed if the deletion is taking too long (stuck); the finalizer handles the cleanup of unregistering the engine and deleting the runtime environment that it created previously.
+
 ## Troubleshooting
 1. If the API Key Changes in DataStage aaS with Anywhere
     1. Rerun the launch.sh script again with the updated input file with the new API Key
