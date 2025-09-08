@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.8
+TOOL_VERSION=1.0.9
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -234,6 +234,11 @@ echo_error_and_exit() {
     exit 1
 }
 
+echo_warn()
+{
+  echo "WARNING: ${1}"
+}
+
 validate_common_args()
 {
   if [ -z $namespace ]; then
@@ -315,7 +320,25 @@ EOF
 
 create_service_account() {
   #sed <"${serviceAccountFile}" "s#NAMESPACE_REPLACE#${namespace}#g" | $kubernetesCLI apply ${dryRun} -f -
-  cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
+
+  $kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET > /dev/null
+  if [ $? -ne 0 ]; then
+    echo "WARNING: Creating service account without container registry pull secret. Falling back on global pull secret."
+    cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ibm-cpd-datastage-remote-operator-serviceaccount
+  namespace: $namespace
+  labels:
+    app.kubernetes.io/instance: ibm-cpd-datastage-remote-operator-sa
+    app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+    app.kubernetes.io/name: ibm-cpd-datastage-remote-operator-sa
+imagePullSecrets:
+- name: ibm-entitlement-key
+EOF
+  else
+    cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -329,6 +352,7 @@ imagePullSecrets:
 - name: ibm-entitlement-key
 - name: $DS_REGISTRY_SECRET
 EOF
+  fi
 }
 
 create_role() {
@@ -551,16 +575,20 @@ EOF
 
 create_pull_secret() {
   $kubernetesCLI -n ${namespace} delete secret $DS_REGISTRY_SECRET --ignore-not-found=true ${dryRun}
-  if [ -z $password ]; then
-    display_missing_arg "password"
+  if [ -z $password ] && [ -z $username ] && [ ! -z $zen_url ]; then
+    echo_warn "Username and Password not specified for the container registry. Install will rely on global pull secrets to retrieve the images for CP4D."
+  else
+    if [ -z $password ]; then
+      display_missing_arg "password"
+    fi
+    if [ -z $username ]; then
+      display_missing_arg "username"
+    fi
+    if [[ ! -z ${CUSTOM_DOCKER_REGISTRY} ]]; then
+      DOCKER_REGISTRY="${CUSTOM_DOCKER_REGISTRY}"
+    fi
+    $kubernetesCLI -n ${namespace} create secret docker-registry $DS_REGISTRY_SECRET --docker-server=${DOCKER_REGISTRY} --docker-username=${username} --docker-password=${password} --docker-email=cpd@us.ibm.com ${dryRun}
   fi
-  if [ -z $username ]; then
-    display_missing_arg "username"
-  fi
-  if [[ ! -z ${CUSTOM_DOCKER_REGISTRY} ]]; then
-    DOCKER_REGISTRY="${CUSTOM_DOCKER_REGISTRY}"
-  fi
-  $kubernetesCLI -n ${namespace} create secret docker-registry $DS_REGISTRY_SECRET --docker-server=${DOCKER_REGISTRY} --docker-username=${username} --docker-password=${password} --docker-email=cpd@us.ibm.com ${dryRun}
 }
 
 create_apikey_secret() {
