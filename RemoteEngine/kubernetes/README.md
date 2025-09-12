@@ -112,6 +112,7 @@ namespace=<namespace>
 
 # If you are specifically deploying a remote engine for IBM Cloud, the username and api key for the IBM Cloud Container Registry.
 # If you are specifically deploying a remote engine for CP4D, the username and api key for the IBM Entitled Registry.
+# The username and password for the registry can be omitted if the global pull secret has been configured for the IBM Entitled Registry.
 username=<account-login-user>
 password=<registry-api-key>
 
