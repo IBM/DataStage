@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.26
+TOOL_VERSION=1.0.27
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -2484,7 +2484,7 @@ elif [[ ${ACTION} == "update" ]]; then
     [ -z $IVSPEC ] && "Could not retrieve IVSPEC from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $PX_MEMORY ] && "Could not retrieve PX_MEMORY from container ${PXRUNTIME_CONTAINER_NAME}"
     [ -z $PX_CPUS ] && "Could not retrieve PX_CPUS from container ${PXRUNTIME_CONTAINER_NAME}"
-    [ -z $PIDS_LIMIT ] && "Could not retrieve PIDS_LIMIT from container ${PXRUNTIME_CONTAINER_NAME}"
+    [ -z $PIDS_LIMIT ] && PIDS_LIMIT='-1'
     [ -z $REMOTE_ENGINE_PORT ] && REMOTE_ENGINE_PORT='9443'
     [ -z $GATEWAY_URL ] && "Could not retrieve GATEWAY_URL from container ${PXRUNTIME_CONTAINER_NAME}"
     if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
