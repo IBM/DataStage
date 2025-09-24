@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.9
+TOOL_VERSION=1.0.10
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -1108,24 +1108,24 @@ determine_registry() {
 
 set_remote_engine_digests() {
   echo "Setting custom remote engine digests."
-  IFS="," read -ra USE_DIGESTS <<< "${USE_DIGESTS}"
-  if [[ ${#USE_DIGESTS[@]} != 3 ]]; then
-    echo_error_and_exit "Please specify the digests to use; one each for ds-operator, ds-px-runtime, and ds-px-compute. ${#USE_DIGESTS[@]} disgest specified; 3 expected."
+  IFS="," read -ra DIGEST_LIST <<< "${USE_DIGESTS}"
+  if [[ ${#DIGEST_LIST[@]} != 3 ]]; then
+    echo_error_and_exit "Please specify the digests to use; one each for ds-operator, ds-px-runtime, and ds-px-compute. ${#DIGEST_LIST[@]} disgest specified; 3 expected."
   fi
-  if [[ "${USE_DIGESTS[0]}" = sha256* ]]; then
-    operator_digest="${USE_DIGESTS[0]}"
+  if [[ "${DIGEST_LIST[0]}" = sha256* ]]; then
+    operator_digest="${DIGEST_LIST[0]}"
     echo "Using custom digest for ds-operator: ${operator_digest}"
   else
     echo_error_and_exit "Custom ds-operator digest is not in proper sha256 format."
   fi
-  if [[ "${USE_DIGESTS[1]}" = sha256* ]]; then
-    px_runtime_digest="${USE_DIGESTS[1]}"
+  if [[ "${DIGEST_LIST[1]}" = sha256* ]]; then
+    px_runtime_digest="${DIGEST_LIST[1]}"
     echo "Using custom digest for ds-px-runtime: ${px_runtime_digest}"
   else
     echo_error_and_exit "Custom ds-px-runtime digest is not in proper sha256 format."
   fi
-  if [[ "${USE_DIGESTS[2]}" = sha256* ]]; then
-    px_compute_digest="${USE_DIGESTS[2]}"
+  if [[ "${DIGEST_LIST[2]}" = sha256* ]]; then
+    px_compute_digest="${DIGEST_LIST[2]}"
     echo "Using custom digest for ds-px-compute: ${px_compute_digest}"
   else
     echo_error_and_exit "Custom ds-px-compute digest is not in proper sha256 format."
