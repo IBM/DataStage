@@ -1727,7 +1727,7 @@ validate_action_arguments() {
         fi
 
         # needed for all options
-        [ -z $REMOTE_ENGINE_NAME ] && echo_error_and_exit "Please specify a name for the Remote Engine instance (-n | --remote-engine-name). Aborting."
+        [ -z "$REMOTE_ENGINE_NAME" ] && echo_error_and_exit "Please specify a name for the Remote Engine instance (-n | --remote-engine-name). Aborting."
 
         # validate values of choice arguments
         check_datastage_home
