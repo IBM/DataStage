@@ -8,7 +8,7 @@
 
 ## Requirements
 DataStage Remote Engine supports deployment on the following platforms:
-* OpenShift 4.12 and above - only x86 hardware is supported
+* OpenShift 4.12 and above - only AMD64 (x86_64) architecture is supported
     * Details on setting up an OpenShift cluster: https://docs.openshift.com/container-platform/4.12/welcome/index.html
 * IBM Cloud Kubernetes Service (IKS) or IBM Red Hat OpenShift Kubernetes Service (ROKS) - Classic or VPC
     * Details on setting up an IKS cluster: https://cloud.ibm.com/docs/containers?topic=containers-getting-started&interface=ui
