@@ -4,6 +4,9 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.2.2](#522)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.2.2.md)
+
 [5.2.1](#521)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.2.1.md)
 
@@ -75,6 +78,26 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 5.2.2
+
+### New commands
+
+The following commands are added:
+
+-   `export-message-handler`  exports message handler.
+
+### Command changes
+
+The following commands have changed:
+
+-   `run-pipeline` and `run`  commands now takes environment variable `ENABLE_CUSTOM_EXITCODE` to return 254 as shell exit code when unexpected errors occur such as HTTP Error 502.
+-  `run-pipeline` and `run`  uses `skip-metrics` when checking status of a job run to make it more efficient
+
+### Fixes
+
+- `update-project` command is fixed to enable folders on the project.
+
 
 ## 5.2.1
 
