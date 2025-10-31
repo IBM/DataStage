@@ -10,11 +10,13 @@ Last Updated: 2025-03-04
 CPDCTL and the  `dsjob`  tool are command-line interfaces (CLI) you can use to manage your  DataStage®  resources in IBM Cloud Pak for Data.
 
 ### Documentation:
-#### Latest : [DSJob Plugin 5.2.1](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.2.1.md)
+#### Latest : [DSJob Plugin 5.2.2](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.2.2.md)
 ### Binary
-#### [DSJob Plugin 5.2.1](https://github.com/IBM/cpdctl/releases/tag/v1.8.20)
+#### [DSJob Plugin 5.2.2](https://github.com/IBM/cpdctl/releases/tag/v1.8.28)
 
 #### Other Releases
+[DSJob Plugin 5.2.1](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.2.1.md)
+
 [DSJob Plugin 5.2.0](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.2.0.md)
 
 [DSJob Plugin 5.1.3](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.1.3.md)
@@ -66,6 +68,7 @@ The following table illustrate CP4D release compatibility to corresponding CPDCT
 CPDCTL release build contains the dsjob plugin which is release for the mentioned CP4D release.
 | CPD release | CPDCTL Version |
 | -------------|---------------|
+|5.2.2   | v1.8.28  |
 |5.2.1   | v1.8.20  |
 |5.2.0   | v1.7.19  |
 |5.1.3   | v1.7.10  |
