@@ -1,4 +1,4 @@
-#DataStage CPD cluster monitor script
+# DataStage CPD cluster monitor script
 
 This is a script to monitor CPD cluster for DataStage runtime pods. 
 Download the script to a local temporary directory on a machine that has access to all px-runtime pods running in a CP4D cluster. 
