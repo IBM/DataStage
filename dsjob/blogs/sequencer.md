@@ -23,7 +23,7 @@ cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID} {--name 
 -  `id` is the id of the flow or a pipeline. One of `name` or `id` must be specified.
 -  `code` will output the details on the code it generates
 -  `threads` specifies the number of parallel compilations to run. The value should be in the range 5-20, default value is 5. This field is optional.
-- `enable-inline` when set to false, generates code to run each nested pipeline as independent sequencer job. Default value is `true`
+- `enable-inline` when true, it runs nested pipelines as part of the same job. If false each nested pipeline is run as a separate job. Default value is `true`
 
 ex:
 // compile all pipelines in a project by concurrently compiling 10 at a time
@@ -42,7 +42,7 @@ To use `enable-inline` option please use cpdctl version [1.6.78]([https://github
 
 - `optimize` when true the pipeline is run as sequencer job. If not specified then the pipeline is run as a normal pipeline execution.
 - `skip-compile` when true the pipeline is not compiled during the run, if this flag is false then the pipeline is compiled as part of the run. This flag is only effective when `optimize` flag is set for the run, i.e. in optimized runner mode.
-- `enable-inline` when set to false allows each nested pipeline to run as independent sequencer job. If `skip-compile` is set, then this flag will not have any effect because the existing compiled code is run as is.
+- `enable-inline` when true, it runs nested pipelines as part of the same job. If false each nested pipeline is run as a separate job. The default value is true.
  
 
 Following are some examples :
