@@ -8,7 +8,7 @@ The script lists all nodes in the cluster with number of DataStage px-runtime po
 
 The script will also copy details of nodes and pods to all px-runtime pods when ever any of the nodes in cluster is cordoned or un-cordoned or removed.
 
-Before cordoning a node that has px-runtime pod running in it, make sure that there is a another px-runtime pod running by updating px-runtime pod replica count in CR. Make sure that there are no DataStage process running, jobs running and queued on the cordoned node before  node upgrade or restart. 
+Before cordoning a node that has px-runtime pod running in it, make sure that there is another px-runtime pod running by updating px-runtime pod replica count in CR. Make sure that there are no DataStage process running, jobs running and queued on the cordoned node before  node upgrade or restart. 
 
 Learn more about Enabling multiple conductor (PX runtime) pods in DataStage at https://www.ibm.com/docs/en/software-hub/5.2.x?topic=resources-enabling-multiple-conductor-pods.
 
