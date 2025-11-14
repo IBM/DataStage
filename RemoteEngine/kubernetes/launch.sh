@@ -753,7 +753,7 @@ handle_install_usage() {
   echo ""
   echo "Usage: $0 install --namespace <namespace> [--data-center <data-center>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--zen-url <zen-url>]"
   echo "--namespace: the namespace to install the DataStage operator"
-  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, toronto, or awsprod"
+  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, toronto, london, or awsprod"
   echo "--registry: Custom container registry to pull images from if you are image mirroring using a private registry. If using this option, you must set --digests as well for IBM Cloud."
   echo "--operator-registry-suffix: Custom operator registry suffix to use for the remote engine to pull ds-operator images from if using a custom container registry. Defaults to 'cpopen'."
   echo "--docker-registry-suffix: Custom docker registry suffix to use for the remote engine to pull ds-px-runtime and ds-px-compute images from if using a custom container registry. Defaults to 'cp/cpd'."
@@ -826,7 +826,7 @@ handle_create_instance_usage() {
   echo "--storageClass: the file storageClass to use"
   echo "--storageSize: the storage size to use (in GB); defaults to 10"
   echo "--size: the size of the instance (small, medium, large); defaults to small"
-  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, toronto, or awsprod"
+  echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, toronto, london, or awsprod"
   echo "--license-accept: set the to true to indicate that you have accepted the license for IBM DataStage as a Service Anywhere - https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en"
   echo "--additional-users: comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner"
   echo "--registry: Custom container registry to pull images from if you are image mirroring using a private registry. If using this option, you must set --digests as well for IBM Cloud."
@@ -1160,6 +1160,9 @@ if [[ "$remote_controlplane_env" != "icp4d" ]]; then
   elif [ $data_center = "toronto" ]; then
     # ca-tor
     DS_GATEWAY="api.ca-tor.dai.cloud.ibm.com"
+  elif [ $data_center = "london" ]; then
+    # eu-gb
+    DS_GATEWAY="api.eu-gb.dataplatform.cloud.ibm.com"
   elif [ $data_center = "ys1dev" ]; then
     # dataplatform.dev
     DS_GATEWAY="api.dataplatform.dev.cloud.ibm.com"
@@ -1180,7 +1183,7 @@ if [[ "$remote_controlplane_env" != "icp4d" ]]; then
     DS_GATEWAY="api.ap-south-1.aws.data.ibm.com"
     IAM_URL="https://account-iam.platform.saas.ibm.com"
   elif [ $data_center != "dallas" ]; then
-    echo_error_and_exit "Unknown value for data center '${data_center}'. Please specified either dallas, frankfurt, sydney, toronto, or awsprod."
+    echo_error_and_exit "Unknown value for data center '${data_center}'. Please specified either dallas, frankfurt, sydney, toronto, london, or awsprod."
   fi
 fi
 }
