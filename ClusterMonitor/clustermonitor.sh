@@ -44,7 +44,7 @@ get_last_chars() {
 # CLI Detection
 #######################################################################
 
-set_clit() {
+set_cli() {
     if which kubectl &>/dev/null; then
         kubernetesCLI="kubectl"
     elif which oc &>/dev/null; then
@@ -269,7 +269,7 @@ monitor_cluster() {
 #######################################################################
 
 main() {
-    set_clit
+    set_cli
     monitor_cluster
 }
 
