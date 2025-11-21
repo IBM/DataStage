@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.29
+TOOL_VERSION=1.0.30
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -1547,6 +1547,28 @@ patch_environment() {
     fi
 }
 
+patch_environment_for_cp4d() {
+    create_hardware_spec_for_cp4d
+    _project_env_patch_response=$($CURL_CMD -sSi -X 'PATCH' "${GATEWAY_URL}/v2/environments/${PROJECT_ENV_ASSET_ID}?project_id=${PROJECT_ID}" \
+        -H 'accept: application/json' \
+        -H "Authorization: Bearer $ACCESS_TOKEN" \
+        -H 'Content-Type: application/json' \
+        -d "{
+  \"/entity/environment/hardware_specification\": {
+    \"guid\": \"${PROJECT_HARDWARE_SPEC_ASSET_ID}\"
+  }
+}"
+        )
+    _project_env_patch_response_status="$(echo $_project_env_patch_response | head -n 1 | cut -d' ' -f2)"
+    if [[ -z "${_project_env_patch_response_status}" || "${_project_env_patch_response_status}" != "200" ]]; then
+        echo "Response: ${_project_env_patch_response}"
+        echo ""
+        echo "WARNING: Unable to patch environment runtime with id: ${PROJECT_ENV_ASSET_ID}. Ignoring ..."
+        echo ""
+    else
+        echo "Patched environment runtime with id: ${PROJECT_ENV_ASSET_ID}"
+    fi
+}
 
 create_environment() {
     _project_env_create_response=$($CURL_CMD -sS -X 'POST' "${GATEWAY_URL}/v2/environments?project_id=${PROJECT_ID}" \
@@ -1587,7 +1609,103 @@ create_environment() {
     \"num_partitions\": 2
   },
   \"software_specification\": {
+  },
+  \"environment_variables\": {
+    \"REMOTE_ENGINE\": \"${REMOTE_ENGINE_ID}\"
+  }
+}"
+        )
 
+    PROJECT_ENV_ASSET_ID=$(printf "%s" "${_project_env_create_response}" | jq '.metadata.asset_id' | tr -d '"')
+    if [[ -z "${PROJECT_ENV_ASSET_ID}" || "${PROJECT_ENV_ASSET_ID}" == "null" ]]; then
+        echo ""
+        if [[ "$_project_env_create_response" ]]; then
+            echo "Response = ${_project_env_create_response}"
+        fi
+        echo_error_and_exit "Failed to create environment in Project, please try again"
+    fi
+
+    if [[ ${PROJECT_ENV_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
+        # echo "Got project environment with id: ${PROJECT_ENV_ASSET_ID}"
+        true
+    else
+        echo ""
+        echo "Response: ${_project_env_get_response}"
+        echo_error_and_exit "Could not create an environment with this remote engine, or failed to check project environment status."
+    fi
+    echo "Created environment runtime with id: ${PROJECT_ENV_ASSET_ID}"
+}
+
+create_hardware_spec_for_cp4d() {
+    _project_hardware_spec_create_response=$($CURL_CMD -sS -X 'POST' "${GATEWAY_URL}/v2/hardware_specifications?project_id=${PROJECT_ID}" \
+        -H 'accept: application/json' \
+        -H "Authorization: Bearer $ACCESS_TOKEN" \
+        -H 'Content-Type: application/json' \
+        -d "{
+  \"name\": \"Hardware Specification for ${REMOTE_ENGINE_NAME}\",
+  \"description\": \"Hardware Specification for DataStage Remote Engine ${REMOTE_ENGINE_NAME}\",
+  \"datastage\": {
+    \"num_conductors\": 1,
+    \"num_computes\": 0,
+    \"conductor\": {
+      \"cpu\": {
+        \"units\": \"${PX_CPUS}\",
+        \"model\": \"\"
+      },
+      \"mem\": {
+        \"size\": \"${PX_MEMORY}\"
+      }
+    },
+    \"compute\": {
+      \"cpu\": {
+        \"units\": \"1\",
+        \"model\": \"\"
+      },
+      \"mem\": {
+        \"size\": \"4G\"
+      }
+    }
+  }
+}"
+        )
+
+    PROJECT_HARDWARE_SPEC_ASSET_ID=$(printf "%s" "${_project_hardware_spec_create_response}" | jq '.metadata.asset_id' | tr -d '"')
+    if [[ -z "${PROJECT_HARDWARE_SPEC_ASSET_ID}" || "${PROJECT_HARDWARE_SPEC_ASSET_ID}" == "null" ]]; then
+        echo ""
+        if [[ "$_project_hardware_spec_create_response" ]]; then
+            echo "Response = ${_project_hardware_spec_create_response}"
+        fi
+        echo_error_and_exit "Failed to create hardware specification in Project, please try again"
+    fi
+
+    if [[ ${PROJECT_HARDWARE_SPEC_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
+        # echo "Got project hardware specification with id: ${PROJECT_HARDWARE_SPEC_ASSET_ID}"
+        true
+    else
+        echo ""
+        echo "Response: ${_project_hardware_spec_create_response}"
+        echo_error_and_exit "Could not create a hardware specification with this remote engine, or failed to check project environment status."
+    fi
+    echo "Created hardware specification with id: ${PROJECT_HARDWARE_SPEC_ASSET_ID}"
+}
+
+create_environment_for_cp4d() {
+    create_hardware_spec_for_cp4d
+    _project_env_create_response=$($CURL_CMD -sS -X 'POST' "${GATEWAY_URL}/v2/environments?project_id=${PROJECT_ID}" \
+        -H 'accept: application/json' \
+        -H "Authorization: Bearer $ACCESS_TOKEN" \
+        -H 'Content-Type: application/json' \
+        -d "{
+  \"name\": \"${REMOTE_ENGINE_NAME}\",
+  \"description\": \"DataStage Remote Engine ${REMOTE_ENGINE_NAME}\",
+  \"display_name\": \"${REMOTE_ENGINE_NAME}\",
+  \"type\": \"datastage\",
+  \"hardware_specification\": {
+    \"guid\": \"${PROJECT_HARDWARE_SPEC_ASSET_ID}\"
+  },
+  \"tools_specification\": {
+    \"runtime_root_folder\": \"/DataStage/\",
+    \"num_partitions\": 2
   },
   \"environment_variables\": {
     \"REMOTE_ENGINE\": \"${REMOTE_ENGINE_ID}\"
@@ -2318,10 +2436,18 @@ if [[ ${ACTION} == "start" ]]; then
         get_environment_id
         if [[ -z "${PROJECT_ENV_ASSET_ID}" || "${PROJECT_ENV_ASSET_ID}" == "null" ]]; then
             echo "Could not find an existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} for project ${PROJECT_ID}, creating a new one ..."
-            create_environment
+            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+                create_environment_for_cp4d
+            else
+                create_environment
+            fi
         else
             echo "Found existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} for project ${PROJECT_ID} with id: ${PROJECT_ENV_ASSET_ID}"
-            patch_environment
+            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+                patch_environment_for_cp4d
+            else
+                patch_environment
+            fi
         fi
         echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is registered for project ${PROJECT_ID}."
 
