@@ -218,6 +218,7 @@ rules:
   - jobs/status
   - pods/status
   - networkpolicies
+  - poddisruptionbudgets
   verbs:
   - apply
   - create
