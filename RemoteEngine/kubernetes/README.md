@@ -215,6 +215,33 @@ To increase the ephemeral storage limit to the target size, eg. 20GB, use the fo
 oc patch pxre <cr-name> --patch '{"spec":{"ephemeralStorageLimit": "20Gi"}}' --type=merge
 ```
 
+## Modifying PXRemoteEngine CR spec to have custom scale values
+To manually adjust the CPU and RAM values of the PXRemoteEngine CR ds-px-runtime and ds-px-compute pods as well as the number of replicas, please follow the instructions laid out here for your PXRE instance: https://www.ibm.com/docs/en/software-hub/5.1.x?topic=resources-customizing-hardware-configurations
+
+*WARNING*: Please specify all values under spec/scale. The PXRemoteEngine will not take partial entries. Also, to ensure smooth functionality, please do not set the values below the minimum required specs. The minimum required specs are:
+```
+spec:
+  scale:
+    pxruntime:
+      replicas: 1
+      resources:
+        limits:
+          cpu: 1
+          memory: 4Gi
+        requests:
+          cpu: 5m
+          memory: 2Gi
+    pxcompute:
+      replicas: 2
+      resources:
+        limits:
+          cpu: 3
+          memory: 12Gi
+        requests:
+          cpu: 5m
+          memory: 2Gi
+```
+
 ## Shutting Down/Uninstalling a Kubernetes Remote Engine
 If the shutdown is temporary, then the shutdown flag can be set on the CR - this will scale down the px-runtime and px-compute to 0.
 
