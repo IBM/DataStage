@@ -72,7 +72,7 @@ To deploy the DataStage operator on cluster without global pull secret configure
 
 # create the remote instance - add '--gateway api.dataplatform.cloud.ibm.com' if the instance needs to registers with prod env
 
-./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project_id1,project_id2,project_id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto|awsprod (if you are specifically deploying a remote engine for IBM Cloud)] [--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)] --license-accept true
+./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project_id1,project_id2,project_id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto|london|awsprod (if you are specifically deploying a remote engine for IBM Cloud)] [--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)] --license-accept true
 ```
 For documentation on how to create IBM Cloud API keys, see https://cloud.ibm.com/docs/account?topic=account-manapikey.
 To generate a CP4D API Key, go to "Profile and settings" when logged in to the CP4D Cluster to get your api key for the connection.
@@ -104,7 +104,7 @@ sample input file:
 # indicate that you have accepted license for IBM DataStage as a Service Anywhere(https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en)
 license_accept=true
 
-# If you are specifically deploying a remote engine for IBM Cloud, the data center where your DataStage is provisioned on IBM cloud (dallas, frankfurt, sydney, toronto, or awsprod); the default is dallas.
+# If you are specifically deploying a remote engine for IBM Cloud, the data center where your DataStage is provisioned on IBM cloud (dallas, frankfurt, sydney, toronto, london, or awsprod); the default is dallas.
 # data_center=dallas
 
 # the namespace to deploy the remote engine

@@ -27,6 +27,7 @@
         1. eu-de.dataplatform.cloud.ibm.com and api.dataplatform.cloud.ibm.com - if using the Frankfurt data center
         1. au-syd.dai.cloud.ibm.com and api.au-syd.dai.cloud.ibm.com - if using the Sydney data center
         1. ca-tor.dai.cloud.ibm.com and api.ca-tor.dai.cloud.ibm.com - if using the Toronto data center
+        1. eu-gb.dataplatform.cloud.ibm.com and api.eu-gb.dataplatform.cloud.ibm.com - if using the London data center
         1. ap-south-1.aws.data.ibm.com and api.ap-south-1.aws.data.ibm.com - if using the AWS data center
         1. cloud-object-storage.appdomain.cloud (the url could have a prefixed region eg. <region>.s3.cloud-object-store.appdomain.cloud), so recommendation is to allow `*.cloud-object-storage.appdomain.cloud` to accomodate such variations.
 
