@@ -4,6 +4,9 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.3.0](#530)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.3.0.md)
+
 [5.2.2](#522)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.2.2.md)
 
@@ -79,25 +82,43 @@ interface.
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
 
+## 5.3.0
+
+### Command changes
+
+The following commands have changed:
+
+- `compile-pipeline` has a new flag `enable-debug` added to support debugging information when running pipeline as optimized runner.
+- `run-pipeline` with `--optimize` option is optimized to use less polling to determine job completions.
+- `git-configure` command is enhanced to SSL fields `git-cert` or `git-certfile` and `git-cert-key` or `git-cert-keyfile`.  New field `ds-user` is added to support tracking pipelines.
+- `get-jobrun` takes new param `skip-metrics` to skip metrics in the returned response.
+- `list-ds-runs` report takes `show-by-runname` option to only show last run for each job with a unique run-name.
+- `list-scheduled-jobs` now shows next scheduled time as local time.
+- `update-job` is enhanced to support `jobrun-retention-days` and `jobrun-retention-runs` to retain jobs.
+- `export-zip`, `export-project` and `export-datastage-assets` add `include-compile-metadata` for pipeline jobs.
+
+### Fixes
+
+- `run-pipeline` option `reset-cache` is fixed to reset cache on a job run.
+
 ## 5.2.2
 
 ### New commands
 
 The following commands are added:
 
--   `export-message-handler`  exports message handler.
+- `export-message-handler` exports message handler.
 
 ### Command changes
 
 The following commands have changed:
 
--   `run-pipeline` and `run`  commands now takes environment variable `ENABLE_CUSTOM_EXITCODE` to return 254 as shell exit code when unexpected errors occur such as HTTP Error 502.
--  `run-pipeline` and `run`  uses `skip-metrics` when checking status of a job run to make it more efficient
+- `run-pipeline` and `run` commands take environment variable `ENABLE_CUSTOM_EXITCODE` to return 254 as shell exit code when unexpected errors occur (such as HTTP Error 502).
+- `run-pipeline` and `run` use `skip-metrics` when checking status of job run to make it more efficient.
 
 ### Fixes
 
 - `update-project` command is fixed to enable folders on the project.
-
 
 ## 5.2.1
 
@@ -272,7 +293,7 @@ The following commands have changed:
 - `warn-limit` option is added to control warn limits before job is aborted at project level.
 - `create-job` optionally takes `optimize` parameter that creates a DataStage sequence runner job. It now take `enable-inline` flag to run nested pipelines inline instead of as separate jobs.
 - `folders` option is added to the following commands to allow asset to be created in a folder
- - `create-flow`, `create-cff-schema`, `create-connection`, `create-build-stage` , `create-custom-stage`, `create-wrapped-stage`, `create-java-library`, `create-message-handler`, `create-paramset`, `create-pipeline-job`, `create-rule`, `create-subflow`, `create-tabledef`, `create-function-lib` and `create-job`.
+  - `create-flow`, `create-cff-schema`, `create-connection`, `create-build-stage` , `create-custom-stage`, `create-wrapped-stage`, `create-java-library`, `create-message-handler`, `create-paramset`, `create-pipeline-job`, `create-rule`, `create-subflow`, `create-tabledef`, `create-function-lib` and `create-job`.
 - `git-status` command changes to allow to display identical, changed and deleted objects using the flags `hide-identical`, `hide-modified` and `hide-deleted` respectively.
 - `migrate` now has two new flags `enable-autosave` to autosave migrated pipelines and `enable-jinja` to allow ninja templates in a bash script.
 - `run` commands now take list of paramfiles to allow to load job parameters from multiple files.
