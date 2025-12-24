@@ -33,9 +33,11 @@ Receiving objects: 100% (1523/1523), 2.34 MiB | 8.45 MiB/s, done.
 Resolving deltas: 100% (645/645), done.
 ```
 
-## Step 2: Get the Latest Image Digests
+## Step 2: Get the Image Digests
 
-### Get Access Token
+### Step 2a: For remote engine for IBM Cloud, it is okay to use the latest image digests
+
+#### First get access token (using your IBM Container Registry API key)
 ```bash
 IBM_CONTAINER_REGISTRY_KEY="your-ibm-cloud-api-key"
 
@@ -54,22 +56,94 @@ echo $ACCESS_TOKEN
 eyJraWQiOiIyMDI0MTEyMDE4MzAiLCJhbGciOiJSUzI1NiJ9.eyJpYW1faWQiOiJJQk1pZC0zMTAwMD...
 ```
 
-### Get Runtime and Compute Digests
+#### Get latest ds-operator digest
 ```bash
 curl -s -X GET \
+  -H "accept: application/json" \
+  -H "Account: d10b01a616ed4b73a9ac8a052424a345" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
-  -H 'accept: application/json;charset=utf-8' \
-  "https://api.dataplatform.cloud.ibm.com/data_intg/v3/flows_runtime/remote_engine/versions" | \
-  jq -r '.versions[0] | "Version: \(.px_runtime_version)\nRelease Date: \(.release_date)\npx_runtime: \(.image_digests.px_runtime)\npx_compute: \(.image_digests.px_compute)"'
+  --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=ds-operator" | \
+  jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"'
 ```
 
 **Sample Output:**
 ```
-Version: 1.0.2502
-Release Date: 11/19/2025
-px_runtime: sha256:fc272799bd1634e47dab5cd3f0974e840ccd3248480e9915bb664b40ca39e9ad
-px_compute: sha256:7870e7f7d2d650b318ca6008999c4406e64a6f09a494177d7a70064015efa7c2
+sha256:373b2d4dd50a780a151113caeb6aa16552001edc55bdf4ce598983e679b6bebf
 ```
+
+#### Get latest ds-px-runtime digest
+```bash
+curl -s -X GET \
+  -H "accept: application/json" \
+  -H "Account: d10b01a616ed4b73a9ac8a052424a345" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=ds-px-runtime" | \
+  jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"'
+```
+
+**Sample Output:**
+```
+sha256:c590dfbe4d25e6b7e5340f472d1a4a0cc5fdc996676f6c1a9038080f251f56a6
+```
+
+#### Get latest ds-px-compute digest
+```bash
+curl -s -X GET \
+  -H "accept: application/json" \
+  -H "Account: d10b01a616ed4b73a9ac8a052424a345" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  --url "https://icr.io/api/v1/images?includeIBM=false&includePrivate=true&includeManifestLists=true&vulnerabilities=true&repository=ds-px-compute" | \
+  jq '. |= sort_by(.Created) | .[length -1] | .RepoDigests[0]' | cut -d@ -f2 | tr -d '"'
+```
+
+**Sample Output:**
+```
+sha256:c490677665a69df0f468b49048c41ac883f3eb50354a3359bab7736f0f2737f9
+```
+
+### Step 2b: For remote engine for CP4D, it is recommended you use the official pre-built image digests that matches the DataStage version of the destination cluster you are connecting to (zen_url)
+
+### For Kubernetes/OpenShift Deployments
+
+You can get the image digests you need near the top of the launch.sh file. They are ordered by DataStage version starting from 5.1.0:
+
+```bash
+egrep "supported_versions=|asset_versions=|operator_digests=|px_runtime_digests=|px_compute_digests=" launch.sh
+```
+
+**Sample Output:**
+```
+supported_versions="5.1.0 5.1.1 5.1.2 5.1.3 5.2.0 5.2.1 5.2.2 5.3.0"
+asset_versions="510 511 512 513 520 521 522 530"
+operator_digests="sha256:4d4e0e4355f2e24522880fd3a5ce2b0300096586d929a9d762b011dcfbdbec84 sha256:315de39c1ce4e72b8af224a676da8c73f3118c455ab427b412edb22da795ae00 sha256:47bbb1b75e59e05e025134c8dd52adc6276050213b0a9deb51067aecb2f6056c sha256:f57d3d5b20521d546a0a9b6af839cc659c1f08357d5d06da93aacf1ad5ee08e4 sha256:2d753908d9581d10e66e087f809fe7c212dc73cbffc60bc6728b7b28b6ff9c57 sha256:2809185dd56232f2956eea571833df8858530c961bba919a967e83c9c3c24877 sha256:95f150a03ee72d4cf3df5db14d398297787451afed69d1f565498a09e5e6d05d sha256:1d0f615945b7784d187501c5eb74e4a63f07d0abedce1be43b48c5e646a54973"
+px_runtime_digests="sha256:e9c63c0334620ac72bc3a7343a6e4e8184a2e48ca2cd1f54f06734fddedc0949 sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a sha256:9e9b1562eee6d09969d6e967f0698f2320c0f75aad9b75643d4818d3596c7f7b sha256:d429306e12a74f34f8a86e0800be346abaff509d4aaf0e9fcefafcaf6ef36769 sha256:6e394510b8dddcb3e0858cf344955e411478927dc3ee35997d69d21bfd06f9d9 sha256:3abc437a0df489b2eb31d078676a3fe6bdd942e0d84b011479a8a0ceba8e02e0 sha256:d0d5b526f3e56539389a17f7f851bb7947332dc849728fa36eef099c1db50ae3 sha256:a9562467423d541c88c87fd509fbe929439be2633b64660eae578363e30e536e"
+px_compute_digests="sha256:266730b6769f585a6c943f3db5ad9174c058e6d00704f2c8a7b0f76cef1de29b sha256:eb9979137e0c724b0087246757666c662e1d430c5590a1a9e674f887be62f699 sha256:daf937b4d46f950b30f5c8d27f3f5b2d61703a8c403869befbdd62c47dd27a3d sha256:9c291405cf498cd88587ce5ae37cf0967718d17e8a7b4b7ea19796d3c5676c09 sha256:52754f8689e31100cd088163c7d1f7c1aa29863c6acbb3f2a41f6d141050ce1a sha256:391396d4d9bd48157eb29c1deb18746bf9be56321c94a99fdd35f8e4a3e6147d sha256:adafd046967c0beda9355f3aadd87d79aa464116c90fe12291fee4d9435a96f2 sha256:686a2fa095f4fb216136608b71732c76a237fd9b4c52091e54117425edd4d80e"
+```
+
+For example, if we want to use the ds-operator, ds-px-runtime, and ds-px-compute images for DataStage version 5.3.0, then we will use the following image digests:
+
+- **ds-operator**: `sha256:1d0f615945b7784d187501c5eb74e4a63f07d0abedce1be43b48c5e646a54973`
+- **ds-px-runtime**: `sha256:a9562467423d541c88c87fd509fbe929439be2633b64660eae578363e30e536e`
+- **ds-px-compute**: `sha256:686a2fa095f4fb216136608b71732c76a237fd9b4c52091e54117425edd4d80e`
+
+### For Docker/Podman Deployments
+
+You can get the image digests you need near the top of the dsengine.sh file. They are ordered by DataStage version starting from 5.1.0:
+
+```bash
+egrep "supported_versions=|asset_versions=|px_runtime_digests=" dsengine.sh
+```
+
+**Sample Output:**
+```
+supported_versions="5.1.0 5.1.1 5.1.2 5.1.3 5.2.0 5.2.1 5.2.2 5.3.0"
+asset_versions="510 511 512 513 520 521 522 530"
+px_runtime_digests="sha256:e9c63c0334620ac72bc3a7343a6e4e8184a2e48ca2cd1f54f06734fddedc0949 sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a sha256:9e9b1562eee6d09969d6e967f0698f2320c0f75aad9b75643d4818d3596c7f7b sha256:d429306e12a74f34f8a86e0800be346abaff509d4aaf0e9fcefafcaf6ef36769 sha256:6e394510b8dddcb3e0858cf344955e411478927dc3ee35997d69d21bfd06f9d9 sha256:3abc437a0df489b2eb31d078676a3fe6bdd942e0d84b011479a8a0ceba8e02e0 sha256:d0d5b526f3e56539389a17f7f851bb7947332dc849728fa36eef099c1db50ae3 sha256:a9562467423d541c88c87fd509fbe929439be2633b64660eae578363e30e536e"
+```
+
+For example, if we want to use the ds-px-runtime image for DataStage version 5.3.0, then we will use the following image digest:
+
+- **ds-px-runtime**: `sha256:a9562467423d541c88c87fd509fbe929439be2633b64660eae578363e30e536e`
 
 ## Step 3: Determine Which Images You Need
 
@@ -80,25 +154,10 @@ You need **three images**:
 - `ds-px-runtime`
 - `ds-px-compute`
 
-**Get the Operator Digest:**
-
-Navigate to the launch script directory and find the latest operator digest:
-```bash
-cd launch
-grep "operator_digests=" launch.sh
-```
-
-**Sample Output:**
-```
-operator_digests="sha256:4d4e0e4355f2e24522880fd3a5ce2b0300096586d929a9d762b011dcfbdbec84 sha256:be24dd5fb73e40177810a0ff71ee885ddf0883ab3f8b790a6620a705848406c5 sha256:f6c7e12cd8d0cd981becb0f5f9abb6b1d833a10beb71a00d33e270d2f7fa2da8 sha256:4a53892a469c6b9b751a4cc2449378bfb0b15bfe1f3c0dd5056eeaf1587c82a4 sha256:06d91aac99dee5359ad21cc004c7f8f5999da1845c0a5dbdfbcab9b921a2f797 sha256:b2eedfb5707285f3f5e9fb6dbab4eacc529e62506c379f915f850d6d2a707e7c sha256:7e4885cdb1deef0cbbcff590357fa96be32b31d5809f045ff2cbf285ad45b0a6"
-```
-
-The **last digest** in the list is the latest operator digest: `sha256:7e4885cdb1deef0cbbcff590357fa96be32b31d5809f045ff2cbf285ad45b0a6`
-
 **Summary of Kubernetes Digests:**
-- **ds-operator**: `sha256:7e4885cdb1deef0cbbcff590357fa96be32b31d5809f045ff2cbf285ad45b0a6`
-- **ds-px-runtime**: `sha256:fc272799bd1634e47dab5cd3f0974e840ccd3248480e9915bb664b40ca39e9ad`
-- **ds-px-compute**: `sha256:7870e7f7d2d650b318ca6008999c4406e64a6f09a494177d7a70064015efa7c2`
+- **ds-operator**: `sha256:373b2d4dd50a780a151113caeb6aa16552001edc55bdf4ce598983e679b6bebf`
+- **ds-px-runtime**: `sha256:c590dfbe4d25e6b7e5340f472d1a4a0cc5fdc996676f6c1a9038080f251f56a6`
+- **ds-px-compute**: `sha256:c490677665a69df0f468b49048c41ac883f3eb50354a3359bab7736f0f2737f9`
 
 ### For Docker/Podman Deployments
 
@@ -106,7 +165,7 @@ You need **one image**:
 - `ds-px-runtime`
 
 **Summary of Docker/Podman Digest:**
-- **ds-px-runtime**: `sha256:fc272799bd1634e47dab5cd3f0974e840ccd3248480e9915bb664b40ca39e9ad`
+- **ds-px-runtime**: `sha256:c590dfbe4d25e6b7e5340f472d1a4a0cc5fdc996676f6c1a9038080f251f56a6`
 
 ## Step 4: Copy Images to Your Private Registry Using Skopeo
 
@@ -121,8 +180,8 @@ REGISTRY_USERNAME="your-username"
 REGISTRY_PASSWORD="your-password"
 
 # Image digests from Step 2
-RUNTIME_DIGEST="sha256:fc272799bd1634e47dab5cd3f0974e840ccd3248480e9915bb664b40ca39e9ad"
-COMPUTE_DIGEST="sha256:7870e7f7d2d650b318ca6008999c4406e64a6f09a494177d7a70064015efa7c2"
+RUNTIME_DIGEST="sha256:c590dfbe4d25e6b7e5340f472d1a4a0cc5fdc996676f6c1a9038080f251f56a6"
+COMPUTE_DIGEST="sha256:c490677665a69df0f468b49048c41ac883f3eb50354a3359bab7736f0f2737f9"
 ```
 
 ### Copy ds-px-runtime (Required for Both Kubernetes and Docker/Podman)
@@ -149,8 +208,8 @@ Storing signatures
 
 If deploying to Kubernetes/OpenShift, also copy the operator and compute images:
 ```bash
-# Set operator digest (from Step 3)
-OPERATOR_DIGEST="sha256:7e4885cdb1deef0cbbcff590357fa96be32b31d5809f045ff2cbf285ad45b0a6"
+# Set operator digest (from Step 2)
+OPERATOR_DIGEST="sha256:373b2d4dd50a780a151113caeb6aa16552001edc55bdf4ce598983e679b6bebf"
 
 # Copy ds-operator
 skopeo copy --all \
@@ -189,7 +248,7 @@ skopeo inspect --creds ${REGISTRY_USERNAME}:${REGISTRY_PASSWORD} \
 ```json
 {
   "Name": "artifactory.example.com/datastage/ds-px-runtime",
-  "Digest": "sha256:fc272799bd1634e47dab5cd3f0974e840ccd3248480e9915bb664b40ca39e9ad",
+  "Digest": "sha256:c590dfbe4d25e6b7e5340f472d1a4a0cc5fdc996676f6c1a9038080f251f56a6",
   "RepoTags": [],
   "Created": "2025-11-19T10:30:00.000000000Z",
   "DockerVersion": "",
@@ -249,8 +308,8 @@ CUSTOM_DOCKER_REGISTRY=artifactory.example.com
 OPERATOR_REGISTRY_SUFFIX=datastage
 DOCKER_REGISTRY_SUFFIX=datastage
 
-# Image digests (from Steps 2 and 3)
-USE_DIGESTS=sha256:7e4885cdb1deef0cbbcff590357fa96be32b31d5809f045ff2cbf285ad45b0a6,sha256:fc272799bd1634e47dab5cd3f0974e840ccd3248480e9915bb664b40ca39e9ad,sha256:7870e7f7d2d650b318ca6008999c4406e64a6f09a494177d7a70064015efa7c2
+# Image digests (from Step 2)
+USE_DIGESTS=sha256:373b2d4dd50a780a151113caeb6aa16552001edc55bdf4ce598983e679b6bebf,sha256:c590dfbe4d25e6b7e5340f472d1a4a0cc5fdc996676f6c1a9038080f251f56a6,sha256:c490677665a69df0f468b49048c41ac883f3eb50354a3359bab7736f0f2737f9
 ```
 
 ### Important Notes for Kubernetes:
@@ -285,9 +344,9 @@ DOCKER_REGISTRY=artifactory.mycompany.com
 OPERATOR_REGISTRY=artifactory.mycompany.com/datastage
 DOCKER_REGISTRY_PREFIX=artifactory.mycompany.com/datastage
 Setting custom remote engine digests.
-Using custom digest for ds-operator: sha256:7e4885cdb1deef0cbbcff590357fa96be32b31d5809f045ff2cbf285ad45b0a6
-Using custom digest for ds-px-runtime: sha256:fc272799bd1634e47dab5cd3f0974e840ccd3248480e9915bb664b40ca39e9ad
-Using custom digest for ds-px-compute: sha256:7870e7f7d2d650b318ca6008999c4406e64a6f09a494177d7a70064015efa7c2
+Using custom digest for ds-operator: sha256:373b2d4dd50a780a151113caeb6aa16552001edc55bdf4ce598983e679b6bebf
+Using custom digest for ds-px-runtime: sha256:c590dfbe4d25e6b7e5340f472d1a4a0cc5fdc996676f6c1a9038080f251f56a6
+Using custom digest for ds-px-compute: sha256:c490677665a69df0f468b49048c41ac883f3eb50354a3359bab7736f0f2737f9
 
 Deploying DataStage operator to namespace datastage-remote...
 secret/datastage-pull-secret created
@@ -353,7 +412,7 @@ Run the `dsengine.sh` script with custom registry parameters:
   --project-id "$PROJECT_ID1,$PROJECT_ID2" \
   --registry "artifactory.example.com" \
   -u "your-artifactory-username" \
-  --digest "sha256:fc272799bd1634e47dab5cd3f0974e840ccd3248480e9915bb664b40ca39e9ad"
+  --digest "sha256:c590dfbe4d25e6b7e5340f472d1a4a0cc5fdc996676f6c1a9038080f251f56a6"
 ```
 
 **Parameter Explanation:**
@@ -377,9 +436,9 @@ Password:
 Login Succeeded!
 
 Checking docker images ...
-Checking image artifactory.example.com/datastage/ds-px-runtime@sha256:fc272799bd1634e47dab5cd3f0974e840ccd3248480e9915bb664b40ca39e9ad
+Checking image artifactory.example.com/datastage/ds-px-runtime@sha256:c590dfbe4d25e6b7e5340f472d1a4a0cc5fdc996676f6c1a9038080f251f56a6
 Image does not exist locally, proceeding to download
-docker pull artifactory.example.com/datastage/ds-px-runtime@sha256:fc272799bd1634e47dab5cd3f0974e840ccd3248480e9915bb664b40ca39e9ad
+docker pull artifactory.example.com/datastage/ds-px-runtime@sha256:c590dfbe4d25e6b7e5340f472d1a4a0cc5fdc996676f6c1a9038080f251f56a6
 
 Initializing DataStage Remote Engine Runtime environment with name 'my_remote_engine_01' ...
 Setting up docker environment
@@ -408,7 +467,7 @@ export REGISTRY_PASSWORD="your-artifactory-password"
   --project-id "$PROJECT_ID1,$PROJECT_ID2" \
   --registry "artifactory.example.com" \
   -u "your-artifactory-username" \
-  --digest "sha256:fc272799bd1634e47dab5cd3f0974e840ccd3248480e9915bb664b40ca39e9ad"
+  --digest "sha256:c590dfbe4d25e6b7e5340f472d1a4a0cc5fdc996676f6c1a9038080f251f56a6"
 ```
 
 ### Monitor the Docker/Podman Installation
