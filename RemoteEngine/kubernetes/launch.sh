@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.13
+TOOL_VERSION=1.0.14
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -14,6 +14,7 @@ filesDir="${scriptDir}/files"
 CURL_CMD="curl"
 remote_controlplane_env="cloud"
 additional_users=""
+DISABLE_WLM_SCALING="false"
 
 serviceAccountFile="${filesDir}/datastage-sa.yaml"
 roleFile="${filesDir}/datastage-role.yaml"
@@ -356,7 +357,82 @@ EOF
 }
 
 create_role() {
-  cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
+  if [[ "${DISABLE_WLM_SCALING}" == "true" ]]; then
+    cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ibm-cpd-datastage-remote-operator-role
+  namespace: $namespace
+  labels:
+     app.kubernetes.io/instance: ibm-cpd-datastage-remote-operator-cluster-role
+     app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+     app.kubernetes.io/name: ibm-cpd-datastage-remote-operator-cluster-role
+
+rules:
+- apiGroups:
+  - ""
+  - batch
+  - extensions
+  - apps
+  - policy
+  - rbac.authorization.k8s.io
+  - autoscaling
+  - route.openshift.io
+  - authorization.openshift.io
+  - networking.k8s.io
+  resources:
+  - secrets
+  - pods
+  - pods/log
+  - jobs
+  - configmaps
+  - deployments
+  - deployments/scale
+  - statefulsets
+  - statefulsets/scale
+  - replicasets
+  - services
+  - persistentvolumeclaims
+  - persistentvolumes
+  - cronjobs
+  - serviceaccounts
+  - roles
+  - rolebindings
+  - horizontalpodautoscalers
+  - jobs/status
+  - pods/status
+  - networkpolicies
+  - poddisruptionbudgets
+  verbs:
+  - apply
+  - create
+  - get
+  - delete
+  - watch
+  - update
+  - edit
+  - list
+  - patch
+- apiGroups:
+  - ds.cpd.ibm.com
+  resources:
+  - pxremoteengines
+  - pxremoteengines/status
+  - pxremoteengines/finalizers
+  verbs:
+  - apply
+  - edit
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+EOF
+  else
+    cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -430,6 +506,7 @@ rules:
   - update
   - watch
 EOF
+  fi
 }
 
 create_role_binding() {
@@ -705,7 +782,33 @@ create_instance() {
     echo "PXRemoteEngine $name already exists; updating its image digests."
     $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"docker_registry_prefix\":\"${DOCKER_REGISTRY_PREFIX}\", \"api_key_secret\":\"${DS_API_KEY_SECRET}\", \"project_id\": \"${projectId}\", \"remote_controlplane_env\":\"${remote_controlplane_env}\", \"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}, \"additional_users\":\"${additional_users}\"}}" --type=merge
   else
-    cat <<EOF | $kubernetesCLI apply -f -
+    if [[ "${DISABLE_WLM_SCALING}" == "true" ]]; then
+      cat <<EOF | $kubernetesCLI apply -f -
+apiVersion: ds.cpd.ibm.com/v1
+kind: PXRemoteEngine
+metadata:
+  name: $name
+  namespace: $namespace
+spec:
+  license:
+    accept: true
+  storageClass: $storage_class
+  storageSize: $storage_size
+  scaleConfig: $size
+  remote_engine: true
+  project_id: [$projectId]
+  enableWLMScaling: false
+  docker_registry_prefix: $DOCKER_REGISTRY_PREFIX
+  api_key_secret: $DS_API_KEY_SECRET
+  remote_controlplane_env: $remote_controlplane_env
+  additional_users: $additional_users
+  GATEWAY: $DS_GATEWAY
+  image_digests:
+    pxcompute: $px_compute_digest
+    pxruntime: $px_runtime_digest
+EOF
+    else
+      cat <<EOF | $kubernetesCLI apply -f -
 apiVersion: ds.cpd.ibm.com/v1
 kind: PXRemoteEngine
 metadata:
@@ -728,7 +831,8 @@ spec:
     pxcompute: $px_compute_digest
     pxruntime: $px_runtime_digest
 EOF
-fi
+    fi
+  fi
   if [ ! -z $has_previous_pxruntime_cr ]; then
     get_resource_id
     change_ownership secret ${name}-ibm-datastage-enc-secret
@@ -751,13 +855,14 @@ handle_badusage() {
 
 handle_install_usage() {
   echo ""
-  echo "Usage: $0 install --namespace <namespace> [--data-center <data-center>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--zen-url <zen-url>]"
+  echo "Usage: $0 install --namespace <namespace> [--data-center <data-center>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--disable-wlm-scaling <true/false>] [--zen-url <zen-url>]"
   echo "--namespace: the namespace to install the DataStage operator"
   echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, toronto, london, or awsprod"
   echo "--registry: Custom container registry to pull images from if you are image mirroring using a private registry. If using this option, you must set --digests as well for IBM Cloud."
   echo "--operator-registry-suffix: Custom operator registry suffix to use for the remote engine to pull ds-operator images from if using a custom container registry. Defaults to 'cpopen'."
   echo "--docker-registry-suffix: Custom docker registry suffix to use for the remote engine to pull ds-px-runtime and ds-px-compute images from if using a custom container registry. Defaults to 'cp/cpd'."
   echo "--digests: Custom digests to use for the remote engine. This option must be set if using a custom registry for IBM Cloud."
+  echo "--disable-wlm-scaling: [true/false] Disables WLM scaling and removes pod/exec permissions. Defaults to 'false'."
   echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   exit 0
 }
@@ -819,7 +924,7 @@ handle_apikey_usage() {
 handle_create_instance_usage() {
   echo ""
   echo "Description: creates an instance of the remote engine; the pull secret and the api-key secret should have been created in the same namespace."
-  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id1,project-id2,project-id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--zen-url <zen-url>] --license-accept true"
+  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id1,project-id2,project-id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--disable-wlm-scaling <true/false>] [--zen-url <zen-url>] --license-accept true"
   echo "--namespace: the namespace to create the instance"
   echo "--name: the name of the remote engine"
   echo "--project-id: the comma separated list of project IDs to register the remote engine"
@@ -833,6 +938,7 @@ handle_create_instance_usage() {
   echo "--operator-registry-suffix: Custom operator registry suffix to use for the remote engine to pull ds-operator images from if using a custom container registry. Defaults to 'cpopen'."
   echo "--docker-registry-suffix: Custom docker registry suffix to use for the remote engine to pull ds-px-runtime and ds-px-compute images from if using a custom container registry. Defaults to 'cp/cpd'."
   echo "--digests: Custom digests to use for the remote engine. This option must be set if using a custom registry for IBM Cloud."
+  echo "--disable-wlm-scaling: [true/false] Disables WLM scaling and removes pod/exec permissions. Defaults to 'false'."
   echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   echo ""
   exit 0
@@ -1305,6 +1411,10 @@ do
         --mcsp-account-id)
             shift
             MCSP_ACCOUNT_ID="$1"
+            ;;
+        --disable-wlm-scaling)
+            shift
+            DISABLE_WLM_SCALING="$1"
             ;;
         install)
             action="install"
