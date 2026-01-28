@@ -15,7 +15,7 @@ CURL_CMD="curl"
 remote_controlplane_env="cloud"
 additional_users=""
 wlmScalingParam=""
-wlmScalingPerms="- pods/exec"
+podExecPerms="- pods/exec"
 
 serviceAccountFile="${filesDir}/datastage-sa.yaml"
 roleFile="${filesDir}/datastage-role.yaml"
@@ -384,7 +384,7 @@ rules:
   resources:
   - secrets
   - pods
-  $wlmScalingPerms
+  $podExecPerms
   - pods/log
   - jobs
   - configmaps
@@ -1416,7 +1416,7 @@ if [ -z $inputFile ]; then
   fi
   if [[ "${DISABLE_WLM_SCALING}" == "true" ]]; then
     wlmScalingParam="enableWLMScaling: false"
-    wlmScalingPerms=""
+    podExecPerms=""
   fi
   validate_common_args
   determine_k8s
@@ -1459,7 +1459,7 @@ if [ ! -z $inputFile ]; then
   fi
   if [[ "${DISABLE_WLM_SCALING}" == "true" ]]; then
     wlmScalingParam="enableWLMScaling: false"
-    wlmScalingPerms=""
+    podExecPerms=""
   fi
   validate_common_args
   determine_k8s
