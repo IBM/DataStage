@@ -95,7 +95,7 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--memory <value>`: Sets the maximum amount of memory the engine can use. The value takes a positive integer, followed by a suffix of m/M, g/G, to indicate megabytes or gigabytes. Default is `4G`.
 1. `--cpus <value>`: Sets the maximum amount of cpu resources the engine can use. The value takes a positive number. Default is `2` cores.
 1. `--pids-limit <value>`: Set the PID limit of the container (defaults to -1 for unlimited pids for the container)
-1. `--volume-dir <value>`: Sets the directory to be used as the volume directory for persistent storage. Default location is `/tmp/docker/volumes`. The volume directory will be updated with the following top level file structure:
+1. `--volume-dir <value>`: Sets the directory to be used as the volume directory for persistent storage. Default location is `$(pwd)/docker/volumes`. The volume directory will be updated with the following top level file structure:
 
     ```
     <volume_dir>/scratch
@@ -104,7 +104,8 @@ While starting a remote engine, following optional flags can be used in addition
     <volume_dir>/<remote_engine_name>_runtime/px-storage
     ```
     Once the remote engine is up and running, additional files and folders will be created inside the above folders as needed by the engine.
-    If you are planning to create multiple engines on the same machine, then they should use different volume directories.
+
+    If you are planning to create multiple engines on the same machine: For storage isolation with /ds-storage and /scratch (recommended), a different volume directory should be used for each engine. If you plan on having multiple engines share the same /ds-storage and /scratch space, then they will all need to specify the same volume directory.
 1. `--home <value>`: Sets the target IBM Cloud enviroment to either `ypprod` (Dallas data center - default), `frprod` (Frankfurt data center), `sydprod` (Sydney data center),  `torprod` (Toronto data center), or  `awsprod` (AWS data center). The project associated with this engine instance must be in same data center.
 1. `--select-version`: Set to true if you want to choose a specific version of remote engine. By default, this flag is set to false and the latest version is used.
 1. `--security-opt <value>`: Specify the security-opt to be used to run the container.
