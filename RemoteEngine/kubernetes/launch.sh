@@ -14,7 +14,8 @@ filesDir="${scriptDir}/files"
 CURL_CMD="curl"
 remote_controlplane_env="cloud"
 additional_users=""
-DISABLE_WLM_SCALING="false"
+wlmScalingParam=""
+wlmScalingPerms="- pods/exec"
 
 serviceAccountFile="${filesDir}/datastage-sa.yaml"
 roleFile="${filesDir}/datastage-role.yaml"
@@ -357,8 +358,7 @@ EOF
 }
 
 create_role() {
-  if [[ "${DISABLE_WLM_SCALING}" == "true" ]]; then
-    cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
+  cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -384,6 +384,7 @@ rules:
   resources:
   - secrets
   - pods
+  $wlmScalingPerms
   - pods/log
   - jobs
   - configmaps
@@ -431,82 +432,6 @@ rules:
   - update
   - watch
 EOF
-  else
-    cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: ibm-cpd-datastage-remote-operator-role
-  namespace: $namespace
-  labels:
-     app.kubernetes.io/instance: ibm-cpd-datastage-remote-operator-cluster-role
-     app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
-     app.kubernetes.io/name: ibm-cpd-datastage-remote-operator-cluster-role
-
-rules:
-- apiGroups:
-  - ""
-  - batch
-  - extensions
-  - apps
-  - policy
-  - rbac.authorization.k8s.io
-  - autoscaling
-  - route.openshift.io
-  - authorization.openshift.io
-  - networking.k8s.io
-  resources:
-  - secrets
-  - pods
-  - pods/exec
-  - pods/log
-  - jobs
-  - configmaps
-  - deployments
-  - deployments/scale
-  - statefulsets
-  - statefulsets/scale
-  - replicasets
-  - services
-  - persistentvolumeclaims
-  - persistentvolumes
-  - cronjobs
-  - serviceaccounts
-  - roles
-  - rolebindings
-  - horizontalpodautoscalers
-  - jobs/status
-  - pods/status
-  - networkpolicies
-  - poddisruptionbudgets
-  verbs:
-  - apply
-  - create
-  - get
-  - delete
-  - watch
-  - update
-  - edit
-  - list
-  - patch
-- apiGroups:
-  - ds.cpd.ibm.com
-  resources:
-  - pxremoteengines
-  - pxremoteengines/status
-  - pxremoteengines/finalizers
-  verbs:
-  - apply
-  - edit
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-EOF
-  fi
 }
 
 create_role_binding() {
@@ -782,8 +707,7 @@ create_instance() {
     echo "PXRemoteEngine $name already exists; updating its image digests."
     $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"docker_registry_prefix\":\"${DOCKER_REGISTRY_PREFIX}\", \"api_key_secret\":\"${DS_API_KEY_SECRET}\", \"project_id\": \"${projectId}\", \"remote_controlplane_env\":\"${remote_controlplane_env}\", \"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}, \"additional_users\":\"${additional_users}\"}}" --type=merge
   else
-    if [[ "${DISABLE_WLM_SCALING}" == "true" ]]; then
-      cat <<EOF | $kubernetesCLI apply -f -
+    cat <<EOF | $kubernetesCLI apply -f -
 apiVersion: ds.cpd.ibm.com/v1
 kind: PXRemoteEngine
 metadata:
@@ -797,7 +721,7 @@ spec:
   scaleConfig: $size
   remote_engine: true
   project_id: [$projectId]
-  enableWLMScaling: false
+  $wlmScalingParam
   docker_registry_prefix: $DOCKER_REGISTRY_PREFIX
   api_key_secret: $DS_API_KEY_SECRET
   remote_controlplane_env: $remote_controlplane_env
@@ -807,31 +731,6 @@ spec:
     pxcompute: $px_compute_digest
     pxruntime: $px_runtime_digest
 EOF
-    else
-      cat <<EOF | $kubernetesCLI apply -f -
-apiVersion: ds.cpd.ibm.com/v1
-kind: PXRemoteEngine
-metadata:
-  name: $name
-  namespace: $namespace
-spec:
-  license:
-    accept: true
-  storageClass: $storage_class
-  storageSize: $storage_size
-  scaleConfig: $size
-  remote_engine: true
-  project_id: [$projectId]
-  docker_registry_prefix: $DOCKER_REGISTRY_PREFIX
-  api_key_secret: $DS_API_KEY_SECRET
-  remote_controlplane_env: $remote_controlplane_env
-  additional_users: $additional_users
-  GATEWAY: $DS_GATEWAY
-  image_digests:
-    pxcompute: $px_compute_digest
-    pxruntime: $px_runtime_digest
-EOF
-    fi
   fi
   if [ ! -z $has_previous_pxruntime_cr ]; then
     get_resource_id
@@ -1515,6 +1414,10 @@ if [ -z $inputFile ]; then
   elif [[ "${data_center}" == 'aws'* ]]; then
     remote_controlplane_env="aws"
   fi
+  if [[ "${DISABLE_WLM_SCALING}" == "true" ]]; then
+    wlmScalingParam="enableWLMScaling: false"
+    wlmScalingPerms=""
+  fi
   validate_common_args
   determine_k8s
 fi
@@ -1553,6 +1456,10 @@ if [ ! -z $inputFile ]; then
     validate_and_setup_cp4d_args
   elif [[ "${data_center}" == 'aws'* ]]; then
     remote_controlplane_env="aws"
+  fi
+  if [[ "${DISABLE_WLM_SCALING}" == "true" ]]; then
+    wlmScalingParam="enableWLMScaling: false"
+    wlmScalingPerms=""
   fi
   validate_common_args
   determine_k8s
