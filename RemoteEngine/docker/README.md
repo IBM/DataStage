@@ -99,8 +99,8 @@ While starting a remote engine, following optional flags can be used in addition
 
     ```
     <volume_dir>/scratch
-    <volume_dir>/ds-storage
     <volume_dir>/<remote_engine_name>_runtime
+    <volume_dir>/<remote_engine_name>_runtime/ds-storage
     <volume_dir>/<remote_engine_name>_runtime/px-storage
     ```
     Once the remote engine is up and running, additional files and folders will be created inside the above folders as needed by the engine.
@@ -208,7 +208,7 @@ This is NOT needed use this if you want to update the engine. This is only neede
    * Purpose: Captures minimal container-level output (stdout/stderr) and can be accessed using podman logs <container-name>. (this is often empty or non-critical)
 #### Primary Remote Engine logs
    * Initial Location: Typically written to /logs directory on the container and bind-mounted to /var/lib/containers/storage/overlay/... on the host (by default).
-   * Archived Location: Older logs are rotated and archived as ZIP files under /ds-storage/service_log_archive in the container, which is bind-mounted to <volume-dir>/ds-storage/service_log_archive on the host.
+   * Archived Location: Older logs are rotated and archived as ZIP files under /ds-storage/service_log_archive in the container, which is bind-mounted to <volume-dir>/<remote_engine_name>_runtime/ds-storage/service_log_archive on the host.
    * Purpose:
       * trace.log – Active detailed trace log of Remote Engine runtime (job interactions, service calls).
       * messages.log – Higher-level system logs (job polling activity, engine heartbeats, etc.).

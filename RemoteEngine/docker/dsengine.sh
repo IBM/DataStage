@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.32
+TOOL_VERSION=1.0.33
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -1895,8 +1895,8 @@ validate_action_arguments() {
 }
 
 setup_docker_volumes() {
-    DS_STORAGE_HOST_DIR="${DOCKER_VOLUMES_DIR}/ds-storage"
     CONTAINER_HOST_DIR="${DOCKER_VOLUMES_DIR}/${PXRUNTIME_CONTAINER_NAME}"
+    DS_STORAGE_HOST_DIR="${CONTAINER_HOST_DIR}/ds-storage"
     PX_STORAGE_HOST_DIR="${CONTAINER_HOST_DIR}/px-storage"
     PX_STORAGE_WLM_DIR="${PX_STORAGE_HOST_DIR}/PXRuntime/WLM"
     SCRATCH_DIR="${DOCKER_VOLUMES_DIR}/scratch"
