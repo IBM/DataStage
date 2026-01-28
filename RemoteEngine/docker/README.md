@@ -95,12 +95,12 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--memory <value>`: Sets the maximum amount of memory the engine can use. The value takes a positive integer, followed by a suffix of m/M, g/G, to indicate megabytes or gigabytes. Default is `4G`.
 1. `--cpus <value>`: Sets the maximum amount of cpu resources the engine can use. The value takes a positive number. Default is `2` cores.
 1. `--pids-limit <value>`: Set the PID limit of the container (defaults to -1 for unlimited pids for the container)
-1. `--volume-dir <value>`: Sets the directory to be used as the volume directory for persistent storage. Default location is `/tmp/docker/volumes`. The volume directory will be updated with the following top level file structure:
+1. `--volume-dir <value>`: Sets the directory to be used as the volume directory for persistent storage. Default location is `$(pwd)/docker/volumes`. The volume directory will be updated with the following top level file structure:
 
     ```
     <volume_dir>/scratch
+    <volume_dir>/ds-storage
     <volume_dir>/<remote_engine_name>_runtime
-    <volume_dir>/<remote_engine_name>_runtime/ds-storage
     <volume_dir>/<remote_engine_name>_runtime/px-storage
     ```
     Once the remote engine is up and running, additional files and folders will be created inside the above folders as needed by the engine.
@@ -208,7 +208,7 @@ This is NOT needed use this if you want to update the engine. This is only neede
    * Purpose: Captures minimal container-level output (stdout/stderr) and can be accessed using podman logs <container-name>. (this is often empty or non-critical)
 #### Primary Remote Engine logs
    * Initial Location: Typically written to /logs directory on the container and bind-mounted to /var/lib/containers/storage/overlay/... on the host (by default).
-   * Archived Location: Older logs are rotated and archived as ZIP files under /ds-storage/service_log_archive in the container, which is bind-mounted to <volume-dir>/<remote_engine_name>_runtime/ds-storage/service_log_archive on the host.
+   * Archived Location: Older logs are rotated and archived as ZIP files under /ds-storage/service_log_archive in the container, which is bind-mounted to <volume-dir>/ds-storage/service_log_archive on the host.
    * Purpose:
       * trace.log – Active detailed trace log of Remote Engine runtime (job interactions, service calls).
       * messages.log – Higher-level system logs (job polling activity, engine heartbeats, etc.).
