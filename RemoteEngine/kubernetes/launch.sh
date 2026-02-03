@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.13
+TOOL_VERSION=1.0.14
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -14,6 +14,8 @@ filesDir="${scriptDir}/files"
 CURL_CMD="curl"
 remote_controlplane_env="cloud"
 additional_users=""
+wlmScalingParam=""
+podExecPerms="- pods/exec"
 
 serviceAccountFile="${filesDir}/datastage-sa.yaml"
 roleFile="${filesDir}/datastage-role.yaml"
@@ -382,7 +384,7 @@ rules:
   resources:
   - secrets
   - pods
-  - pods/exec
+  $podExecPerms
   - pods/log
   - jobs
   - configmaps
@@ -719,6 +721,7 @@ spec:
   scaleConfig: $size
   remote_engine: true
   project_id: [$projectId]
+  $wlmScalingParam
   docker_registry_prefix: $DOCKER_REGISTRY_PREFIX
   api_key_secret: $DS_API_KEY_SECRET
   remote_controlplane_env: $remote_controlplane_env
@@ -728,7 +731,7 @@ spec:
     pxcompute: $px_compute_digest
     pxruntime: $px_runtime_digest
 EOF
-fi
+  fi
   if [ ! -z $has_previous_pxruntime_cr ]; then
     get_resource_id
     change_ownership secret ${name}-ibm-datastage-enc-secret
@@ -751,13 +754,14 @@ handle_badusage() {
 
 handle_install_usage() {
   echo ""
-  echo "Usage: $0 install --namespace <namespace> [--data-center <data-center>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--zen-url <zen-url>]"
+  echo "Usage: $0 install --namespace <namespace> [--data-center <data-center>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--disable-wlm-scaling <true/false>] [--zen-url <zen-url>]"
   echo "--namespace: the namespace to install the DataStage operator"
   echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, toronto, london, or awsprod"
   echo "--registry: Custom container registry to pull images from if you are image mirroring using a private registry. If using this option, you must set --digests as well for IBM Cloud."
   echo "--operator-registry-suffix: Custom operator registry suffix to use for the remote engine to pull ds-operator images from if using a custom container registry. Defaults to 'cpopen'."
   echo "--docker-registry-suffix: Custom docker registry suffix to use for the remote engine to pull ds-px-runtime and ds-px-compute images from if using a custom container registry. Defaults to 'cp/cpd'."
   echo "--digests: Custom digests to use for the remote engine. This option must be set if using a custom registry for IBM Cloud."
+  echo "--disable-wlm-scaling: [true/false] Disables WLM scaling and removes pod/exec permissions. Defaults to 'false'."
   echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   exit 0
 }
@@ -819,7 +823,7 @@ handle_apikey_usage() {
 handle_create_instance_usage() {
   echo ""
   echo "Description: creates an instance of the remote engine; the pull secret and the api-key secret should have been created in the same namespace."
-  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id1,project-id2,project-id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--zen-url <zen-url>] --license-accept true"
+  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id1,project-id2,project-id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--disable-wlm-scaling <true/false>] [--zen-url <zen-url>] --license-accept true"
   echo "--namespace: the namespace to create the instance"
   echo "--name: the name of the remote engine"
   echo "--project-id: the comma separated list of project IDs to register the remote engine"
@@ -833,6 +837,7 @@ handle_create_instance_usage() {
   echo "--operator-registry-suffix: Custom operator registry suffix to use for the remote engine to pull ds-operator images from if using a custom container registry. Defaults to 'cpopen'."
   echo "--docker-registry-suffix: Custom docker registry suffix to use for the remote engine to pull ds-px-runtime and ds-px-compute images from if using a custom container registry. Defaults to 'cp/cpd'."
   echo "--digests: Custom digests to use for the remote engine. This option must be set if using a custom registry for IBM Cloud."
+  echo "--disable-wlm-scaling: [true/false] Disables WLM scaling and removes pod/exec permissions. Defaults to 'false'."
   echo "--zen-url: CP4D zen url. Specifying this will switch flow to cp4d. (required for cp4d)"
   echo ""
   exit 0
@@ -1306,6 +1311,10 @@ do
             shift
             MCSP_ACCOUNT_ID="$1"
             ;;
+        --disable-wlm-scaling)
+            shift
+            DISABLE_WLM_SCALING="$1"
+            ;;
         install)
             action="install"
             ;;
@@ -1405,6 +1414,10 @@ if [ -z $inputFile ]; then
   elif [[ "${data_center}" == 'aws'* ]]; then
     remote_controlplane_env="aws"
   fi
+  if [[ "${DISABLE_WLM_SCALING}" == "true" ]]; then
+    wlmScalingParam="enableWLMScaling: false"
+    podExecPerms=""
+  fi
   validate_common_args
   determine_k8s
 fi
@@ -1443,6 +1456,10 @@ if [ ! -z $inputFile ]; then
     validate_and_setup_cp4d_args
   elif [[ "${data_center}" == 'aws'* ]]; then
     remote_controlplane_env="aws"
+  fi
+  if [[ "${DISABLE_WLM_SCALING}" == "true" ]]; then
+    wlmScalingParam="enableWLMScaling: false"
+    podExecPerms=""
   fi
   validate_common_args
   determine_k8s
