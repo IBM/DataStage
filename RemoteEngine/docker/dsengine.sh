@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.32
+TOOL_VERSION=1.0.34
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -2115,7 +2115,6 @@ EOL
 
 generate_init_volume_script() {
     INIT_VOL_FILE="${PX_STORAGE_HOST_DIR}/init-volume.sh"
-    if [ ! -f "${INIT_VOL_FILE}" ]; then
 cat <<EOL > "${INIT_VOL_FILE}"
 #! /bin/bash
 set -x
@@ -2127,8 +2126,12 @@ cd /px-storage && mkdir -p pds_files/node1 pds_files/node2 Datasets certs data/s
 mkdir -p /opt/ibm/PXService/Server/scratch/tmpdir;
 # mkdir -p /px-storage/ds-storage;
 rm -rf /opt/ibm/PXService/Server/Datasets;
+[ -L "/opt/ibm/PXService/Server/pds_files" ] && rm -f /opt/ibm/PXService/Server/pds_files;
+[ -L "/opt/ibm/PXService/Server/PXEngine/etc/certs" ] && rm -fr /opt/ibm/PXService/Server/PXEngine/etc/certs;
+[ -L "/opt/ibm/data/sap" ] && rm -fr /opt/ibm/data/sap;
 ln -s  /px-storage/pds_files /opt/ibm/PXService/Server/pds_files;
 ln -s  /px-storage/Datasets /opt/ibm/PXService/Server/Datasets;
+rm -fr /opt/ibm/PXService/Server/PXEngine/etc/certs;
 ln -s  /px-storage/certs /opt/ibm/PXService/Server/PXEngine/etc/certs;
 ln -s  /px-storage/data/sap /opt/ibm/data/sap;
 # create directory for snc configuratio for SAP connector
@@ -2211,9 +2214,15 @@ if [ -d /opt/ibm/PXService/Server/DSWLM/logs ]; then
 fi
 # create symlink for db2 catalog node/db
 sed -i 's/dsadm/dsuser/g' /home/dsuser/sqllib/db2profile
+mkdir -p /home/dsuser/sqllib/sqlnodir
 if [[ ! -d /px-storage/db2 ]]; then
    mkdir -p /px-storage/db2/sqldbdir
    source /home/dsuser/sqllib/db2profile
+   if [[ ! -f /px-storage/db2/db2nodes.cfg ]]; then
+      echo "0 ds-px-default-ibm-datastage-px-compute-0.ds-px-default-ibm-datastage-px-compute 0" > /px-storage/db2/db2nodes.cfg
+   fi
+   rm -f /home/dsuser/sqllib/db2nodes.cfg
+   ln -s /px-storage/db2/db2nodes.cfg /home/dsuser/sqllib/db2nodes.cfg
    # db2 catalog fails when symlinked to an empty dir
    # the workaround is to catalog a dummy node and use the created dir for the symlink
    db2 CATALOG TCPIP NODE ignore REMOTE IGNORE.DB2.IBM.COM SERVER 50000
@@ -2222,8 +2231,11 @@ fi
 if [[ ! -f /px-storage/db2/db2nodes.cfg ]]; then
    echo "0 ds-px-default-ibm-datastage-px-compute-0.ds-px-default-ibm-datastage-px-compute 0" > /px-storage/db2/db2nodes.cfg
 fi
+rm -f /home/dsuser/sqllib/db2nodes.cfg
 ln -s /px-storage/db2/db2nodes.cfg /home/dsuser/sqllib/db2nodes.cfg
+rm -fr /home/dsuser/sqllib/sqlnodir
 ln -s /px-storage/db2/sqlnodir /home/dsuser/sqllib/sqlnodir
+rm -fr /home/dsuser/sqllib/sqldbdir
 ln -s /px-storage/db2/sqldbdir /home/dsuser/sqllib/sqldbdir
 # for px compute; call initScript to import java certs
 if [[ -z "\${DS_PX_COMPUTE_REPLICAS}" ]]; then
@@ -2239,7 +2251,6 @@ if [[ -z "\${DS_PX_COMPUTE_REPLICAS}" ]]; then
 fi
 EOL
         set_permissions "${INIT_VOL_FILE}"
-    fi
 }
 
 generate_download_jdbc_jars_script() {
@@ -2305,6 +2316,7 @@ fi
 
 echo "Importing \$cert_name certificate manually..."
 [ ! -d "./sqllib/.licbkup" ] && mkdir ./sqllib/.licbkup
+[ -L "./sqllib/license" ] && rm -f ./sqllib/license
 [ ! -d "./sqllib/license" ] && mkdir ./sqllib/license
 cp -f \$cert_path ./sqllib/.licbkup/\$cert_name
 
