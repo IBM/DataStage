@@ -246,5 +246,35 @@ Project Changes:
     ...
 ```
 
+### Working with proxy
+
+When proxy is used, we need a environment vairable GIT_HTTP_PROXY set to the proxy url for connecting to Git from inside migration service. To achieve this we need to edit datastage customer resource to add a property with the end point. 
+
+``` 
+// Edit DataStage CR
+oc edit datastge datastage
+
+// under spec add property gitHTTPSProxy with proper URL for the proxy as shown below.
+  uid: adf2528c-1451-41b6-b2e2-4e10da2c2559
+spec:
+  ds_enterprise: false
+  ds_set_runtime_class: false
+  enableDataService: true
+  enableFlowsAssistant: false
+  enableMetrics: true
+  enableODLM: false
+  gitHTTPSProxy: http://9.xx.xxx.xxx:3128        <======
+  ignoreForMaintenance: false
+```
+after the CR is saved, DataStage operator will eventually process it and restarts the migration service pod with proper environment variable. You can check the setting using the following command
+```
+# oc rsh datastage-ibm-datastage-migration-687ff87c45-4tdrg env |grep GIT_HTTP
+GIT_HTTPS_PROXY=http://9.52.244.237:32336
+```
+
+Now you are ready to use your proxy. 
+For trouble shooting the connection, please check configuration required in proxy to allow connection from your custer and also ability for proxy to connect to github.
+
+
 
 Currently this functionality is available only on CPD platforms and we are working in bring it to Saas soon.
