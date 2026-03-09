@@ -17,7 +17,13 @@ To properly manage job run retention in DataStage, follow these steps in this or
 
 1. **Prune existing job runs** using [`pruneJobs.sh`](./scripts/pruneJobs.sh)
 2. **Set retention policy** for jobs using [`jobRunHistoryRetention.sh`](./scripts/jobRunHistoryRetention.sh)
-3. **Update project default retention policy** to the desired value for future jobs. 
+3. **Update project default job run retention policy** to the desired value for future jobs. 
+
+Let us follow the steps where a project has default retention policy for job run as "No Limit" and Found that large number of files exist under /mnt/asset_file_api/projects/<PROJECT_ID>/assets/job_run/log in asset-files-api pod.
+
+Existing Project Setting:
+![Project Job Run Retention Settings](ProjectJobRunRetentionSettings.png)
+
 
 ## Setting Retention Policy
 
@@ -25,32 +31,53 @@ Use the [`jobRunHistoryRetention.sh`](./scripts/jobRunHistoryRetention.sh) scrip
 
 **Prerequisites:** `cpdctl` must be configured before running the script.
 
+### Command Syntax
+
+```bash
+jobRunHistoryRetention.sh <PROJECT_NAME> --runs <number> [OPTIONS]
+jobRunHistoryRetention.sh <PROJECT_NAME> --days <number> [OPTIONS]
+```
+
+### Available Options
+
+| Option | Description | Required | Mutually Exclusive With |
+|--------|-------------|----------|------------------------|
+| `--runs <number>` | Number of job runs to keep | Yes (or --days) | --days |
+| `--days <number>` | Number of days to keep job runs | Yes (or --runs) | --runs |
+| `--job "<JOB_NAME>"` | Apply to a specific job only | No | --input-file |
+| `--input-file <file>` | File containing list of job names (one per line) | No | --job |
+| `--save-failures` | Save failed job names to logs/failed_<PROJECT>_<timestamp>.txt | No | - |
+
 ### Usage Examples
 
 **Set retention for all jobs in a project:**
 ```bash
-jobRunHistoryRetention.sh <PROJECT_NAME> --runs <Number of runs to keep>
-# OR
-jobRunHistoryRetention.sh <PROJECT_NAME> --days <Number of days to keep>
+jobRunHistoryRetention.sh MyProject --runs 10
+jobRunHistoryRetention.sh MyProject --days 30
 ```
 
 **Set retention for a single job:**
 ```bash
-jobRunHistoryRetention.sh <PROJECT_NAME> --job "<JOB_NAME>" --runs <Number of runs to keep>
-# OR
-jobRunHistoryRetention.sh <PROJECT_NAME> --job "<JOB_NAME>" --days <Number of days to keep>
+jobRunHistoryRetention.sh MyProject --job "ETL_Daily_Load.DataStage job" --runs 5
+jobRunHistoryRetention.sh MyProject --job "SQ_Load.DataStage sequence" --days 7
 ```
 
 **Set retention for multiple jobs from a file:**
 ```bash
-jobRunHistoryRetention.sh <PROJECT_NAME> --input-file <FILE_WITH_LIST_OF_JOBS> --runs <Number of runs to keep>
-# OR
-jobRunHistoryRetention.sh <PROJECT_NAME> --input-file <FILE_WITH_LIST_OF_JOBS> --days <Number of days to keep>
+jobRunHistoryRetention.sh MyProject --input-file jobs_list.txt --runs 10
+jobRunHistoryRetention.sh MyProject --input-file jobs_list.txt --days 30
 ```
 
 **Save failed jobs to a log file:**
 ```bash
-jobRunHistoryRetention.sh <PROJECT_NAME> --runs <Number> --save-failures
+jobRunHistoryRetention.sh MyProject --runs 10 --save-failures
+jobRunHistoryRetention.sh MyProject --job "ETL_Daily_Load.DataStage job" --days 7 --save-failures
+```
+
+**Combine options:**
+```bash
+# Process jobs from file and save failures
+jobRunHistoryRetention.sh MyProject --input-file jobs_list.txt --runs 5 --save-failures
 ```
 
 ### Script Features
@@ -76,32 +103,53 @@ Use the [`pruneJobs.sh`](./scripts/pruneJobs.sh) script to clean up existing job
 
 When `cpdctl` is configured with version **1.8.145 or later**, the script supports the `--threads` option for parallel job runs cleanup. Earlier versions only supported threading for jobs, not job runs.
 
+### Command Syntax
+
+```bash
+pruneJobs.sh <PROJECT_NAME> --keep-runs <number> [OPTIONS]
+pruneJobs.sh <PROJECT_NAME> --keep-days <number> [OPTIONS]
+```
+
+### Available Options
+
+| Option | Description | Required | Mutually Exclusive With |
+|--------|-------------|----------|------------------------|
+| `--keep-runs <number>` | Number of most recent job runs to keep | Yes (or --keep-days) | --keep-days |
+| `--keep-days <number>` | Keep job runs from the last N days | Yes (or --keep-runs) | --keep-runs |
+| `--job "<JOB_NAME>"` | Prune a specific job only | No | --input-file |
+| `--input-file <file>` | File containing list of job names (one per line) | No | --job |
+| `--save-failures` | Save failed job names to logs/failed_<PROJECT>_<timestamp>.txt | No | - |
+
 ### Usage Examples
 
 **Prune all jobs in a project:**
 ```bash
-pruneJobs.sh <PROJECT_NAME> --keep-runs <Number of runs to keep>
-# OR
-pruneJobs.sh <PROJECT_NAME> --keep-days <Number of days to keep>
+pruneJobs.sh MyProject --keep-runs 10
+pruneJobs.sh MyProject --keep-days 30
 ```
 
 **Prune a single job:**
 ```bash
-pruneJobs.sh <PROJECT_NAME> --job "<JOB_NAME>" --keep-runs <Number of runs to keep>
-# OR
-pruneJobs.sh <PROJECT_NAME> --job "<JOB_NAME>" --keep-days <Number of days to keep>
+pruneJobs.sh MyProject --job "ETL_Daily_Load" --keep-runs 5
+pruneJobs.sh MyProject --job "Data_Transform" --keep-days 7
 ```
 
 **Prune multiple jobs from a file:**
 ```bash
-pruneJobs.sh <PROJECT_NAME> --input-file <FILE_WITH_LIST_OF_JOBS> --keep-runs <Number of runs to keep>
-# OR
-pruneJobs.sh <PROJECT_NAME> --input-file <FILE_WITH_LIST_OF_JOBS> --keep-days <Number of days to keep>
+pruneJobs.sh MyProject --input-file jobs_list.txt --keep-runs 10
+pruneJobs.sh MyProject --input-file jobs_list.txt --keep-days 30
 ```
 
 **Save failed jobs to a log file:**
 ```bash
-pruneJobs.sh <PROJECT_NAME> --keep-runs <Number> --save-failures
+pruneJobs.sh MyProject --keep-runs 10 --save-failures
+pruneJobs.sh MyProject --job "ETL_Job" --keep-days 7 --save-failures
+```
+
+**Combine options:**
+```bash
+# Process jobs from file and save failures
+pruneJobs.sh MyProject --input-file jobs_list.txt --keep-runs 5 --save-failures
 ```
 
 ### Script Features
