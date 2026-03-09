@@ -20,7 +20,9 @@ In DataStage versions **5.3.1 and earlier**, the default project job run retenti
 
 ## Setting Retention Policy
 
-Use the [`jobRunHistoryRetention.sh`](https://github.com/IBM/DataStage/tree/main/dsjob/blogs) script to configure retention policies.
+Use the [`jobRunHistoryRetention.sh`](./scripts/jobRunHistoryRetention.sh) script to configure retention policies.
+
+**Prerequisites:** `cpdctl` must be configured before running the script.
 
 ### Usage Examples
 
@@ -45,6 +47,17 @@ jobRunHistoryRetention.sh <PROJECT_NAME> --input-file <FILE_WITH_LIST_OF_JOBS> -
 jobRunHistoryRetention.sh <PROJECT_NAME> --input-file <FILE_WITH_LIST_OF_JOBS> --days <Number of days to keep>
 ```
 
+**Save failed jobs to a log file:**
+```bash
+jobRunHistoryRetention.sh <PROJECT_NAME> --runs <Number> --save-failures
+```
+
+### Script Features
+
+- **Automatic retry:** Failed operations are retried up to 3 times
+- **Failure tracking:** Use `--save-failures` to save failed job names to a log file in the `logs/` directory
+- **Input file updates:** When using `--input-file`, the file is automatically updated with only failed jobs after execution
+
 ### When Retention Policy Takes Effect
 
 The retention policy is triggered in the following scenarios:
@@ -54,7 +67,9 @@ The retention policy is triggered in the following scenarios:
 
 ## Cleanup Existing Job Runs
 
-Use the [`pruneJobs.sh`](https://github.com/IBM/DataStage/tree/main/dsjob/blogs) script to clean up existing job runs.
+Use the [`pruneJobs.sh`](./scripts/pruneJobs.sh) script to clean up existing job runs.
+
+**Prerequisites:** `cpdctl` must be configured before running the script.
 
 ### Performance Enhancement
 
@@ -82,6 +97,18 @@ pruneJobs.sh <PROJECT_NAME> --input-file <FILE_WITH_LIST_OF_JOBS> --keep-runs <N
 # OR
 pruneJobs.sh <PROJECT_NAME> --input-file <FILE_WITH_LIST_OF_JOBS> --keep-days <Number of days to keep>
 ```
+
+**Save failed jobs to a log file:**
+```bash
+pruneJobs.sh <PROJECT_NAME> --keep-runs <Number> --save-failures
+```
+
+### Script Features
+
+- **Automatic retry:** Failed operations are retried up to 3 times
+- **Failure tracking:** Use `--save-failures` to save failed job names to a log file in the `logs/` directory
+- **Input file updates:** When using `--input-file`, the file is automatically updated with only failed jobs after execution
+- **Validation:** Ensures positive integer values for retention parameters
 
 ## Additional Resources
 
