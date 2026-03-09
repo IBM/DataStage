@@ -1,22 +1,23 @@
 # DataStage Job Run Retention and Cleanup
+## Overview
 
-## Storage Location
+Job run logs and artifacts are stored in the `file-api-claim` PVC at the following location:
 
-Job run logs and artifacts are stored in the `file-api-claim` PVC after job completion:
+**Storage Path:** `/mnt/asset_file_api/projects/<PROJECT_ID>/assets/job_run/log` in `asset-files-api`
 
-**Path:** `/mnt/asset_file_api/projects/<PROJECT_ID>/assets/job_run/log` in `asset-files-api`
+## Important Notes
 
-## Default Retention Policy
-
-In DataStage versions **5.3.1 and earlier**, the default project job run retention is set to **"No limit"**.
-
-### Important Notes
-
+- In DataStage versions **CPD5.3.1 and earlier**, the default project job run retention is set to **"No limit"**
 - Changes to project default retention settings apply **only to newly created jobs**
 - Existing jobs are **not affected** by default retention changes
-- To update retention for existing jobs:
-  1. First prune existing job runs using [`pruneJobs.sh`](https://github.com/IBM/DataStage/tree/main/dsjob/blogs)
-  2. Then set retention policy using [`jobRunHistoryRetention.sh`](https://github.com/IBM/DataStage/tree/main/dsjob/blogs)
+
+## Recommended Cleanup Process
+
+To properly manage job run retention in DataStage, follow these steps in this order:
+
+1. **Prune existing job runs** using [`pruneJobs.sh`](./scripts/pruneJobs.sh)
+2. **Set retention policy** for jobs using [`jobRunHistoryRetention.sh`](./scripts/jobRunHistoryRetention.sh)
+3. **Update project default retention policy** to the desired value for future jobs. 
 
 ## Setting Retention Policy
 
