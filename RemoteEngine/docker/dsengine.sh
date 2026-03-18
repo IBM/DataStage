@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.32
+TOOL_VERSION=1.0.33
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -1126,6 +1126,9 @@ run_px_runtime_docker() {
     fi
 
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
+        runtime_docker_opts+=(
+            --env MOUNT_DIRS="${MOUNT_DIRS[@]}"
+        )
         for mount in "${MOUNT_DIRS[@]}"; do
             if [[ -n "$mount" && -v mount && ! -z $mount ]]; then
                 if [[ "${mount}" == *':/opt/ibm/PXService/Server/scratch' ]]; then
@@ -2547,11 +2550,10 @@ elif [[ ${ACTION} == "update" ]]; then
     KRB5_CONFIG_FILES_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/etc/krb5-config-files") | .Source')
     KRB5_CONFIG_DIR_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/etc/krb5-config-files/krb5-config-dir") | .Source')
     HOST_NETWORK=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^HOST_NETWORK= | cut -d'=' -f2-)
-    # MOUNT_DIRS=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | select(.Destination != "/etc/krb5-config-files") | select(.Destination != "/etc/krb5-config-files/krb5-config-dir") | "\(.Source):\(.Destination)"' | tr '\n' ' ')
+    MOUNT_DIRS_STR=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^MOUNT_DIRS= | cut -d'=' -f2-)
+    MOUNT_DIRS=($MOUNT_DIRS_STR)
     SAVEIFS=$IFS
     IFS=$'\n'
-    MOUNT_DIRS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | select(.Destination != "/etc/krb5-config-files") | select(.Destination != "/etc/krb5-config-files/krb5-config-dir") | "\(.Source):\(.Destination)"' | while read object; do echo "$object"; done)
-    MOUNT_DIRS=($MOUNT_DIRS_STR)
     ADD_HOSTS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].HostConfig.ExtraHosts | .[]')
     ADD_HOSTS=($ADD_HOSTS_STR)
     IFS=$SAVEIFS
