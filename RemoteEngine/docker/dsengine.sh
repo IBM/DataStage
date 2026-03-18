@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.32
+TOOL_VERSION=1.0.33
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -48,7 +48,10 @@ GATEWAY_DOMAIN_TORPROD='ca-tor.dai.cloud.ibm.com'
 GATEWAY_DOMAIN_LONPROD='eu-gb.dataplatform.cloud.ibm.com'
 GATEWAY_DOMAIN_AWSDEV='dev.aws.data.ibm.com'
 GATEWAY_DOMAIN_AWSTEST='test.aws.data.ibm.com'
-GATEWAY_DOMAIN_AWSPROD='ap-south-1.aws.data.ibm.com'
+GATEWAY_DOMAIN_AWSPROD_APSOUTH='ap-south-1.aws.data.ibm.com'
+GATEWAY_DOMAIN_AWSPROD_USEAST='us-east-1.aws.data.ibm.com'
+GATEWAY_DOMAIN_AWSGOVPREPROD='dai.prep.ibmforusgov.com'
+GATEWAY_DOMAIN_AWSGOVPROD='dai.ibmforusgov.com'
 
 # cp4d constants
 ZEN_URL='dummyzenurl'
@@ -80,7 +83,7 @@ STR_PROD_APIKEY='  -p, --prod-apikey           IBM Cloud Production APIKey for i
 STR_DSNEXT_SEC_KEY='  -e, --encryption-key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            Comma separated list of DataPlatform Project IDs'
-STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, lonprod, awsprod, cp4d]'
+STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, lonprod, awsprod-apsouth, awsprod-useast, awsgovprod, cp4d]'
 STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
 STR_RELABEL_SELINUX_MOUNTS='  --relabel-selinux-mounts    [true]. Appends the :z option to SELinux volume bind mounts.'
@@ -110,7 +113,7 @@ STR_REGISTRY_USER='  -u, --user                  User to login to a custom conta
 STR_DIGEST='  --digest                    Digest to pull the ds-px-runtime image from the registry (required if --registry is set and --image-tag is not set).'
 STR_IMAGE_TAG='  --image-tag                 Image tag to pull the ds-px-runtime image from the registry (required if --registry is set and --digest is not set).'
 STR_SKIP_DOCKER_LOGIN='  --skip-docker-login         [true | false]. Skips Docker login to container registry if that step is not needed.'
-STR_MCSP_ACCOUNT_ID='  --mcsp-account-id           The account ID of the AWS governing owner account (required if --home is used with "awsprod").'
+STR_MCSP_ACCOUNT_ID='  --mcsp-account-id           The account ID of the AWS governing owner account (required when deploying a remote engine for AWS).'
 STR_SYSCTL_SETTINGS='  --sysctl                    Semi-colon separated list of key=value pairs of sysctl settings (eg. net.ipv4.tcp_keepalive_time=120;net.core.somaxconn=16384;...). Whitespaces are ignored.'
 STR_ENV_VARS='  --env-vars                  Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.'
 
@@ -239,7 +242,7 @@ print_usage() {
         echo "${STR_SELECT_PX_VERSION}"
         echo "${STR_ADDITIONAL_USERS}"
         echo "${STR_SYSCTL_SETTINGS}"
-        echo "${STR_ENV_VARS}"        
+        echo "${STR_ENV_VARS}"
     fi
 
     echo "${STR_HELP}"
@@ -1230,7 +1233,7 @@ start_px_runtime_docker() {
 
 wait_readiness_px_runtime()
 {
-    TOTAL_RETRIES=49
+    TOTAL_RETRIES=50
     WAIT_DURATION=5
     ret=1
     count=0
@@ -1364,7 +1367,14 @@ wait_readiness_px_compute() {
 
 get_iam_token() {
 
-    if [[ "${DATASTAGE_HOME}" == 'aws'* ]]; then
+    if [[ "${DATASTAGE_HOME}" == 'awsgov'* ]]; then
+        _iam_response=$($CURL_CMD -sS -L -X POST \
+                    -H 'Content-Type: application/json' \
+                    -H 'Accept: application/json' \
+                    -d "{ \"apikey\": \"${IAM_APIKEY}\" }" \
+                    "${UI_GATEWAY_URL}/api/rest/mcsp/apikeys/token")
+        ACCESS_TOKEN=$(printf "%s" ${_iam_response} | jq -r .token | tr -d '"')
+    elif [[ "${DATASTAGE_HOME}" == 'aws'* ]]; then
         IAM_URL="${IAM_URL%/}"
         IAM_URL="${IAM_URL%/api/2.0/accounts/*/apikeys/token}"
 
@@ -1787,11 +1797,29 @@ check_datastage_home() {
         GATEWAY_URL="https://api.${GATEWAY_DOMAIN_AWSTEST}"
         IAM_URL='https://account-iam.platform.test.saas.ibm.com'
 
-    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_AWSPROD}" || "$DATASTAGE_HOME" == "awsprod" ]]; then
-        DATASTAGE_HOME='awsprod'
-        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_AWSPROD}"
-        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_AWSPROD}"
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_AWSPROD_APSOUTH}" || "$DATASTAGE_HOME" == "awsprod-apsouth" ]]; then
+        DATASTAGE_HOME='awsprod-apsouth'
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_AWSPROD_APSOUTH}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_AWSPROD_APSOUTH}"
         IAM_URL='https://account-iam.platform.saas.ibm.com'
+
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_AWSPROD_USEAST}" || "$DATASTAGE_HOME" == "awsprod-useast" ]]; then
+        DATASTAGE_HOME='awsprod-useast'
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_AWSPROD_USEAST}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_AWSPROD_USEAST}"
+        IAM_URL='https://account-iam.platform.saas.ibm.com'
+
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_AWSGOVPREPROD}" || "$DATASTAGE_HOME" == "awsgovpreprod" ]]; then
+        DATASTAGE_HOME='awsgovpreprod'
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_AWSGOVPREPROD}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_AWSGOVPREPROD}"
+        IAM_URL=''
+
+    elif [[ "$DATASTAGE_HOME" == *"${GATEWAY_DOMAIN_AWSGOVPROD}" || "$DATASTAGE_HOME" == "awsgovprod" ]]; then
+        DATASTAGE_HOME='awsgovprod'
+        UI_GATEWAY_URL="https://${GATEWAY_DOMAIN_AWSGOVPROD}"
+        GATEWAY_URL="https://api.${GATEWAY_DOMAIN_AWSGOVPROD}"
+        IAM_URL=''
 
     elif [[ "$DATASTAGE_HOME" == 'CP4D' || "$DATASTAGE_HOME" == 'cp4d' || "$DATASTAGE_HOME" == 'Cp4d' ]]; then
         DATASTAGE_HOME='cp4d'
@@ -1809,7 +1837,10 @@ check_datastage_home() {
         - https://api.${GATEWAY_DOMAIN_LONPROD}
         - https://api.${GATEWAY_DOMAIN_AWSDEV}
         - https://api.${GATEWAY_DOMAIN_AWSTEST}
-        - https://api.${GATEWAY_DOMAIN_AWSPROD}
+        - https://api.${GATEWAY_DOMAIN_AWSPROD_APSOUTH}
+        - https://api.${GATEWAY_DOMAIN_AWSPROD_USEAST}
+        - https://api.${GATEWAY_DOMAIN_AWSGOVPREPROD}
+        - https://api.${GATEWAY_DOMAIN_AWSGOVPROD}
         - cp4d"
     fi
 
