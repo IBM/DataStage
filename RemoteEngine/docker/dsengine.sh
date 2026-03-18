@@ -2551,9 +2551,15 @@ elif [[ ${ACTION} == "update" ]]; then
     KRB5_CONFIG_DIR_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/etc/krb5-config-files/krb5-config-dir") | .Source')
     HOST_NETWORK=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^HOST_NETWORK= | cut -d'=' -f2-)
     MOUNT_DIRS_STR=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^MOUNT_DIRS= | cut -d'=' -f2-)
-    MOUNT_DIRS=($MOUNT_DIRS_STR)
+    if [[ ! -z "$MOUNT_DIRS_STR" ]]; then
+      MOUNT_DIRS=($MOUNT_DIRS_STR)
+    fi
     SAVEIFS=$IFS
     IFS=$'\n'
+    if [[ ! -v MOUNT_DIRS ]]; then
+      MOUNT_DIRS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | select(.Destination != "/etc/krb5-config-files") | select(.Destination != "/etc/krb5-config-files/krb5-config-dir") | "\(.Source):\(.Destination)"' | while read object; do echo "$object"; done)
+      MOUNT_DIRS=($MOUNT_DIRS_STR)
+    fi
     ADD_HOSTS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].HostConfig.ExtraHosts | .[]')
     ADD_HOSTS=($ADD_HOSTS_STR)
     IFS=$SAVEIFS
