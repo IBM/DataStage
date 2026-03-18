@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.32
+TOOL_VERSION=1.0.33
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -1010,6 +1010,7 @@ run_px_runtime_docker() {
         --cpus=${PX_CPUS}
         --pids-limit=${PIDS_LIMIT}
         --env COMPONENT_ID=ds-px-runtime
+        --env DS_PX_COMPUTE_REPLICAS=0
         --env WLP_SKIP_UMASK=true
         --env ENVIRONMENT_TYPE=CLOUD
         --env ENVIRONMENT_NAME="icp4d"
