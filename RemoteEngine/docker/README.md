@@ -28,7 +28,9 @@
         1. au-syd.dai.cloud.ibm.com and api.au-syd.dai.cloud.ibm.com - if using the Sydney data center
         1. ca-tor.dai.cloud.ibm.com and api.ca-tor.dai.cloud.ibm.com - if using the Toronto data center
         1. eu-gb.dataplatform.cloud.ibm.com and api.eu-gb.dataplatform.cloud.ibm.com - if using the London data center
-        1. ap-south-1.aws.data.ibm.com and api.ap-south-1.aws.data.ibm.com - if using the AWS data center
+        1. ap-south-1.aws.data.ibm.com and api.ap-south-1.aws.data.ibm.com - if using the AWS PROD AP SOUTH data center
+        1. us-east-1.aws.data.ibm.com and api.us-east-1.aws.data.ibm.com - if using the AWS PROD US EAST data center
+        1. dai.ibmforusgov.com and api.dai.ibmforusgov.com - if using the AWS GOV PROD data center
         1. cloud-object-storage.appdomain.cloud (the url could have a prefixed region eg. <region>.s3.cloud-object-store.appdomain.cloud), so recommendation is to allow `*.cloud-object-storage.appdomain.cloud` to accomodate such variations.
 
 
@@ -106,7 +108,7 @@ While starting a remote engine, following optional flags can be used in addition
     Once the remote engine is up and running, additional files and folders will be created inside the above folders as needed by the engine.
 
     If you are planning to create multiple engines on the same machine: For storage isolation with /ds-storage and /scratch (recommended), a different volume directory should be used for each engine. If you plan on having multiple engines share the same /ds-storage and /scratch space, then they will all need to specify the same volume directory.
-1. `--home <value>`: Sets the target IBM Cloud enviroment to either `ypprod` (Dallas data center - default), `frprod` (Frankfurt data center), `sydprod` (Sydney data center),  `torprod` (Toronto data center), or  `awsprod` (AWS data center). The project associated with this engine instance must be in same data center.
+1. `--home <value>`: Sets the target IBM Cloud enviroment to either `ypprod` (Dallas data center - default), `frprod` (Frankfurt data center), `sydprod` (Sydney data center),  `torprod` (Toronto data center), `awsprod-apsouth` (AWS PROD AP SOUTH data center), `awsprod-useast` (AWS PROD US EAST data center), or `awsgovprod` (AWS GOV PROD data center). The project associated with this engine instance must be in same data center.
 1. `--select-version`: Set to true if you want to choose a specific version of remote engine. By default, this flag is set to false and the latest version is used.
 1. `--security-opt <value>`: Specify the security-opt to be used to run the container.
 1. `--cap-drop <value>`: Specify the cap-drop to be used to run the container.
@@ -132,7 +134,7 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--digest`: Digest to pull the ds-px-runtime image from the registry (required if --registry is set and --image-tag is not set).
 1. `--image-tag`: Image tag to pull the ds-px-runtime image from the registry (required if --registry is set and --digest is not set).
 1. `--skip-docker-login`: [true | false]. Skips Docker login to container registry if that step is not needed.
-1. `--mcsp-account-id`: The account ID of the AWS governing owner account (required if --home is used with "awsprod").
+1. `--mcsp-account-id`: The account ID of the AWS governing owner account (required when deploying a remote engine for AWS).
 1. `--sysctl`: Semi-colon separated list of key=value pairs of sysctl settings (eg. net.ipv4.tcp_keepalive_time=120;net.core.somaxconn=16384;...). Whitespaces are ignored.
 1. `--env-vars`: Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.
     * Remote Engine specific environment variables:
