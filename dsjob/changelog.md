@@ -4,6 +4,9 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.3.1](#531)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.3.1.md)
+
 [5.3.0](#530)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.3.0.md)
 
@@ -81,6 +84,24 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 5.3.1
+
+### Command changes
+
+The following commands have changed:
+
+- `jobrunclean` uses `--states` flag to filter jobs based on job run state.
+- `list-active-runs` takes `--project, --project-id` to list based on project, takes `--name, --id` to list active runs per job in a specified project.
+- `git-configure` command is enhanced to SSL fields `git-cert` or `git-certfile` and `git-cert-key` or `git-cert-keyfile`. New field `ds-user` is added to support tracking pipelines.
+- `get-jobrun` takes new param `skip-metrics` to skip metrics in the returned response.
+- `list-ds-runs` report takes `show-by-runname` option to only show last run for each job with a unique run-name.
+- `list-datasets` and `list-filesets` takes new argument `--with-location` to show location information of the dataset.
+
+### Fixes
+
+- fixed run/run-pipeline commands enhanced to handle parameter processing in a thread safe manner.  
+- added retry logic into run/run-pipeline command while processing crucial steps such as validating project, fetching job, creating job run, starting job run and getting status of the job run so that many network transient failures to the api calls are handled.
 
 ## 5.3.0
 
