@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.33
+TOOL_VERSION=1.0.34
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -69,6 +69,7 @@ FORCE_RENEW='false'
 RESTART_STOPPED_CONTAINER='false'
 PROXY_CACERT_LOCATION="/px-storage/proxy.pem"
 KRB5_CONF_FILE="/etc/krb5-config-files/krb5.conf"
+DS_STORAGE_PATH="/ds-storage:/px-storage"
 
 supported_versions="5.1.0 5.1.1 5.1.2 5.1.3 5.2.0 5.2.1 5.2.2 5.3.0 5.3.1"
 asset_versions="510 511 512 513 520 521 522 530 531"
@@ -1130,8 +1131,11 @@ run_px_runtime_docker() {
     fi
 
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
+        # Use ; as delimiter to properly handle multiple entries
+        MOUNT_DIRS_JOINED=$(printf '%s;' "${MOUNT_DIRS[@]}")
+        echo "MOUNT_DIRS_JOINED: ${MOUNT_DIRS_JOINED}"
         runtime_docker_opts+=(
-            --env MOUNT_DIRS="${MOUNT_DIRS[@]}"
+             --env MOUNT_DIRS="${MOUNT_DIRS_JOINED}"
         )
         for mount in "${MOUNT_DIRS[@]}"; do
             if [[ -n "$mount" && -v mount && ! -z $mount ]]; then
@@ -1144,6 +1148,25 @@ run_px_runtime_docker() {
                 )
             fi
         done
+    fi
+
+    # Build DS_STORAGE_PATH from MOUNT_DIRS if not already in ENV_VARS
+    if [[ ! "$ENV_VARS" =~ "DS_STORAGE_PATH=" ]]; then
+        if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
+            for mount in "${MOUNT_DIRS[@]}"; do
+                if [[ -n "$mount" && -v mount && ! -z $mount ]]; then
+                    # Extract container path (part after the colon)
+                    container_path="${mount#*:}"
+                    # Remove any SELinux options (e.g., :z)
+                    container_path="${container_path%%:*}"
+                    # Append to DS_STORAGE_PATH if not already present
+                    if [[ ! "$DS_STORAGE_PATH" =~ (^|:)"$container_path"(:|$) ]]; then
+                        DS_STORAGE_PATH="${DS_STORAGE_PATH}:${container_path}"
+                    fi
+                fi
+            done
+            echo "DS_STORAGE_PATH=${DS_STORAGE_PATH}"
+        fi
     fi
 
     if [[ "${SCRATCH_DIR_OVERRIDE}" == 'false' ]]; then
@@ -1174,7 +1197,7 @@ run_px_runtime_docker() {
         -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2"${RELABEL_SELINUX_MOUNTS:+:z}"
         -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files"${RELABEL_SELINUX_MOUNTS:+:z}"
         -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir"${RELABEL_SELINUX_MOUNTS:+:z}"
-        --env DS_STORAGE_PATH=/ds-storage:/px-storage
+        --env DS_STORAGE_PATH="${DS_STORAGE_PATH}"
         --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
         --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
         --env ENABLE_DS_METRICS=false
@@ -2360,6 +2383,24 @@ EOL
     fi
 }
 
+# Function to split string into array using ';' delimiter
+split_mount_dirs() {
+    local mount_dirs_str="$1"
+    local -n result_array=$2
+    
+    # Save current IFS
+    local OLDIFS="$IFS"
+    
+    # Set IFS to ';' for splitting
+    IFS=';'
+    
+    # Read into array
+    read -ra result_array <<< "$mount_dirs_str"
+    
+    # Restore IFS
+    IFS="$OLDIFS"
+}
+
 #######################################################################
 # main
 #######################################################################
@@ -2584,7 +2625,8 @@ elif [[ ${ACTION} == "update" ]]; then
     HOST_NETWORK=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^HOST_NETWORK= | cut -d'=' -f2-)
     MOUNT_DIRS_STR=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^MOUNT_DIRS= | cut -d'=' -f2-)
     if [[ ! -z "$MOUNT_DIRS_STR" ]]; then
-      MOUNT_DIRS=($MOUNT_DIRS_STR)
+      declare -a MOUNT_DIRS 
+      split_mount_dirs "$MOUNT_DIRS_STR" MOUNT_DIRS
     fi
     SAVEIFS=$IFS
     IFS=$'\n'
