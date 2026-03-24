@@ -1133,7 +1133,6 @@ run_px_runtime_docker() {
     if [[ -v MOUNT_DIRS && ! -z $MOUNT_DIRS ]]; then
         # Use ; as delimiter to properly handle multiple entries
         MOUNT_DIRS_JOINED=$(printf '%s;' "${MOUNT_DIRS[@]}")
-        echo "MOUNT_DIRS_JOINED: ${MOUNT_DIRS_JOINED}"
         runtime_docker_opts+=(
              --env MOUNT_DIRS="${MOUNT_DIRS_JOINED}"
         )
