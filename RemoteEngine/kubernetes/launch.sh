@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.15
+TOOL_VERSION=1.0.16
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -323,6 +323,11 @@ EOF
 create_service_account() {
   #sed <"${serviceAccountFile}" "s#NAMESPACE_REPLACE#${namespace}#g" | $kubernetesCLI apply ${dryRun} -f -
 
+  ibmEntitlementKey=`$kubernetesCLI -n $namespace get secret ibm-entitlement-key --ignore-not-found=true`
+  ibmEntitlementKeyEntry=""
+  if [[ ! -z $ibmEntitlementKey ]]; then
+    ibmEntitlementKeyEntry="- name: ibm-entitlement-key"
+  fi;
   $kubernetesCLI -n $namespace get secret $DS_REGISTRY_SECRET > /dev/null
   if [ $? -ne 0 ]; then
     echo "WARNING: Creating service account without container registry pull secret. Falling back on global pull secret."
@@ -337,7 +342,7 @@ metadata:
     app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
     app.kubernetes.io/name: ibm-cpd-datastage-remote-operator-sa
 imagePullSecrets:
-- name: ibm-entitlement-key
+${ibmEntitlementKeyEntry}
 EOF
   else
     cat <<EOF | $kubernetesCLI -n $namespace apply ${dryRun} -f -
@@ -351,8 +356,8 @@ metadata:
     app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
     app.kubernetes.io/name: ibm-cpd-datastage-remote-operator-sa
 imagePullSecrets:
-- name: ibm-entitlement-key
 - name: $DS_REGISTRY_SECRET
+${ibmEntitlementKeyEntry}
 EOF
   fi
 }
