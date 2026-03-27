@@ -1981,6 +1981,7 @@ setup_docker_volumes() {
 
         echo "Creating init scripts ..."
         generate_startup_script
+        generate_db2_certs_script
         generate_snc_script
         generate_log_retention_cfg
         generate_init_volume_script
@@ -2035,6 +2036,7 @@ cat <<EOL > "${STARTUP_FILE}"
 #!/bin/sh
 set -x
 
+export IBM_HOME=/opt/ibm
 secretDir="/etc/secrets"
 iterateSecrets() {
    for filename in \${secretDir}/*; do
@@ -2058,6 +2060,19 @@ importDB2ZLicense() {
    if [ -f "/px-storage/db2consv_ee.lic" ]; then
       sh /px-storage/import_license.sh /px-storage/db2consv_ee.lic
    fi
+}
+
+# Delete Custom certs if they exist in certs store
+# Deleting here to avoid failure due to re import in 01-libertycert.sh when the pod restarts
+deleteCustomCertsFromStore() {
+   for filename in /etc/wdp_certs/*.pem; do
+     if [ -f "\$filename" ]; then
+       name=\${filename##*/}
+       echo "Deleting custom cert \${name} from store"
+       keytool -delete -alias "\${name}" -keystore \${JAVA_HOME}/lib/security/cacerts -storepass changeit
+       keytool -delete -alias "\${name}" -keystore \${IBM_HOME}/security/cacerts.p12 -storepass changeit
+     fi
+   done
 }
 
 startContainer() {
@@ -2096,7 +2111,36 @@ iterateSecrets
 importDB2ZLicense
 startCassandraSQLENgine
 startMongoDBSQLEngine
+deleteCustomCertsFromStore
 startContainer
+EOL
+        set_permissions "${STARTUP_FILE}"
+    fi
+}
+
+generate_db2_certs_script() {
+    STARTUP_FILE="${PX_STORAGE_HOST_DIR}/02-create-db2-certs.sh"
+    if [ ! -f "${STARTUP_FILE}" ]; then
+cat <<EOL > "${STARTUP_FILE}"
+#!/bin/sh
+
+createDB2CliIni() {
+  if [[ ! -f /px-storage/db2/db2cli.ini ]]; then
+    echo "[COMMON]" > /px-storage/db2/db2cli.ini
+    echo "SSLServerCertificate=/px-storage/db2/cpd-cacerts.crt" >> /px-storage/db2/db2cli.ini
+  fi
+  ln -sf /px-storage/db2/db2cli.ini /home/dsuser/sqllib/cfg/db2cli.ini
+}
+
+createDB2Certs() {
+   # convert the Java cacerts to pem format on startup
+   \${JAVA_HOME}/bin/keytool -importkeystore -srckeystore \${JAVA_HOME}/lib/security/cacerts -srcstoretype jks -srcstorepass changeit -destkeystore /tmp/keystore.p12 -deststoretype pkcs12 -deststorepass changeit
+   openssl pkcs12 -in /tmp/keystore.p12 -passin pass:changeit -out /px-storage/db2/cpd-cacerts.crt
+   rm -f /tmp/keystore.p12
+}
+
+createDB2CliIni
+createDB2Certs
 EOL
         set_permissions "${STARTUP_FILE}"
     fi
@@ -2178,6 +2222,7 @@ cat <<EOL > "${INIT_VOL_FILE}"
 set -x
 
 cp "/px-storage/startup.sh" /opt/ibm/startup.sh
+cp "/px-storage/02-create-db2-certs.sh" /opt/ibm/initScripts/02-create-db2-certs.sh
 
 cd /px-storage && mkdir -p pds_files/node1 pds_files/node2 Datasets certs data/sap config/wlm config/jdbc config/odbc PXRuntime/WLM/logs dbdrivers;
 # create directory for tempdir
