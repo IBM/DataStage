@@ -1259,8 +1259,8 @@ start_px_runtime_docker() {
 
 wait_readiness_px_runtime()
 {
-    TOTAL_RETRIES=50
-    WAIT_DURATION=6
+    TOTAL_RETRIES=60
+    WAIT_DURATION=5
     ret=1
     count=0
 
