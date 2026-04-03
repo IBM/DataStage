@@ -186,14 +186,10 @@ metadata:
 rules:
 - apiGroups:
   - ""
-  - batch
-  - extensions
   - apps
   - policy
   - rbac.authorization.k8s.io
   - autoscaling
-  - route.openshift.io
-  - authorization.openshift.io
   - networking.k8s.io
   resources:
   - secrets
@@ -210,7 +206,6 @@ rules:
   - services
   - persistentvolumeclaims
   - persistentvolumes
-  - cronjobs
   - serviceaccounts
   - roles
   - rolebindings
