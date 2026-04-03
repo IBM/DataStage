@@ -186,7 +186,6 @@ metadata:
 rules:
 - apiGroups:
   - ""
-  - batch
   - extensions
   - apps
   - policy
@@ -210,7 +209,6 @@ rules:
   - services
   - persistentvolumeclaims
   - persistentvolumes
-  - cronjobs
   - serviceaccounts
   - roles
   - rolebindings
