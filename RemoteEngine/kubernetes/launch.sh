@@ -377,13 +377,10 @@ metadata:
 rules:
 - apiGroups:
   - ""
-  - extensions
   - apps
   - policy
   - rbac.authorization.k8s.io
   - autoscaling
-  - route.openshift.io
-  - authorization.openshift.io
   - networking.k8s.io
   resources:
   - secrets
