@@ -407,12 +407,12 @@ rules:
   - networkpolicies
   verbs:
   - create
-  - get
   - delete
-  - watch
-  - update
+  - get
   - list
   - patch
+  - update
+  - watch
 - apiGroups:
   - ds.cpd.ibm.com
   resources:
