@@ -215,13 +215,11 @@ rules:
   - pods/status
   - networkpolicies
   verbs:
-  - apply
   - create
   - get
   - delete
   - watch
   - update
-  - edit
   - list
   - patch
 - apiGroups:
@@ -231,8 +229,6 @@ rules:
   - pxruntimes/status
   - pxruntimes/finalizers
   verbs:
-  - apply
-  - edit
   - create
   - delete
   - get

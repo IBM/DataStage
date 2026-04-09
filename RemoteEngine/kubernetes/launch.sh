@@ -406,13 +406,11 @@ rules:
   - pods/status
   - networkpolicies
   verbs:
-  - apply
   - create
   - get
   - delete
   - watch
   - update
-  - edit
   - list
   - patch
 - apiGroups:
@@ -422,8 +420,6 @@ rules:
   - pxremoteengines/status
   - pxremoteengines/finalizers
   verbs:
-  - apply
-  - edit
   - create
   - delete
   - get
