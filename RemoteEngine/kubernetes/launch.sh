@@ -387,6 +387,7 @@ rules:
   - pods
   $podExecPerms
   - pods/log
+  - poddisruptionbudgets
   - jobs
   - configmaps
   - deployments
@@ -404,17 +405,14 @@ rules:
   - jobs/status
   - pods/status
   - networkpolicies
-  - poddisruptionbudgets
   verbs:
-  - apply
   - create
-  - get
   - delete
-  - watch
-  - update
-  - edit
+  - get
   - list
   - patch
+  - update
+  - watch
 - apiGroups:
   - ds.cpd.ibm.com
   resources:
@@ -422,8 +420,6 @@ rules:
   - pxremoteengines/status
   - pxremoteengines/finalizers
   verbs:
-  - apply
-  - edit
   - create
   - delete
   - get
