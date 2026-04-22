@@ -284,7 +284,6 @@ rules:
       - list
       - patch
       - update
-      - view
       - watch
   - apiGroups:
       - policy
