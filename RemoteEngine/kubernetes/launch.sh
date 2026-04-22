@@ -378,13 +378,13 @@ rules:
   - apiGroups:
       - ''
     resources:
-      - secrets
+      - configmaps
+      - persistentvolumeclaims
       - pods
       $podExecPerms
-      - configmaps
-      - services
-      - persistentvolumeclaims
+      - secrets
       - serviceaccounts
+      - services
     verbs:
       - create
       - delete
@@ -407,9 +407,9 @@ rules:
     resources:
       - deployments
       - deployments/scale
+      - replicasets
       - statefulsets
       - statefulsets/scale
-      - replicasets
     verbs:
       - create
       - delete
@@ -451,12 +451,28 @@ rules:
       - list
       - watch
   - apiGroups:
+      - ds.cpd.ibm.com
+    resources:
+      - '*'
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
       - networking.k8s.io
     resources:
       - networkpolicies
     verbs:
+      - create
+      - delete
       - get
       - list
+      - patch
+      - update
       - view
       - watch
   - apiGroups:
@@ -474,22 +490,8 @@ rules:
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:
-      - roles
       - rolebindings
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - ds.cpd.ibm.com
-    resources:
-      - pxruntimes
-      - pxruntimes/status
-      - pxruntimes/finalizers
+      - roles
     verbs:
       - create
       - delete
