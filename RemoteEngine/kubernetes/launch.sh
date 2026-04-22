@@ -453,7 +453,9 @@ rules:
   - apiGroups:
       - ds.cpd.ibm.com
     resources:
-      - '*'
+      - pxremoteengines
+      - pxremoteengines/finalizers
+      - pxremoteengines/status
     verbs:
       - create
       - delete

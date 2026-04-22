@@ -262,7 +262,9 @@ rules:
   - apiGroups:
       - ds.cpd.ibm.com
     resources:
-      - '*'
+      - pxruntimes
+      - pxruntimes/finalizers
+      - pxruntimes/status
     verbs:
       - create
       - delete
