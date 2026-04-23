@@ -375,58 +375,132 @@ metadata:
      app.kubernetes.io/name: ibm-cpd-datastage-remote-operator-cluster-role
 
 rules:
-- apiGroups:
-  - ""
-  - apps
-  - policy
-  - rbac.authorization.k8s.io
-  - autoscaling
-  - networking.k8s.io
-  resources:
-  - secrets
-  - pods
-  $podExecPerms
-  - pods/log
-  - poddisruptionbudgets
-  - jobs
-  - configmaps
-  - deployments
-  - deployments/scale
-  - statefulsets
-  - statefulsets/scale
-  - replicasets
-  - services
-  - persistentvolumeclaims
-  - persistentvolumes
-  - serviceaccounts
-  - roles
-  - rolebindings
-  - horizontalpodautoscalers
-  - jobs/status
-  - pods/status
-  - networkpolicies
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ds.cpd.ibm.com
-  resources:
-  - pxremoteengines
-  - pxremoteengines/status
-  - pxremoteengines/finalizers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
+  - apiGroups:
+      - ''
+    resources:
+      - configmaps
+      - persistentvolumeclaims
+      - pods
+      $podExecPerms
+      - secrets
+      - serviceaccounts
+      - services
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ''
+    resources:
+      - pods/log
+      - pods/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - deployments/scale
+      - replicasets
+      - statefulsets
+      - statefulsets/scale
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - autoscaling
+    resources:
+      - horizontalpodautoscalers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - jobs/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ds.cpd.ibm.com
+    resources:
+      - pxremoteengines
+      - pxremoteengines/finalizers
+      - pxremoteengines/status
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - networkpolicies
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - rolebindings
+      - roles
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
 EOF
 }
 
