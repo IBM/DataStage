@@ -2233,6 +2233,8 @@ ln -s  /px-storage/pds_files /opt/ibm/PXService/Server/pds_files;
 ln -s  /px-storage/Datasets /opt/ibm/PXService/Server/Datasets;
 ln -s  /px-storage/certs /opt/ibm/PXService/Server/PXEngine/etc/certs;
 ln -s  /px-storage/data/sap /opt/ibm/data/sap;
+# Fix for Java Integration Stage path resolution (Issue #62716)
+ln -sf /ds-storage/PXRuntime/Projects /ds-storage/projects;
 # create directory for snc configuratio for SAP connector
 mkdir -p /ds-storage/snc;
 if [[ ! -f "/ds-storage/snc/snc-automate.sh" ]]; then
