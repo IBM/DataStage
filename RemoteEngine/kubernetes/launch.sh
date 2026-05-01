@@ -394,22 +394,11 @@ rules:
       - update
       - watch
   - apiGroups:
-      - ''
-    resources:
-      - pods/log
-      - pods/status
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
       - apps
     resources:
       - deployments
-      - deployments/scale
       - replicasets
       - statefulsets
-      - statefulsets/scale
     verbs:
       - create
       - delete
@@ -418,6 +407,15 @@ rules:
       - patch
       - update
       - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments/scale
+      - statefulsets/scale
+    verbs:
+      - get
+      - patch
+      - update
   - apiGroups:
       - autoscaling
     resources:
@@ -454,8 +452,6 @@ rules:
       - ds.cpd.ibm.com
     resources:
       - pxremoteengines
-      - pxremoteengines/finalizers
-      - pxremoteengines/status
     verbs:
       - create
       - delete
@@ -464,6 +460,21 @@ rules:
       - patch
       - update
       - watch
+  - apiGroups:
+      - ds.cpd.ibm.com
+    resources:
+      - pxremoteengines/finalizers
+    verbs:
+      - patch
+      - update
+  - apiGroups:
+      - ds.cpd.ibm.com
+    resources:
+      - pxremoteengines/status
+    verbs:
+      - get
+      - patch
+      - update
   - apiGroups:
       - networking.k8s.io
     resources:
