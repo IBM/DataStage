@@ -207,6 +207,7 @@ rules:
       - pods/exec
     verbs:
       - create
+      - get
   - apiGroups:
       - apps
     resources:
