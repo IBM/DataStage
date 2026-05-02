@@ -190,7 +190,6 @@ rules:
       - configmaps
       - persistentvolumeclaims
       - pods
-      - pods/exec
       - secrets
       - serviceaccounts
       - services
@@ -205,20 +204,16 @@ rules:
   - apiGroups:
       - ''
     resources:
-      - pods/log
-      - pods/status
+      - pods/exec
     verbs:
+      - create
       - get
-      - list
-      - watch
   - apiGroups:
       - apps
     resources:
       - deployments
-      - deployments/scale
       - replicasets
       - statefulsets
-      - statefulsets/scale
     verbs:
       - create
       - delete
@@ -227,6 +222,15 @@ rules:
       - patch
       - update
       - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments/scale
+      - statefulsets/scale
+    verbs:
+      - get
+      - patch
+      - update
   - apiGroups:
       - autoscaling
     resources:
@@ -263,8 +267,6 @@ rules:
       - ds.cpd.ibm.com
     resources:
       - pxruntimes
-      - pxruntimes/finalizers
-      - pxruntimes/status
     verbs:
       - create
       - delete
@@ -273,6 +275,21 @@ rules:
       - patch
       - update
       - watch
+  - apiGroups:
+      - ds.cpd.ibm.com
+    resources:
+      - pxruntimes/finalizers
+    verbs:
+      - patch
+      - update
+  - apiGroups:
+      - ds.cpd.ibm.com
+    resources:
+      - pxruntimes/status
+    verbs:
+      - get
+      - patch
+      - update
   - apiGroups:
       - networking.k8s.io
     resources:
