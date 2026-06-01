@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.17
+TOOL_VERSION=1.0.18
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -32,6 +32,7 @@ OPERATOR_REGISTRY_SUFFIX="cpopen"
 DOCKER_REGISTRY_SUFFIX="cp/cpd"
 DS_REGISTRY_SECRET="datastage-pull-secret"
 DS_API_KEY_SECRET="datastage-api-key-secret"
+DS_CREDENTIAL_STORE_SECRET="datastage-credential-store-secret"
 DS_PROXY_URL="datastage-proxy-url"
 DS_GATEWAY="api.dataplatform.cloud.ibm.com"
 IAM_URL="https://iam.cloud.ibm.com"
@@ -731,6 +732,17 @@ create_krb5_configmaps() {
   fi
 }
 
+create_credential_store_secret() {
+  $kubernetesCLI -n ${namespace} delete secret $DS_CREDENTIAL_STORE_SECRET --ignore-not-found=true ${dryRun}
+  if [ ! -z $CREDENTIAL_STORE_CONFIG ]; then
+    if [ -f $CREDENTIAL_STORE_CONFIG ]; then
+      $kubernetesCLI -n ${namespace} create secret generic $DS_CREDENTIAL_STORE_SECRET --from-env-file=${CREDENTIAL_STORE_CONFIG}
+    else
+      echo_error_and_exit "The specified credential store config file $CREDENTIAL_STORE_CONFIG is not found."
+    fi
+  fi
+}
+
 create_db2z_license_secret() {
   $kubernetesCLI -n ${namespace} delete secret datastage-db2z-license --ignore-not-found=true ${dryRun}
   if [ ! -z $DB2Z_LICENSE ]; then
@@ -878,6 +890,15 @@ handle_krb5_usage() {
   echo "--namespace: the namespace to install the DataStage operator"
   echo "--krb5-conf: Specify the location of the Kerberos config file if using Kerberos Authentication."
   echo "--krb5-conf-dir: Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include 'includedir /etc/krb5-config-files/krb5-config-dir' line)"
+  exit 0
+}
+
+handle_credential_store_secret_usage() {
+  echo ""
+  echo "Description: create secret from credential store configuration file"
+  echo "Usage: $0 create-credential-store-secret --namespace <namespace> --credential-store-config <config_file_location>"
+  echo "--namespace: the namespace to install the DataStage operator"
+  echo "--credential-store-config: Specify the location of the credential store configuration file (properties format)"
   exit 0
 }
 
@@ -1411,6 +1432,10 @@ do
             shift
             DISABLE_WLM_SCALING="$1"
             ;;
+        --credential-store-config)
+            shift
+            CREDENTIAL_STORE_CONFIG="${1}"
+            ;;
         install)
             action="install"
             ;;
@@ -1422,6 +1447,9 @@ do
              ;;
         create-krb5-configmaps)
             action="create-krb5-configmaps"
+             ;;
+        create-credential-store-secret)
+            action="create-credential-store-secret"
              ;;
         create-db2z-license-secret)
             action="create-db2z-license-secret"
@@ -1487,6 +1515,9 @@ if [[ ! -z $dsdisplayHelp ]]; then
     create-krb5-configmaps)
       handle_krb5_usage
       ;;
+    create-credential-store-secret)
+      handle_credential_store_secret_usage
+      ;;
     create-db2z-license-secret)
       handle_import_db2z_license_usage
       ;;
@@ -1531,6 +1562,9 @@ create-proxy-secrets)
 create-krb5-configmaps)
   create_krb5_configmaps
   ;;
+create-credential-store-secret)
+  create_credential_store_secret
+  ;;
 create-db2z-license-secret)
   create_db2z_license_secret
   ;;
@@ -1565,6 +1599,7 @@ if [ ! -z $inputFile ]; then
   create_pull_secret
   create_proxy_secrets
   create_krb5_configmaps
+  create_credential_store_secret
   create_db2z_license_secret
   create_apikey_secret
   determine_registry
