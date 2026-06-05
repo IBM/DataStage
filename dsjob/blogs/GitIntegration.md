@@ -81,6 +81,8 @@ Git commit also maintains and updates `  DataStage-README.json` at the root of t
 Note `project.json` is a special file that is added at the root of each folder and maintained by Git API. This file will help determine project level changes with respect to Git. This file along side the project tracking data in the Migration service helps in determining what assets are changed between Project and Git.
 
 
+** Note: ** Git Commit only works on non-empty project. This is due to the risk involved in deleting all assets in the repo when a empty project is committed against a repo. Also exporting a empty project is prohibited from the migration API used from the backend.
+
 #### Git Commit from CLI
 ```
 $ cpdctl dsjob git-commit -p dsjob-demo1122 --repo git-dsjob --branch demo1122 --in-folder folder1122 --commit-message "test commit" --wait 2000
@@ -191,6 +193,8 @@ User will have chance to select assets to pul or can pull the entire project for
 Context based pull are available from UI on selected assets.
 
 ![Context based pull into a Project](gitpull3.png)
+
+** Note: ** Git pull cannot be performed from a empty repo, this can cause all assets be deleted from the project. This is considered a destructive operation and api will validated and block any operations that result in all assets being deleted from the project.
 
 #### Git Pull from CLI
 Create a project
