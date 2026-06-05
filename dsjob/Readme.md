@@ -72,7 +72,7 @@ The following table illustrate CP4D release compatibility to corresponding CPDCT
 CPDCTL release build contains the dsjob plugin which is release for the mentioned CP4D release.
 | CPD release | CPDCTL Version |
 | -------------|---------------|
-|5.3.0   | v1.8.145 |
+|5.3.1   | v1.8.145 |
 |5.3.0   | v1.8.79  |
 |5.2.2   | v1.8.28  |
 |5.2.1   | v1.8.20  |
