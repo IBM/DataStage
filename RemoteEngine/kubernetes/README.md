@@ -61,6 +61,9 @@ To deploy the DataStage operator on cluster without global pull secret configure
 # create the krb5 configmaps if Kerberos Authentication is used
 # ./launch.sh create-krb5-configmaps --namespace <namespace> --krb5-conf <krb5_conf_location> [--krb5-conf-dir <krb5_config_dir_location>]
 
+# create the credential store secrets if properties file is provided
+# ./launch.sh create-credential-store-secrets --namespace <namespace> --credential-store-config <config_file_location>
+
 # create secret to import DB2Z license
 # ./launch.sh create-db2z-license-secret --namespace <namespace> --import-db2z-license <db2z_license_location>
 
@@ -155,6 +158,9 @@ zen_url=<zen-url>
 
 # Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include 'includedir /etc/krb5-config-files/krb5-config-dir' line).
 # KRB5_CONF_DIR=<krb5_config_dir_location>
+
+# Specify the location of the credtial store properties file if using vault secrets to set required environment variables.
+# CREDENTIAL_STORE_CONFIG=<config_file_location>
 
 # Specify the location of the DB2Z license to import
 # DB2Z_LICENSE=<db2z_license_location>
