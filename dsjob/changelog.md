@@ -4,6 +4,9 @@
 The following updates and changes apply to the `dsjob` command-line
 interface.
 
+[5.4.0](#540)
+[Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.4.0.md)
+
 [5.3.1](#531)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.5.3.1.md)
 
@@ -84,6 +87,47 @@ interface.
 
 [4.6.2](#462)
 [Documentation](https://github.com/IBM/DataStage/tree/main/dsjob/dsjob.4.6.2.md)
+
+## 5.4.0
+
+### New commands
+
+The following commands are added:
+
+- `get-asset-info` retrieves asset information by name and type.
+- `get-git-token` fetches the Git token from the user profile.
+- `get-job-report` provides a detailed report of job runs.
+- `get-joblog` retrieves logs for completed jobs using a new API to avoid truncation.
+- `set-git-token` allows users to upload a new Git token to their profile.
+- `unify-pipeline` converts an existing DataStage pipeline runner job into a unified job.
+- `get-pipeline-settings` retrieves pipeline settings for the project.
+- `update-pipeline-settings` updates pipeline settings for the project.
+- `remove-job-invocationid` removes the invocation ID from a job.
+- `populate-cache` loads cache entries into the project's local filesystem.
+- `clear-cache` clears the local filesystem cache for the project.
+
+### Command changes
+
+The following commands have changed:
+
+- The `run` command now allows users to execute optimized pipeline jobs:
+  - Retries on intermittent network errors and internal server errors.
+  - Retries job creation on failure.
+  - Retries when checking job status for completion.
+- `list-datasets` and `list-filesets` now use a new API to support exporting large data sets to a file.
+- `list-datasets` no longer requires the `/mnts` prefix to be specified.
+- `list-env-vars` has been fixed to handle trailing spaces in names.
+- `export-folders` has been fixed to account for all missing jobs.
+- The `migrate` command adds a new `migrate-odbc` option to migrate connections as generic ODBC.
+- `import-zip` introduces a new `include-compile-errors` option to display compile errors in the output.
+- `export-project` and `export-datastage-assets` now include a `no-secrets` option to omit secrets from the exported output.
+- `run-pipeline` selects jobs with priority given to unified jobs while maintaining backward compatibility.
+
+### Fixes
+
+- Fixed `run` and `run-pipeline` commands, enhancing them to handle parameter processing in a thread-safe manner.
+- Added retry logic to the `run` and `run-pipeline` commands for critical steps such as validating the project, fetching the job, creating a job run, starting the job run, and retrieving job run status, improving resilience against transient network errors in API calls.
+- `create-tabledef` now supports all data types supported by the table definition API.
 
 ## 5.3.1
 
