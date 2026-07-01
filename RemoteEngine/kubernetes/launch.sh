@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.18
+TOOL_VERSION=1.0.19
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -281,6 +281,10 @@ spec:
       - description: The status of PXRemoteEngine
         jsonPath: .status.dsStatus
         name: Status
+        type: string
+      - description: Progress percentage of PXRemoteEngine
+        jsonPath: .status.progress
+        name: Percent
         type: string
       - description: The age of PXRemoteEngine
         jsonPath: .metadata.creationTimestamp
@@ -701,7 +705,7 @@ create_proxy_secrets() {
     if [ ! -z $cacert_location ]; then
       if [ -f $cacert_location ]; then
         CURL_CMD="${CURL_CMD} --proxy-insecure"
-        $kubernetesCLI -n ${namespace} create secret generic connection-ca-certs --from-file=${cacert_location}
+        $kubernetesCLI -n ${namespace} create secret generic connection-ca-certs --from-file=remote_proxy_cert.pem=${cacert_location}
       else
         echo_error_and_exit "The specified proxy certificate $cacert_location is not found."
       fi
