@@ -141,6 +141,82 @@ While starting a remote engine, following optional flags can be used in addition
         * REMOTE_ENGINE_BATCH_SIZE - Set to an integer representing the maximum number of jobs that remote engine will pull at one time. Default value is 5.
         * APT_USE_REMOTE_APP - Set to "force" to make remote engine avoid forking section leader processes. Can avoid inheriting unwanted open resources from the conductor. Default is unset.
         * ENABLE_DS_METRICS - Set to "true" to have the remote engine send metrics to a configured DataStage metrics repository. See the [IBM Cloud](https://dataplatform.cloud.ibm.com/docs/content/dstage/dsnav/topics/ds_metrics.html?context=cpdaas&audience=wdp) or [Cloud Pak for Data](https://www.ibm.com/docs/en/software-hub/5.1.x?topic=administering-storing-persisting-metrics) documentation for more information.
+    * Credential store configuration can also be passed via `--env-vars`:
+        * Example for Google Secret Manager:
+            ```bash
+            ./dsengine.sh start -n 'my_remote_engine_01' \
+                                -e "$ENCRYPTION_KEY" \
+                                -i "$ENCRYPTION_IV" \
+                                -p "$IBM_ENTITLED_REGISTRY_APIKEY" \
+                                --project-id "$PROJECT_ID" \
+                                --env-vars "credentialStores=$STORES;GOOGLE_PROJECT_ID=$PROJECT_ID;GOOGLE_CREDENTIALS_MODE=$MODE;GOOGLE_CREDENTIALS_FILE=$JSON_PATH"
+            ```
+1. `--credential-store-config`: Path to secret-store.properties file to load credential store configurations. This file contains configuration for external credential stores (HashiCorp Vault, IBM Secrets Manager, Google Secret Manager) that DataStage can use to retrieve credentials securely.
+    * Example usage with properties file:
+        ```bash
+        ./dsengine.sh start -n 'my_remote_engine_01' \
+                            -e "$ENCRYPTION_KEY" \
+                            -i "$ENCRYPTION_IV" \
+                            -p "$IBM_ENTITLED_REGISTRY_APIKEY" \
+                            --project-id "$PROJECT_ID" \
+                            --credential-store-config "./secret-store.properties"
+        ```
+    * **Complete secret-store.properties configuration template:**
+        ```properties
+        ################################################
+        #       Credential Stores                      #
+        ################################################
+        # Defines the credential stores for DataStage to use. Specify a comma-separated list
+        # of unique credential store IDs. possible values: hashicorp,ibm,google
+        credentialStores=
+
+        ############################################################
+        #    Hashicorp Credential Store Configuration              #
+        ############################################################
+        # Required: Hashicorp Host Address
+        VAULT_ADDR=
+        # Required: Hashicorp auth method: token
+        VAULT_AUTH_METHOD=
+        # Required: Hashicorp token
+        VAULT_TOKEN=
+        # Hashicorp lease expiration buffer in seconds
+        VAULT_LEASE_EXPIRATION_BUFFER_SEC=
+        # Hashicorp lease renewal interval in seconds
+        VAULT_LEASE_RENEWAL_INTERVAL_SEC=
+
+        ############################################################
+        #    Google Secret Manager Credential Store Configuration  #
+        ############################################################
+        # Required: Google Cloud Project ID
+        GOOGLE_PROJECT_ID=
+        # Credentials mode: default, json, or jsonPath
+        GOOGLE_CREDENTIALS_MODE=jsonPath
+        # For credentialsMode=jsonPath: provide path to JSON file
+        GOOGLE_CREDENTIALS_FILE=
+        # For credentialsMode=json: provide JSON directly
+        GOOGLE_CREDENTIALS_JSON=
+        # Cache expiration in milliseconds (default: 30 minutes)
+        GOOGLE_CACHE_EXPIRATION_MS=1800000
+
+        ############################################################
+        #    IBM Secret Manager Credential Store Configuration     #
+        ############################################################
+        # Required: IBM Secrets Manager service URL
+        IBM_SECRETS_MANAGER_URL=
+        # Required: IBM Cloud API Key
+        IBM_API_KEY=
+        # Cache expiration in milliseconds (default: 30 minutes)
+        IBM_CACHE_EXPIRATION_MS=
+        # Credential refresh interval in milliseconds (default: 30 seconds)
+        IBM_CREDENTIAL_REFRESH_MS=
+        # Credential retry interval in milliseconds (default: 15 seconds)
+        IBM_CREDENTIAL_RETRY_MS=
+        # Number of retry attempts (default: 3)
+        IBM_RETRY_ATTEMPTS=
+        # Retry backoff in milliseconds (default: 1 second)
+        IBM_RETRY_BACKOFF_MS=
+        ```
+    * **Note**: Credential store configurations can be provided either via `--credential-store-config` (using a properties file) or via `--env-vars` (inline configuration). Choose the method that best fits your deployment requirements.
 
 
 ### 2. Update an engine
@@ -176,6 +252,7 @@ While updating a remote engine, following optional flags can be used in addition
         * REMOTE_ENGINE_BATCH_SIZE - Set to an integer representing the maximum number of jobs that remote engine will pull at one time. Default value is 5.
         * APT_USE_REMOTE_APP - Set to "force" to make remote engine avoid forking section leader processes. Can avoid inheriting unwanted open resources from the conductor. Default is unset.
         * ENABLE_DS_METRICS - Set to "true" to have the remote engine send metrics to a configured DataStage metrics repository. See the [IBM Cloud](https://dataplatform.cloud.ibm.com/docs/content/dstage/dsnav/topics/ds_metrics.html?context=cpdaas&audience=wdp) or [Cloud Pak for Data](https://www.ibm.com/docs/en/software-hub/5.1.x?topic=administering-storing-persisting-metrics) documentation for more information.
+1. `--credential-store-config`: Path to secret-store.properties file to load credential store configurations. This file contains configuration for external credential stores (HashiCorp Vault, IBM Secrets Manager, Google Secret Manager) that DataStage can use to retrieve credentials securely.
 
 
 ### 3. Stop an engine
