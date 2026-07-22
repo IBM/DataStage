@@ -783,8 +783,8 @@ create_instance() {
   if [ -z $storage_class ]; then
     display_missing_arg "storageClass"
   fi
-  if [ -z $projectId ]; then
-    display_missing_arg "project-id"
+  if [ -z $projectId ] && [ -z $spaceId ]; then
+    display_missing_arg "project-id/space-id"
   fi
   if [ -z $license_accept ] || [ $license_accept != "true" ]; then
     display_missing_arg "license-accept"
@@ -799,7 +799,7 @@ create_instance() {
   $kubernetesCLI -n $namespace get pxremoteengine $name
   if [ $? -eq 0 ]; then
     echo "PXRemoteEngine $name already exists; updating its image digests."
-    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"docker_registry_prefix\":\"${DOCKER_REGISTRY_PREFIX}\", \"api_key_secret\":\"${DS_API_KEY_SECRET}\", \"project_id\": \"${projectId}\", \"remote_controlplane_env\":\"${remote_controlplane_env}\", \"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}, \"additional_users\":\"${additional_users}\"}}" --type=merge
+    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"docker_registry_prefix\":\"${DOCKER_REGISTRY_PREFIX}\", \"api_key_secret\":\"${DS_API_KEY_SECRET}\"${projectId:+, \"project_id\": \"${projectId}\"}${spaceId:+, \"space_id\": \"${spaceId}\"}, \"remote_controlplane_env\":\"${remote_controlplane_env}\", \"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}, \"additional_users\":\"${additional_users}\"}}" --type=merge
   else
     cat <<EOF | $kubernetesCLI apply -f -
 apiVersion: ds.cpd.ibm.com/v1
@@ -814,7 +814,8 @@ spec:
   storageSize: $storage_size
   scaleConfig: $size
   remote_engine: true
-  project_id: [$projectId]
+  ${projectId:+project_id: [$projectId]}
+  ${spaceId:+space_id: [$spaceId]}
   $wlmScalingParam
   docker_registry_prefix: $DOCKER_REGISTRY_PREFIX
   api_key_secret: $DS_API_KEY_SECRET
@@ -926,10 +927,11 @@ handle_apikey_usage() {
 handle_create_instance_usage() {
   echo ""
   echo "Description: creates an instance of the remote engine; the pull secret and the api-key secret should have been created in the same namespace."
-  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id1,project-id2,project-id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--disable-wlm-scaling <true/false>] [--zen-url <zen-url>] --license-accept true"
+  echo "Usage: $0 create-instance --namespace <namespace> --name <name> --project-id <project-id1,project-id2,project-id3,...> --space-id <space-id1,space-id2,space-id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center <data-center>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--disable-wlm-scaling <true/false>] [--zen-url <zen-url>] --license-accept true"
   echo "--namespace: the namespace to create the instance"
   echo "--name: the name of the remote engine"
   echo "--project-id: the comma separated list of project IDs to register the remote engine"
+  echo "--space-id: the comma separated list of space IDs to register the remote engine"
   echo "--storageClass: the file storageClass to use"
   echo "--storageSize: the storage size to use (in GB); defaults to 10"
   echo "--size: the size of the instance (small, medium, large); defaults to small"
@@ -1359,6 +1361,10 @@ do
         --project-id)
             shift
             projectId="${1}"
+            ;;
+        --space-id)
+            shift
+            spaceId="${1}"
             ;;
         --name)
             shift

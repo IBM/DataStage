@@ -61,7 +61,7 @@
 ## Usage
 
 ### 1a. Start an engine on the Remote Engine server for IBM Cloud
-The `dsengine.sh` script can be invoked from the `docker` folder of this project. Note that the name in the below command can be changed from `my_remote_engine_01` to your preferred name.
+The `dsengine.sh` script can be invoked from the `docker` folder of this project. Note that the name in the below command can be changed from `my_remote_engine_01` to your preferred name. You can replace `--project-id` with `--space-id` or use them together in tandem.
 ```bash
 # create/start a local remote engine instance for IBM Cloud
 ./dsengine.sh start -n 'my_remote_engine_01' \
@@ -74,7 +74,7 @@ The `dsengine.sh` script can be invoked from the `docker` folder of this project
 ```
 Once the script execution has completed, this engine needs to be selected in the project settings by going to the project, navigating to `Manage` > `DataStage` and selecting the appropriate engine under the `Settings` tab > `Remote` environments.
 ### 1b. Start an engine on the Remote Engine server for Cloud Pak for Data Instances
-The `dsengine.sh` script can be invoked from the `docker` folder of this project. Note that the name in the below command can be changed from `my_remote_engine_01` to your preferred name.
+The `dsengine.sh` script can be invoked from the `docker` folder of this project. Note that the name in the below command can be changed from `my_remote_engine_01` to your preferred name. You can replace `--project-id` with `--space-id` or use them together in tandem.
 ```bash
 # create/start a local remote engine instance for CP4D instance
 ./dsengine.sh start -n 'my_remote_engine_01' \
@@ -189,7 +189,7 @@ Stop the remote engine container.
 Note that if the `./dsengine.sh start` is used when a container is stopped, the script will simply start the stopped container.
 
 ### 4a. Cleanup/Uninstall a remote engine for IBM Cloud
-This is NOT needed use this if you want to update the engine. This is only needed if you want to completely remove the engine container, delete the volume directories and deregister the remote engine from the associated project.
+This is NOT needed use this if you want to update the engine. This is only needed if you want to completely remove the engine container, delete the volume directories and deregister the remote engine from the associated project. You can replace `--project-id` with `--space-id` or use them together in tandem.
 ```bash
 # cleanup a remote engine instance with name 'my_remote_engine_01'
 ./dsengine.sh cleanup -n 'my_remote_engine_01' \
@@ -197,7 +197,7 @@ This is NOT needed use this if you want to update the engine. This is only neede
                       --project-id "$PROJECT_ID"
 ```
 ### 4b. Cleanup/Uninstall a remote engine for Cloud Pak for Data Instances
-This is NOT needed use this if you want to update the engine. This is only needed if you want to completely remove the engine container, delete the volume directories and deregister the remote engine from the associated project.
+This is NOT needed use this if you want to update the engine. This is only needed if you want to completely remove the engine container, delete the volume directories and deregister the remote engine from the associated project. You can replace `--project-id` with `--space-id` or use them together in tandem.
 ```bash
 # cleanup a remote engine instance with name 'my_remote_engine_01'
 ./dsengine.sh cleanup -n 'my_remote_engine_01' \

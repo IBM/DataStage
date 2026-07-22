@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.36
+TOOL_VERSION=1.0.37
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -84,6 +84,7 @@ STR_PROD_APIKEY='  -p, --prod-apikey           IBM Cloud Production APIKey for i
 STR_DSNEXT_SEC_KEY='  -e, --encryption-key        Encryption key to be used'
 STR_IVSPEC='  -i, --ivspec                Initialization vector'
 STR_PROJECT_UID='  -d, --project-id            Comma separated list of DataPlatform Project IDs'
+STR_SPACE_UID='  -s, --space-id              Comma separated list of DataPlatform Space IDs'
 STR_DSTAGE_HOME='  --home                      Select IBM DataStage Cloud datacenter: [ypprod (default), frprod, sydprod, torprod, lonprod, awsprod-apsouth, awsprod-useast, awsgovprod, cp4d]'
 STR_VOLUMES="  --volume-dir                Specify a directory for datastage persistent storage. Default location is ${DOCKER_VOLUMES_DIR}"
 STR_MOUNT_DIR="  --mount-dir                 Mount a directory. This flag can be specified multiple times."
@@ -175,13 +176,13 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--volume-dir] [--mount-dir] [--relabel-selinux-mounts] [--host-network] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--mcsp-account-id]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [-s | --space-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--volume-dir] [--mount-dir] [--relabel-selinux-mounts] [--host-network] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--mcsp-account-id]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
         echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
-        echo "${bold}usage:${normal} ${script_name} cleanup [-n | --remote-engine-name] [-a | --apikey] [-d | --project-id] [--home]"
+        echo "${bold}usage:${normal} ${script_name} cleanup [-n | --remote-engine-name] [-a | --apikey] [-d | --project-id] [-s | --space-id] [--home]"
     elif [[ "${ACTION}" == 'help' ]]; then
         print_help 1;
         exit 1;
@@ -210,6 +211,7 @@ print_usage() {
 
     if [[ "${ACTION}" == 'start' || "${ACTION}" == 'cleanup' ]]; then
         echo "${STR_PROJECT_UID}"
+        echo "${STR_SPACE_UID}"
         echo "${STR_DSTAGE_HOME}"
     fi
 
@@ -351,6 +353,10 @@ function start() {
         -d | --project-id)
             shift
             IFS="," read -ra PROJECT_IDS <<< "$1"
+            ;;
+        -s | --space-id)
+            shift
+            IFS="," read -ra SPACE_IDS <<< "$1"
             ;;
         --home)
             shift
@@ -638,6 +644,10 @@ function cleanup() {
         -d | --project-id)
             shift
             IFS="," read -ra PROJECT_IDS <<< "$1"
+            ;;
+        -s | --space-id)
+            shift
+            IFS="," read -ra SPACE_IDS <<< "$1"
             ;;
         --home)
             shift
@@ -1521,20 +1531,20 @@ remove_remote_engine () {
 # -----------------------------
 
 get_environment_id() {
-    _project_env_get_response=$($CURL_CMD -sS -X 'GET' "${GATEWAY_URL}/v2/environments?project_id=${PROJECT_ID}" \
+    _scope_env_get_response=$($CURL_CMD -sS -X 'GET' "${GATEWAY_URL}/v2/environments?${SCOPE_TYPE}=${SCOPE_ID}" \
         -H 'accept: application/json' \
         -H "Authorization: Bearer $ACCESS_TOKEN")
 
-    if [[ -z "${_project_env_get_response}" || "${_project_env_get_response}" == "null" ]]; then
+    if [[ -z "${_scope_env_get_response}" || "${_scope_env_get_response}" == "null" ]]; then
         echo ""
-        echo "Response: ${_project_env_get_response}"
-        echo_error_and_exit "Failed to get Project Environment list, please try again"
+        echo "Response: ${_scope_env_get_response}"
+        echo_error_and_exit "Failed to get ${SCOPE_TYPE}=${SCOPE_ID} Environment list, please try again"
     fi
 
-    # is there any project env already present with this remote engine. There could be multiple envs with the same remote engine id, so select the first one
-    PROJECT_ENV_ASSET_ID=$(printf "%s" "${_project_env_get_response}" | jq -r "[.resources | .[] | select(.entity.environment.environment_variables.REMOTE_ENGINE==\"${REMOTE_ENGINE_ID}\") | .metadata.asset_id][0]" | tr -d '"')
-    if [[ ${PROJECT_ENV_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
-        # echo "Got project environment with id: ${PROJECT_ENV_ASSET_ID}"
+    # is there any scoped env already present with this remote engine. There could be multiple envs with the same remote engine id, so select the first one
+    SCOPE_ENV_ASSET_ID=$(printf "%s" "${_scope_env_get_response}" | jq -r "[.resources | .[] | select(.entity.environment.environment_variables.REMOTE_ENGINE==\"${REMOTE_ENGINE_ID}\") | .metadata.asset_id][0]" | tr -d '"')
+    if [[ ${SCOPE_ENV_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
+        # echo "Got ${SCOPE_TYPE} environment with id: ${SCOPE_ENV_ASSET_ID}"
         echo ""
     fi
     # dont else and exit from here, since in a regular start, we simply if env with this remote engine is
@@ -1542,7 +1552,7 @@ get_environment_id() {
 }
 
 patch_environment() {
-    _project_env_patch_response=$($CURL_CMD -sSi -X 'PATCH' "${GATEWAY_URL}/v2/environments/${PROJECT_ENV_ASSET_ID}?project_id=${PROJECT_ID}" \
+    _scope_env_patch_response=$($CURL_CMD -sSi -X 'PATCH' "${GATEWAY_URL}/v2/environments/${SCOPE_ENV_ASSET_ID}?${SCOPE_TYPE}=${SCOPE_ID}" \
         -H 'accept: application/json' \
         -H "Authorization: Bearer $ACCESS_TOKEN" \
         -H 'Content-Type: application/json' \
@@ -1573,42 +1583,42 @@ patch_environment() {
   }
 }"
         )
-    _project_env_patch_response_status="$(echo $_project_env_patch_response | head -n 1 | cut -d' ' -f2)"
-    if [[ -z "${_project_env_patch_response_status}" || "${_project_env_patch_response_status}" != "200" ]]; then
-        echo "Response: ${_project_env_patch_response}"
+    _scope_env_patch_response_status="$(echo $_scope_env_patch_response | head -n 1 | cut -d' ' -f2)"
+    if [[ -z "${_scope_env_patch_response_status}" || "${_scope_env_patch_response_status}" != "200" ]]; then
+        echo "Response: ${_scope_env_patch_response}"
         echo ""
-        echo "WARNING: Unable to patch environment runtime with id: ${PROJECT_ENV_ASSET_ID}. Ignoring ..."
+        echo "WARNING: Unable to patch environment runtime with id: ${SCOPE_ENV_ASSET_ID}. Ignoring ..."
         echo ""
     else
-        echo "Patched environment runtime with id: ${PROJECT_ENV_ASSET_ID}"
+        echo "Patched environment runtime with id: ${SCOPE_ENV_ASSET_ID}"
     fi
 }
 
 patch_environment_for_cp4d() {
     create_hardware_spec_for_cp4d
-    _project_env_patch_response=$($CURL_CMD -sSi -X 'PATCH' "${GATEWAY_URL}/v2/environments/${PROJECT_ENV_ASSET_ID}?project_id=${PROJECT_ID}" \
+    _scope_env_patch_response=$($CURL_CMD -sSi -X 'PATCH' "${GATEWAY_URL}/v2/environments/${SCOPE_ENV_ASSET_ID}?${SCOPE_TYPE}=${SCOPE_ID}" \
         -H 'accept: application/json' \
         -H "Authorization: Bearer $ACCESS_TOKEN" \
         -H 'Content-Type: application/json' \
         -d "{
   \"/entity/environment/hardware_specification\": {
-    \"guid\": \"${PROJECT_HARDWARE_SPEC_ASSET_ID}\"
+    \"guid\": \"${SCOPE_HARDWARE_SPEC_ASSET_ID}\"
   }
 }"
         )
-    _project_env_patch_response_status="$(echo $_project_env_patch_response | head -n 1 | cut -d' ' -f2)"
-    if [[ -z "${_project_env_patch_response_status}" || "${_project_env_patch_response_status}" != "200" ]]; then
-        echo "Response: ${_project_env_patch_response}"
+    _scope_env_patch_response_status="$(echo $_scope_env_patch_response | head -n 1 | cut -d' ' -f2)"
+    if [[ -z "${_scope_env_patch_response_status}" || "${_scope_env_patch_response_status}" != "200" ]]; then
+        echo "Response: ${_scope_env_patch_response}"
         echo ""
-        echo "WARNING: Unable to patch environment runtime with id: ${PROJECT_ENV_ASSET_ID}. Ignoring ..."
+        echo "WARNING: Unable to patch environment runtime with id: ${SCOPE_ENV_ASSET_ID}. Ignoring ..."
         echo ""
     else
-        echo "Patched environment runtime with id: ${PROJECT_ENV_ASSET_ID}"
+        echo "Patched environment runtime with id: ${SCOPE_ENV_ASSET_ID}"
     fi
 }
 
 create_environment() {
-    _project_env_create_response=$($CURL_CMD -sS -X 'POST' "${GATEWAY_URL}/v2/environments?project_id=${PROJECT_ID}" \
+    _scope_env_create_response=$($CURL_CMD -sS -X 'POST' "${GATEWAY_URL}/v2/environments?${SCOPE_TYPE}=${SCOPE_ID}" \
         -H 'accept: application/json' \
         -H "Authorization: Bearer $ACCESS_TOKEN" \
         -H 'Content-Type: application/json' \
@@ -1653,28 +1663,28 @@ create_environment() {
 }"
         )
 
-    PROJECT_ENV_ASSET_ID=$(printf "%s" "${_project_env_create_response}" | jq '.metadata.asset_id' | tr -d '"')
-    if [[ -z "${PROJECT_ENV_ASSET_ID}" || "${PROJECT_ENV_ASSET_ID}" == "null" ]]; then
+    SCOPE_ENV_ASSET_ID=$(printf "%s" "${_scope_env_create_response}" | jq '.metadata.asset_id' | tr -d '"')
+    if [[ -z "${SCOPE_ENV_ASSET_ID}" || "${SCOPE_ENV_ASSET_ID}" == "null" ]]; then
         echo ""
-        if [[ "$_project_env_create_response" ]]; then
-            echo "Response = ${_project_env_create_response}"
+        if [[ "$_scope_env_create_response" ]]; then
+            echo "Response = ${_scope_env_create_response}"
         fi
-        echo_error_and_exit "Failed to create environment in Project, please try again"
+        echo_error_and_exit "Failed to create environment in ${SCOPE_TYPE}=${SCOPE_ID}, please try again"
     fi
 
-    if [[ ${PROJECT_ENV_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
-        # echo "Got project environment with id: ${PROJECT_ENV_ASSET_ID}"
+    if [[ ${SCOPE_ENV_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
+        # echo "Got ${SCOPE_TYPE} environment with id: ${SCOPE_ENV_ASSET_ID}"
         true
     else
         echo ""
-        echo "Response: ${_project_env_get_response}"
-        echo_error_and_exit "Could not create an environment with this remote engine, or failed to check project environment status."
+        echo "Response: ${_scope_env_get_response}"
+        echo_error_and_exit "Could not create an environment with this remote engine, or failed to check ${SCOPE_TYPE} environment status."
     fi
-    echo "Created environment runtime with id: ${PROJECT_ENV_ASSET_ID}"
+    echo "Created environment runtime with id: ${SCOPE_ENV_ASSET_ID}"
 }
 
 create_hardware_spec_for_cp4d() {
-    _project_hardware_spec_create_response=$($CURL_CMD -sS -X 'POST' "${GATEWAY_URL}/v2/hardware_specifications?project_id=${PROJECT_ID}" \
+    _scope_hardware_spec_create_response=$($CURL_CMD -sS -X 'POST' "${GATEWAY_URL}/v2/hardware_specifications?${SCOPE_TYPE}=${SCOPE_ID}" \
         -H 'accept: application/json' \
         -H "Authorization: Bearer $ACCESS_TOKEN" \
         -H 'Content-Type: application/json' \
@@ -1706,29 +1716,29 @@ create_hardware_spec_for_cp4d() {
 }"
         )
 
-    PROJECT_HARDWARE_SPEC_ASSET_ID=$(printf "%s" "${_project_hardware_spec_create_response}" | jq '.metadata.asset_id' | tr -d '"')
-    if [[ -z "${PROJECT_HARDWARE_SPEC_ASSET_ID}" || "${PROJECT_HARDWARE_SPEC_ASSET_ID}" == "null" ]]; then
+    SCOPE_HARDWARE_SPEC_ASSET_ID=$(printf "%s" "${_scope_hardware_spec_create_response}" | jq '.metadata.asset_id' | tr -d '"')
+    if [[ -z "${SCOPE_HARDWARE_SPEC_ASSET_ID}" || "${SCOPE_HARDWARE_SPEC_ASSET_ID}" == "null" ]]; then
         echo ""
-        if [[ "$_project_hardware_spec_create_response" ]]; then
-            echo "Response = ${_project_hardware_spec_create_response}"
+        if [[ "$_scope_hardware_spec_create_response" ]]; then
+            echo "Response = ${_scope_hardware_spec_create_response}"
         fi
-        echo_error_and_exit "Failed to create hardware specification in Project, please try again"
+        echo_error_and_exit "Failed to create hardware specification in ${SCOPE_TYPE}=${SCOPE_ID}, please try again"
     fi
 
-    if [[ ${PROJECT_HARDWARE_SPEC_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
-        # echo "Got project hardware specification with id: ${PROJECT_HARDWARE_SPEC_ASSET_ID}"
+    if [[ ${SCOPE_HARDWARE_SPEC_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
+        # echo "Got ${SCOPE_TYPE} hardware specification with id: ${SCOPE_HARDWARE_SPEC_ASSET_ID}"
         true
     else
         echo ""
-        echo "Response: ${_project_hardware_spec_create_response}"
-        echo_error_and_exit "Could not create a hardware specification with this remote engine, or failed to check project environment status."
+        echo "Response: ${_scope_hardware_spec_create_response}"
+        echo_error_and_exit "Could not create a hardware specification with this remote engine, or failed to check ${SCOPE_TYPE} environment status."
     fi
-    echo "Created hardware specification with id: ${PROJECT_HARDWARE_SPEC_ASSET_ID}"
+    echo "Created hardware specification with id: ${SCOPE_HARDWARE_SPEC_ASSET_ID}"
 }
 
 create_environment_for_cp4d() {
     create_hardware_spec_for_cp4d
-    _project_env_create_response=$($CURL_CMD -sS -X 'POST' "${GATEWAY_URL}/v2/environments?project_id=${PROJECT_ID}" \
+    _scope_env_create_response=$($CURL_CMD -sS -X 'POST' "${GATEWAY_URL}/v2/environments?${SCOPE_TYPE}=${SCOPE_ID}" \
         -H 'accept: application/json' \
         -H "Authorization: Bearer $ACCESS_TOKEN" \
         -H 'Content-Type: application/json' \
@@ -1738,7 +1748,7 @@ create_environment_for_cp4d() {
   \"display_name\": \"${REMOTE_ENGINE_NAME}\",
   \"type\": \"datastage\",
   \"hardware_specification\": {
-    \"guid\": \"${PROJECT_HARDWARE_SPEC_ASSET_ID}\"
+    \"guid\": \"${SCOPE_HARDWARE_SPEC_ASSET_ID}\"
   },
   \"tools_specification\": {
     \"runtime_root_folder\": \"/DataStage/\",
@@ -1750,31 +1760,31 @@ create_environment_for_cp4d() {
 }"
         )
 
-    PROJECT_ENV_ASSET_ID=$(printf "%s" "${_project_env_create_response}" | jq '.metadata.asset_id' | tr -d '"')
-    if [[ -z "${PROJECT_ENV_ASSET_ID}" || "${PROJECT_ENV_ASSET_ID}" == "null" ]]; then
+    SCOPE_ENV_ASSET_ID=$(printf "%s" "${_scope_env_create_response}" | jq '.metadata.asset_id' | tr -d '"')
+    if [[ -z "${SCOPE_ENV_ASSET_ID}" || "${SCOPE_ENV_ASSET_ID}" == "null" ]]; then
         echo ""
-        if [[ "$_project_env_create_response" ]]; then
-            echo "Response = ${_project_env_create_response}"
+        if [[ "$_scope_env_create_response" ]]; then
+            echo "Response = ${_scope_env_create_response}"
         fi
-        echo_error_and_exit "Failed to create environment in Project, please try again"
+        echo_error_and_exit "Failed to create environment in ${SCOPE_TYPE}=${SCOPE_ID}, please try again"
     fi
 
-    if [[ ${PROJECT_ENV_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
-        # echo "Got project environment with id: ${PROJECT_ENV_ASSET_ID}"
+    if [[ ${SCOPE_ENV_ASSET_ID} =~ ^\{?[A-F0-9a-f]{8}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{4}-[A-F0-9a-f]{12}\}?$ ]]; then
+        # echo "Got ${SCOPE_TYPE} environment with id: ${SCOPE_ENV_ASSET_ID}"
         true
     else
         echo ""
-        echo "Response: ${_project_env_get_response}"
-        echo_error_and_exit "Could not create an environment with this remote engine, or failed to check project environment status."
+        echo "Response: ${_scope_env_get_response}"
+        echo_error_and_exit "Could not create an environment with this remote engine, or failed to check ${SCOPE_TYPE} environment status."
     fi
-    echo "Created environment runtime with id: ${PROJECT_ENV_ASSET_ID}"
+    echo "Created environment runtime with id: ${SCOPE_ENV_ASSET_ID}"
 }
 
 remove_environment() {
-    _project_env_delete_response=$($CURL_CMD -sS -X 'DELETE' "${GATEWAY_URL}/v2/environments/${PROJECT_ENV_ASSET_ID}?project_id=${PROJECT_ID}" \
+    _scope_env_delete_response=$($CURL_CMD -sS -X 'DELETE' "${GATEWAY_URL}/v2/environments/${SCOPE_ENV_ASSET_ID}?${SCOPE_TYPE}=${SCOPE_ID}" \
         -H 'accept: */*' \
         -H "Authorization: Bearer $ACCESS_TOKEN")
-    echo "Deleted environment runtime with id: ${PROJECT_ENV_ASSET_ID}"
+    echo "Deleted environment runtime with id: ${SCOPE_ENV_ASSET_ID}"
 }
 
 #######################################################################
@@ -1896,7 +1906,7 @@ validate_action_arguments() {
         if [[ "${ACTION}" == 'start' ]]; then
             [ -z $DSNEXT_SEC_KEY ] && echo_error_and_exit "Please specify an encryption key (-e | --encryption-key. Aborting."
             [ -z $IVSPEC ] && echo_error_and_exit "Please specify the initialization vector for the encryption key (-i | --ivspec). Aborting."
-            [ -z $PROJECT_IDS ] && echo_error_and_exit "Please specify the comma separated list of project IDs in which you want to create the Remote Engine environment (-d | --project-id). Aborting."
+            [ -z $PROJECT_IDS ] && [ -z $SPACE_IDS ] && echo_error_and_exit "Please specify the comma separated list of project IDs (-d | --project-id) and/or space IDs (-s | --space-id) in which you want to create the Remote Engine environment. Aborting."
             if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
                 [ -z $CP4D_USER ] && echo_error_and_exit "Please specify CP4D User (--cp4d-user) for the respective environment. Aborting."
                 [ -z $CP4D_API_KEY ] && echo_error_and_exit "Please specify CP4D APIKey (--cp4d-apikey) for the respective environment. Aborting."
@@ -1921,6 +1931,7 @@ validate_action_arguments() {
             echo "DATASTAGE_HOME=${DATASTAGE_HOME}"
             echo "GATEWAY_URL=${GATEWAY_URL}"
             echo "PROJECT_IDS=${PROJECT_IDS}"
+            echo "SPACE_IDS=${SPACE_IDS}"
             echo "REMOTE_ENGINE_PREFIX=${REMOTE_ENGINE_NAME}"
             echo "DOCKER_REGISTRY=${DOCKER_REGISTRY}"
             echo "CONTAINER_MEMORY=${PX_MEMORY}"
@@ -2561,23 +2572,25 @@ if [[ ${ACTION} == "start" ]]; then
     for PROJECT_ID in "${PROJECT_IDS[@]}"; do
         echo ''
         echo "Getting Project Environment Engine ID for project ${PROJECT_ID}..."
+        SCOPE_TYPE="project_id"
+        SCOPE_ID=${PROJECT_ID}
         get_environment_id
-        if [[ -z "${PROJECT_ENV_ASSET_ID}" || "${PROJECT_ENV_ASSET_ID}" == "null" ]]; then
-            echo "Could not find an existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} for project ${PROJECT_ID}, creating a new one ..."
+        if [[ -z "${SCOPE_ENV_ASSET_ID}" || "${SCOPE_ENV_ASSET_ID}" == "null" ]]; then
+            echo "Could not find an existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} for ${SCOPE_TYPE}=${SCOPE_ID}, creating a new one ..."
             if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
                 create_environment_for_cp4d
             else
                 create_environment
             fi
         else
-            echo "Found existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} for project ${PROJECT_ID} with id: ${PROJECT_ENV_ASSET_ID}"
+            echo "Found existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} for ${SCOPE_TYPE}=${SCOPE_ID} with id: ${SCOPE_ENV_ASSET_ID}"
             if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
                 patch_environment_for_cp4d
             else
                 patch_environment
             fi
         fi
-        echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is registered for project ${PROJECT_ID}."
+        echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is registered for ${SCOPE_TYPE}=${SCOPE_ID}."
 
         # echo "Updating the project to use ${REMOTE_ENGINE_NAME} as the default environment"
         # update_datastage_settings
@@ -2591,6 +2604,43 @@ if [[ ${ACTION} == "start" ]]; then
         echo ""
         echo "Project assets:"
         echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
+    done
+
+    for SPACE_ID in "${SPACE_IDS[@]}"; do
+        echo ''
+        echo "Getting Space Environment Engine ID for space ${SPACE_ID}..."
+        SCOPE_TYPE="space_id"
+        SCOPE_ID=${SPACE_ID}
+        get_environment_id
+        if [[ -z "${SCOPE_ENV_ASSET_ID}" || "${SCOPE_ENV_ASSET_ID}" == "null" ]]; then
+            echo "Could not find an existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} for ${SCOPE_TYPE}=${SCOPE_ID}, creating a new one ..."
+            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+                create_environment_for_cp4d
+            else
+                create_environment
+            fi
+        else
+            echo "Found existing environment with REMOTE_ENGINE=${REMOTE_ENGINE_ID} for ${SCOPE_TYPE}=${SCOPE_ID} with id: ${SCOPE_ENV_ASSET_ID}"
+            if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
+                patch_environment_for_cp4d
+            else
+                patch_environment
+            fi
+        fi
+        echo "Runtime Environment 'Remote Engine ${REMOTE_ENGINE_NAME}' is registered for ${SCOPE_TYPE}=${SCOPE_ID}."
+
+        # echo "Updating the project to use ${REMOTE_ENGINE_NAME} as the default environment"
+        # update_datastage_settings
+
+        SPACES_LINK="${UI_GATEWAY_URL}/spaces/${SPACE_ID}"
+        echo ""
+        echo "Setup complete"
+        echo ""
+        echo "Space settings:"
+        echo "* ${SPACES_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=cpdaas"
+        echo ""
+        echo "Space assets:"
+        echo "* ${SPACES_LINK}/assets?context=cpdaas"
     done
 
     # echo ""
@@ -2900,7 +2950,7 @@ elif [[ ${ACTION} == "cleanup" ]]; then
             [[ "${ZEN_URL}" != "http"* ]] && echo_error_and_exit "Container is not running or doesn't exist. Aborting."
             GATEWAY_URL=$ZEN_URL
             UI_GATEWAY_URL=$ZEN_URL
-            PROJECT_CONTEXT='icp4data'
+            SCOPE_CONTEXT='icp4data'
             echo "Getting cp4d access token"
             get_cp4d_access_token
         else
@@ -2908,7 +2958,7 @@ elif [[ ${ACTION} == "cleanup" ]]; then
                 MCSP_ACCOUNT_ID=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^MCSP_ACCOUNT_ID= | cut -d'=' -f2-)
                 [ -z $MCSP_ACCOUNT_ID ] && echo_error_and_exit "Container is not running or doesn't exist. Aborting."
             fi
-            PROJECT_CONTEXT='cpdaas'
+            SCOPE_CONTEXT='cpdaas'
             echo "Getting IAM token"
             get_iam_token
         fi
@@ -2929,9 +2979,11 @@ elif [[ ${ACTION} == "cleanup" ]]; then
         for PROJECT_ID in "${PROJECT_IDS[@]}"; do
             echo ''
             echo "Getting Project Environment Engine ID for project ${PROJECT_ID}..."
+            SCOPE_TYPE="project_id"
+            SCOPE_ID=${PROJECT_ID}
             get_environment_id
 
-            echo "Removing Runtime associated with the remote Engine for project ${PROJECT_ID}..."
+            echo "Removing Runtime associated with the remote Engine for ${SCOPE_TYPE}=${SCOPE_ID}..."
             remove_environment
 
             # echo "Resetting DataStage settings"
@@ -2940,10 +2992,32 @@ elif [[ ${ACTION} == "cleanup" ]]; then
             PROJECTS_LINK="${UI_GATEWAY_URL}/projects/${PROJECT_ID}"
             echo ""
             echo "Project settings:"
-            echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=${PROJECT_CONTEXT}"
+            echo "* ${PROJECTS_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=${SCOPE_CONTEXT}"
             echo ""
             echo "Project assets:"
             echo "* ${PROJECTS_LINK}/assets?context=cpdaas"
+        done
+
+        for SPACE_ID in "${SPACE_IDS[@]}"; do
+            echo ''
+            echo "Getting Space Environment Engine ID for space ${SPACE_ID}..."
+            SCOPE_TYPE="space_id"
+            SCOPE_ID=${SPACE_ID}
+            get_environment_id
+
+            echo "Removing Runtime associated with the remote Engine for ${SCOPE_TYPE}=${SCOPE_ID}..."
+            remove_environment
+
+            # echo "Resetting DataStage settings"
+            # reset_datastage_settings
+
+            SPACES_LINK="${UI_GATEWAY_URL}/spaces/${SPACE_ID}"
+            echo ""
+            echo "Space settings:"
+            echo "* ${SPACES_LINK}/manage/tool-configurations/datastage_admin_settings_section?context=${SCOPE_CONTEXT}"
+            echo ""
+            echo "Space assets:"
+            echo "* ${SPACES_LINK}/assets?context=cpdaas"
         done
 
         echo ''
