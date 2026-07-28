@@ -383,3 +383,136 @@ The expected usage pattern is:
 1. first call fetches and writes cache
 2. later call reads cache and avoids backend call where possible
 3. if cache cannot be used, normal backend logic continues
+
+
+# Setting up dsjob cache when running from a Job Routine in a DataStage flow
+
+The steps below apply to both **CPD (Cloud Pak for Data)** and **IBM Cloud** deployments.
+
+## Step 0: Enable cpdctl commands in the flow (prerequisite)
+
+This step is not directly related to cache setup, but it is **required** to run any `cpdctl` commands from a DataStage flow.
+
+Set the `ENABLE_CPDCTL` variable in the flow's local parameters:
+
+1. Open the flow UI page.
+2. Go to **Add parameters → Create parameter**.
+3. Enter the following values:
+
+- Name: `$ENABLE_CPDCTL`
+- Default value: `true`
+
+Example:
+
+![alt text](RuntimeCacheSettings.png)
+
+## Step 1: Enable the DSJob cache
+
+Set the `DSJobCache` variable in the flow's local parameters:
+
+1. Open the flow UI page.
+2. Go to **Add parameters → Create parameter**.
+3. Enter the following values:
+
+- Name: `$DSJobCache`
+- Default value: `true`
+
+## Step 2.1: Set cache expiration time (optional)
+
+The default cache TTL is **10 minutes**. To override it, set the `DSJobCacheTTL` variable in the flow's local parameters:
+
+1. Open the flow UI page.
+2. Go to **Add parameters → Create parameter**.
+3. Enter the following values:
+
+- Name: `$DSJobCacheTTL`
+- Default value: `30m`
+
+You can use any valid duration string, for example `10m`, `1h`, or `2h30m`.
+
+## Step 2.2: Run cpdctl commands inside a subroutine
+
+You can add your `cpdctl` commands inside the job routine and run the flow. Once the flow runs, you will see your commands executing and the output in the job logs.
+
+![alt text](CacheInJobRoutine.png)
+
+These steps cover the basic setup. Follow next steps if you want to run with a customized version instead of the built-in version. If you have all the changes that you need, in the built-in cloud/cpd cluster version, you don't need to follow the below steps.
+
+## Using cpdctl 1.8.260+ on DataStage Cloud with Remote Engine and CPD Cluster
+
+Cloud with Remote Engine cache support is available starting with cpdctl version `1.8.260`.
+
+### 1. Download and install the new binary
+
+Download the appropriate Linux binary from the official cpdctl release. Confirm the architecture first:
+
+```bash
+uname -m
+```
+
+For `x86_64`, use `cpdctl_linux_amd64.tar.gz`. Extract the binary from it, copy it into the remote-engine container.
+
+> 📁 **Example path:** `/tmp/cpdctl_custom`
+
+### 2. Replace the existing symlink
+
+You can also refer to this IBM document https://www.ibm.com/docs/en/ws-and-kc?topic=jobs-setting-up-before-job-after-job-subroutines to know more about replacing cpdctl
+
+The existing path is a symlink:
+
+```text
+/px-storage/tools/cpdctl/cpdctl -> /opt/ibm/PXService/tools/cpdctl
+```
+
+Replace it with the new binary using `mv` — do not use plain `cp` while the destination is a symlink, as it may follow the link and attempt to overwrite the inaccessible `/opt/ibm/PXService/tools/cpdctl` binary:
+
+```bash
+mv <binary-path-inside-container> /px-storage/tools/cpdctl/cpdctl
+```
+
+> 📋 **Example:**
+> ```bash
+> mv /tmp/cpdctl_custom /px-storage/tools/cpdctl/cpdctl
+> ```
+
+Verify the replacement:
+
+```bash
+ls -l /px-storage/tools/cpdctl/cpdctl
+```
+
+It should show a regular file but not any sym link
+
+```bash
+/px-storage/tools/cpdctl/cpdctl version
+```
+You should see the version that you downloaded.
+
+### 3. Run cpdctl from the DataStage job routine
+
+Execute cpdctl from the job routine using the new binary
+
+```bash
+cpdctl dsjob <command>
+```
+
+you can run your cpdctl commands as usual and the new binary version that you placed at /px-storage/tools/cpdctl/cpdctl will be used.
+
+> **Note:** Because `/px-storage` is shared, replacing the binary affects all remote-engine jobs running cpdctl using this mounted volume.
+
+### 4. Roll back if needed - optional, if you want to revert back to original.
+
+Preserve the custom binary and recreate the original symlink:
+
+```bash
+mv /px-storage/tools/cpdctl/cpdctl  /px-storage/tools/cpdctl/cpdctl_custom
+
+ln -s /opt/ibm/PXService/tools/cpdctl  /px-storage/tools/cpdctl/cpdctl
+```
+Verify:
+
+```bash
+ls -l /px-storage/tools/cpdctl/cpdctl
+```
+you should see the sym link back.
+
