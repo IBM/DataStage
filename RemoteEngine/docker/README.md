@@ -166,6 +166,7 @@ While starting a remote engine, following optional flags can be used in addition
         ################################################
         #       Credential Stores                      #
         ################################################
+
         # Defines the credential stores for DataStage to use. Specify a comma-separated list
         # of unique credential store IDs. possible values: hashicorp,ibm,google
         credentialStores=
@@ -175,18 +176,25 @@ While starting a remote engine, following optional flags can be used in addition
         ############################################################
         # Required: Hashicorp Host Address
         VAULT_ADDR=
-        # Required: Hashicorp auth method: token
+        # Required: Hashicorp auth method: token, appRole
         VAULT_AUTH_METHOD=
         # Required: Hashicorp token
         VAULT_TOKEN=
-        # Hashicorp lease expiration buffer in seconds
+        # Required: when appRole is selected
+        VAULT_ROLE_ID=
+        VAULT_SECRET_ID=
+        # Namespace name
+        VAULT_NAMESPACE=
+        # How many seconds before a Vault secret lease expires the client should treat it as already expired
         VAULT_LEASE_EXPIRATION_BUFFER_SEC=
-        # Hashicorp lease renewal interval in seconds
+        # How frequently (in seconds) the client should attempt to renew an active Vault lease to keep it alive
         VAULT_LEASE_RENEWAL_INTERVAL_SEC=
+
 
         ############################################################
         #    Google Secret Manager Credential Store Configuration  #
         ############################################################
+
         # Required: Google Cloud Project ID
         GOOGLE_PROJECT_ID=
         # Credentials mode: default, json, or jsonPath
@@ -201,6 +209,7 @@ While starting a remote engine, following optional flags can be used in addition
         ############################################################
         #    IBM Secret Manager Credential Store Configuration     #
         ############################################################
+
         # Required: IBM Secrets Manager service URL
         IBM_SECRETS_MANAGER_URL=
         # Required: IBM Cloud API Key
