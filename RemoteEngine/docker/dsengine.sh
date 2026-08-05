@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.36
+TOOL_VERSION=1.0.37
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -117,7 +117,7 @@ STR_SKIP_DOCKER_LOGIN='  --skip-docker-login         [true | false]. Skips Docke
 STR_MCSP_ACCOUNT_ID='  --mcsp-account-id           The account ID of the AWS governing owner account (required when deploying a remote engine for AWS).'
 STR_SYSCTL_SETTINGS='  --sysctl                    Semi-colon separated list of key=value pairs of sysctl settings (eg. net.ipv4.tcp_keepalive_time=120;net.core.somaxconn=16384;...). Whitespaces are ignored.'
 STR_ENV_VARS='  --env-vars                  Semi-colon separated list of key=value pairs of environment variables to set (eg. key1=value1;key2=value2;key3=value3;...). Whitespaces are ignored.'
-
+STR_CREDENTIAL_STORE_CONFIG='  --credential-store-config   Path to secret-store.properties file to load credential store configurations.'
 
 
 #######################################################################
@@ -244,6 +244,7 @@ print_usage() {
         echo "${STR_ADDITIONAL_USERS}"
         echo "${STR_SYSCTL_SETTINGS}"
         echo "${STR_ENV_VARS}"
+        echo "${STR_CREDENTIAL_STORE_CONFIG}"
     fi
 
     echo "${STR_HELP}"
@@ -304,6 +305,52 @@ function handle_relabel_selinux_mounts() {
     else
         echo_error_and_exit 'Incorrect option specified for flag "--relabel-selinux-mounts". Acceptable values are: [true]'
     fi
+}
+
+function load_secret_store_properties() {
+    local props_file="$1"
+
+    if [[ -z "$props_file" ]]; then
+        return 0
+    fi
+
+    # Convert to absolute path if relative
+    if [[ ! "$props_file" = /* ]]; then
+        props_file="$(pwd)/$props_file"
+    fi
+
+    if [[ ! -f "$props_file" ]]; then
+        echo_error_and_exit "Secret store properties file not found: $props_file"
+    fi
+
+    echo "Loading secret store properties from: $props_file"
+
+    # Read the properties file and export as environment variables
+    while IFS='=' read -r key value || [[ -n "$key" ]]; do
+        # Skip empty lines and comments
+        [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+
+        # Trim whitespace from key and value
+        key=$(echo "$key" | xargs)
+        value=$(echo "$value" | xargs)
+
+        # Skip if key is empty after trimming
+        [[ -z "$key" ]] && continue
+
+        # Export the variable
+        export "$key=$value"
+
+        # Append to ENV_VARS for Docker container
+        if [[ -z "$ENV_VARS" ]]; then
+            ENV_VARS="$key=$value"
+        else
+            ENV_VARS="$ENV_VARS;$key=$value"
+        fi
+
+        echo "  Loaded: $key"
+    done < "$props_file"
+
+    echo "Secret store properties loaded successfully"
 }
 
 function start() {
@@ -480,6 +527,10 @@ function start() {
             shift
             ENV_VARS="${1// /}"
             ;;
+        --credential-store-config)
+            shift
+            CREDENTIAL_STORE_CONFIG_FILE="$1"
+            ;;
         -h | --help | help)
             print_usage
             exit 1
@@ -575,6 +626,10 @@ function update() {
         --env-vars)
             shift
             ENV_VARS="${1// /}"
+            ;;
+        --credential-store-config)
+            shift
+            CREDENTIAL_STORE_CONFIG_FILE="$1"
             ;;
         -h | --help | help)
             print_usage
@@ -2459,6 +2514,11 @@ echo ""
 set_container_registry
 validate_action_arguments
 setup_docker_volumes
+
+# Load secret store properties if specified
+if [[ ! -z $CREDENTIAL_STORE_CONFIG_FILE ]]; then
+    load_secret_store_properties "$CREDENTIAL_STORE_CONFIG_FILE"
+fi
 
 if [[ "${DATASTAGE_HOME}" == 'cp4d' ]]; then
     echo 'CP4D environment found, curl will be used without ssl validation ...'

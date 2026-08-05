@@ -197,6 +197,70 @@ Running the install script with the input file:
 ```
 ./launch.sh -f inputFile.txt
 ```
+* **Complete secret-store.properties configuration template:**
+   ```properties
+   ################################################
+   #       Credential Stores                      #
+   ################################################
+   
+   # Defines the credential stores for DataStage to use. Specify a comma-separated list
+   # of unique credential store IDs. possible values: hashicorp,ibm,google
+   credentialStores=
+
+   ############################################################
+   #    Hashicorp Credential Store Configuration              #
+   ############################################################
+   # Required: Hashicorp Host Address
+   VAULT_ADDR=
+   # Required: Hashicorp auth method: token, appRole
+   VAULT_AUTH_METHOD=
+   # Required: Hashicorp token
+   VAULT_TOKEN=
+   # Required: when appRole is selected
+   VAULT_ROLE_ID=
+   VAULT_SECRET_ID=
+   # Namespace name
+   VAULT_NAMESPACE=
+   # How many seconds before a Vault secret lease expires the client should treat it as already expired
+   VAULT_LEASE_EXPIRATION_BUFFER_SEC=
+   # How frequently (in seconds) the client should attempt to renew an active Vault lease to keep it alive
+   VAULT_LEASE_RENEWAL_INTERVAL_SEC=
+
+
+   ############################################################
+   #    Google Secret Manager Credential Store Configuration  #
+   ############################################################
+   
+   # Required: Google Cloud Project ID
+   GOOGLE_PROJECT_ID=
+   # Credentials mode: default, json, or jsonPath
+   GOOGLE_CREDENTIALS_MODE=jsonPath
+   # For credentialsMode=jsonPath: provide path to JSON file
+   GOOGLE_CREDENTIALS_FILE=
+   # For credentialsMode=json: provide JSON directly
+   GOOGLE_CREDENTIALS_JSON=
+   # Cache expiration in milliseconds (default: 30 minutes)
+   GOOGLE_CACHE_EXPIRATION_MS=1800000
+
+   ############################################################
+   #    IBM Secret Manager Credential Store Configuration     #
+   ############################################################
+   
+   # Required: IBM Secrets Manager service URL
+   IBM_SECRETS_MANAGER_URL=
+   # Required: IBM Cloud API Key
+   IBM_API_KEY=
+   # Cache expiration in milliseconds (default: 30 minutes)
+   IBM_CACHE_EXPIRATION_MS=
+   # Credential refresh interval in milliseconds (default: 30 seconds)
+   IBM_CREDENTIAL_REFRESH_MS=
+   # Credential retry interval in milliseconds (default: 15 seconds)
+   IBM_CREDENTIAL_RETRY_MS=
+   # Number of retry attempts (default: 3)
+   IBM_RETRY_ATTEMPTS=
+   # Retry backoff in milliseconds (default: 1 second)
+   IBM_RETRY_BACKOFF_MS=
+   ```
 
 ## Mounting Additional Persistence Volumes
 To mount additional storage volumes to the remote engine instance, edit the custom resource (CR) and add the additional PVCs under `additional_storage`
