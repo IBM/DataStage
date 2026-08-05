@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.37
+TOOL_VERSION=1.0.38
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -71,9 +71,9 @@ PROXY_CACERT_LOCATION="/px-storage/proxy.pem"
 KRB5_CONF_FILE="/etc/krb5-config-files/krb5.conf"
 DS_STORAGE_PATH="/ds-storage:/px-storage"
 
-supported_versions="5.1.0 5.1.1 5.1.2 5.1.3 5.2.0 5.2.1 5.2.2 5.3.0 5.3.1"
-asset_versions="510 511 512 513 520 521 522 530 531"
-px_runtime_digests="sha256:e9c63c0334620ac72bc3a7343a6e4e8184a2e48ca2cd1f54f06734fddedc0949 sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a sha256:9e9b1562eee6d09969d6e967f0698f2320c0f75aad9b75643d4818d3596c7f7b sha256:d429306e12a74f34f8a86e0800be346abaff509d4aaf0e9fcefafcaf6ef36769 sha256:6e394510b8dddcb3e0858cf344955e411478927dc3ee35997d69d21bfd06f9d9 sha256:3abc437a0df489b2eb31d078676a3fe6bdd942e0d84b011479a8a0ceba8e02e0 sha256:d0d5b526f3e56539389a17f7f851bb7947332dc849728fa36eef099c1db50ae3 sha256:a9562467423d541c88c87fd509fbe929439be2633b64660eae578363e30e536e sha256:be2a6a0481a74bc17e25202cdc730d9fd64e9960f36900f3f3aabdb1e310e7fe"
+supported_versions="5.1.0 5.1.1 5.1.2 5.1.3 5.2.0 5.2.1 5.2.2 5.3.0 5.3.1 5.4.0"
+asset_versions="510 511 512 513 520 521 522 530 531 540"
+px_runtime_digests="sha256:e0e93f238899c60249c04f159326cd6338e59a179ba5762e7fab6b1855295444 sha256:3000c8a98cef44be354cad92ea7790d075f3fed7b7cde69c9d59f1d52f25499a sha256:74a3ba0c7316793b91b9a8410af1c30282020cbef6ed975f5787cfb61aa6ecb5 sha256:b1f2ce9976dd6ec08bfad47d6f06b6e0b5b91b7a8781c28d29e5c1e43f5206d5 sha256:2670bf08422818d9e6c1b8703f2f93fa47d3adc2110648a5b8a4e82153cd629f sha256:f57a35d763bd61f647acd12e1195250da2b567850fbddbb48ed306bd6d845e95 sha256:d86ca09f61a007582ac6442e220e9d1f2cb2ba79adf3f6038b007b302119ae37 sha256:0630e2d63e028bd27fc7c8ccbfe6270f418d14980fde00345834fe3788cb4dc1 sha256:be2a6a0481a74bc17e25202cdc730d9fd64e9960f36900f3f3aabdb1e310e7fe sha256:f40ab11a1d2a2dd92ae047a1a7079d4991cb3c63b939c6f27565e4ab45b31d2b"
 
 bold=$(tput bold)
 normal=$(tput sgr0)
