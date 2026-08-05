@@ -1,11 +1,12 @@
 OPERATOR_REGISTRY="icr.io/cpopen"
-OPERATOR_DIGEST="sha256:1d0f615945b7784d187501c5eb74e4a63f07d0abedce1be43b48c5e646a54973"
 kubernetesCLI="oc"
 
-supportedVersions="5.0.0 5.0.1 5.0.2 5.0.3 5.1.0 5.1.1 5.1.2 5.1.3 5.2.0 5.2.1 5.2.2 5.3.0 5.3.1"
-assetVersions="500 501 502 503 510 511 512 513 520 521 522 530 531"
-imageDigests="sha256:c0af884eca4c68411f53a00dfb4bd486092c99977e161ef47ac1ed0602fb5e20 sha256:e21e3503e6f7e212109d104a4ef5a505ee0ca172d77eda9f65174bb104b8be07 sha256:c2c27cf0826e1f96aa523ec68374680ce1f7f8f4cc5512c28962933b22aabbfe sha256:0797ab7ed8d6c9aa644a6ca9468b279248d8deaf8afdf905464d44f4dd1824c3 sha256:28fa26fe1ed7dfa973274f02e65ccb341e598d8e6e03c005ad60c2f2e02ee23b sha256:315de39c1ce4e72b8af224a676da8c73f3118c455ab427b412edb22da795ae00 sha256:47bbb1b75e59e05e025134c8dd52adc6276050213b0a9deb51067aecb2f6056c sha256:f57d3d5b20521d546a0a9b6af839cc659c1f08357d5d06da93aacf1ad5ee08e4 sha256:2d753908d9581d10e66e087f809fe7c212dc73cbffc60bc6728b7b28b6ff9c57 sha256:2809185dd56232f2956eea571833df8858530c961bba919a967e83c9c3c24877 sha256:95f150a03ee72d4cf3df5db14d398297787451afed69d1f565498a09e5e6d05d sha256:1d0f615945b7784d187501c5eb74e4a63f07d0abedce1be43b48c5e646a54973 sha256:0aee9f7552814e93b76015a0be09170af40c93998c454fae70f719fe932ff2f2"
-version="5.3.1"
+supported_versions="5.1.0 5.1.1 5.1.2 5.1.3 5.2.0 5.2.1 5.2.2 5.3.0 5.3.1 5.4.0"
+asset_versions="510 511 512 513 520 521 522 530 531 540"
+operator_digests="sha256:2ced6ab631a869af0bf5cdfc0c494b78bb13e7fc7c935a84a62a94aa1183b623 sha256:b617c3faf2dc1e67f89dbe9baaf8456916c5c0dd9a183bb09fbb73eb9cb6e327 sha256:eec7dae8518f8e990904986d6b794735498fe1170bf2e9fc837aec8ec3e938ad sha256:212c975eaf76301c6c76fd3c33504e7696cc2b4da8d09f67baab43fea6a32cbb sha256:e13148eec54b11e0126f2e321a4c926951af4b741102c02b77d1b9e906619fbb sha256:d7a883657cfdc7e44c97db02b39d4af1a970990675045b886dcae56be149765e sha256:3a857a501a414018db4caf67ec27a16b0b27862c917d6d9863bfab7334b33d68 sha256:9fa25c170f2436214693eda0fadfd52a39b05f195d608407e6b45280a3357402 sha256:0c1c9a477be3aff53429e32b41a62e23c1e47f6375ef3a9fb6c7a5922088d650 sha256:e849e5a1ae70981a6f4f369fa958ee361afc5879e1e4d4c03778020e995934c2"
+
+OPERATOR_DIGEST="${operator_digests##* }"
+version="${supported_versions##* }"
 
 verify_args() {
   # check if oc cli available
@@ -28,8 +29,8 @@ verify_args() {
   fi
 
   # TODO set digest based on version in subsequent release
-  if [[ ! $supportedVersions =~ (^|[[:space:]])$version($|[[:space:]]) ]]; then
-    echo "Unsupported version ${version}. Supported versions: ${supportedVersions}"
+  if [[ ! $supported_versions =~ (^|[[:space:]])$version($|[[:space:]]) ]]; then
+    echo "Unsupported version ${version}. Supported versions: ${supported_versions}"
     exit 3
   fi
 }
@@ -43,12 +44,12 @@ check_version() {
     fi
     asset_version=`curl -ks https://${hub_url}/data_intg/v3/assets/version`
     
-    versionsArray=(${supportedVersions})
-    assetVersionsArray=(${assetVersions})
-    digestsArray=(${imageDigests})
+    versionsArray=(${supported_versions})
+    assetVersionsArray=(${asset_versions})
+    digestsArray=(${operator_digests})
 
     if [ ${#versionsArray[@]} -ne ${#assetVersionsArray[@]} ]; then
-      echo "Mismatch size for '${supportedVersions}' and '${assetVersions}'"
+      echo "Mismatch size for '${supported_versions}' and '${asset_versions}'"
       exit 1
     fi
     arraylength=${#versionsArray[@]}
@@ -66,8 +67,8 @@ check_version() {
       fi 
     done
   else
-    versionsArray=(${supportedVersions})
-    digestsArray=(${imageDigests})
+    versionsArray=(${supported_versions})
+    digestsArray=(${operator_digests})
     for (( i=0; i<${arraylength}; i++ ));
     do
       ventry=${versionsArray[$i]}
@@ -510,7 +511,7 @@ handle_badusage() {
   echo ""
   echo "Usage: $0 --namespace <management-namespace> [--version <version>]"
   echo "--namespace: the management namespace to deploy the DataStage operator into"
-  echo "--version: the version of the operator to deploy. The following versions are supported: ${supportedVersions}"
+  echo "--version: the version of the operator to deploy. The following versions are supported: ${supported_versions}"
   echo ""
   exit 3
 }
