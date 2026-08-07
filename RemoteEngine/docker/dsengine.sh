@@ -15,7 +15,7 @@
 # constants
 #######################################################################
 # tool version
-TOOL_VERSION=1.0.38
+TOOL_VERSION=1.0.39
 TOOL_NAME='IBM DataStage Remote Engine'
 TOOL_SHORTNAME='DataStage Remote Engine'
 
@@ -758,7 +758,7 @@ print_tool_name_version() {
 
 create_dir_if_not_exist() {
     DIR_PATH=$1
-    if [ ! -d $DIR_PATH ]; then
+    if [ ! -d "$DIR_PATH" ]; then
         echo "Folder ${DIR_PATH} does not exist, creating ..."
         mkdir -p "${DIR_PATH}"
         set_permissions "${DIR_PATH}"
