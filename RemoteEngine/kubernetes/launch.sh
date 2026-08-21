@@ -399,6 +399,14 @@ rules:
       - update
       - watch
   - apiGroups:
+      - ''
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+      - update
+  - apiGroups:
       - apps
     resources:
       - deployments
