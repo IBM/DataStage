@@ -438,7 +438,7 @@ You can add your `cpdctl` commands inside the job routine and run the flow. Once
 
 These steps cover the basic setup. Follow next steps if you want to run with a customized version instead of the built-in version. If you have all the changes that you need, in the built-in cloud/cpd cluster version, you don't need to follow the below steps.
 
-## Using cpdctl 1.8.260+ on DataStage Cloud with Remote Engine and CPD Cluster
+## Replace cpdctl binary on DataStage Cloud with Remote Engine and CPD Cluster
 
 Cloud with Remote Engine cache support is available starting with cpdctl version `1.8.260`.
 
@@ -516,3 +516,125 @@ ls -l /px-storage/tools/cpdctl/cpdctl
 ```
 you should see the sym link back.
 
+
+# Using cache inside a Bash Script stage / node
+
+# For pipelines running in the optimized runner mode
+
+## Step 1: Replace the cpdctl binary (if needed)
+If your environment requires a newer `cpdctl` version, follow the instructions in [Replace cpdctl binary on DataStage Cloud with Remote Engine and CPD Cluster](#replace-cpdctl-binary-on-datastage-cloud-with-remote-engine-and-cpd-cluster) to replace the binary.
+
+## Step 2: Configure environment variables in the bash script node
+Add the following environment variables to your Bash Script stage/node. If `CPDCTL_CACHE_PATH` is not specified, cache files will be stored under `/px-storage/tools/cpdctl/dsjob_cache` by default.
+
+### Step 2.1: Enable general cpdctl dsjob execution
+```bash
+export CPDCTL_ENABLE_DSJOB=1
+export ENABLE_CPDCTL=1
+```
+
+### Step 2.2: Enable the DSJob cache
+```bash
+export DSJobCache=true
+```
+
+### Step 2.3: Set cache expiration time (optional)
+By default, the cache expires after 10 minutes. Set `DSJobCacheTTL` to override this (e.g., `10m`, `30m`, `1h`, or `2h30m`):
+```bash
+export DSJobCacheTTL=30m
+```
+
+## Step 3: Populate the cache to maximize cache usage
+To maximize cache efficiency, run the `populate-cache` command before executing your actual script commands:
+
+```bash
+cpdctl dsjob populate-cache -p ad_re
+```
+
+Example Script:
+
+![alt text](BashScriptOptimized.png)
+
+# For pipelines running in the normal mode
+
+By default, on Cloud Pak for Data (CP4D), Pipeline jobs cannot see mounted volumes (like `/ds-storage` that DataStage has access to).
+
+There are two ways to configure cache for the Watson Pipeline Runner:
+
+
+## Scenario 1: Using a Shared Storage Volume
+
+Use this approach when you have access to a shared storage volume. The cache and key files are persisted across pipeline runs via the mounted volume.
+
+### Step 1: Create and Configure the Storage Volume Connection
+
+Before wiring the volume into your pipeline, complete the following steps to create the shared storage volume and add its connection to your project:
+
+**1.1 Create the Storage Volume**
+Please refer to this document to create a storage volume
+
+Official IBM Documentation: [Sharing storage volumes between Pipelines and DataStage](https://www.ibm.com/docs/en/cloud-paks/cp-data/4.8.x?topic=pipelines-sharing-storage-volumes).
+
+**1.2 Add the Storage Volume as a Project Asset**
+1. Open your project and go to the **Assets** tab.
+2. Click **New asset → Connection**.
+3. Select **Storage volume** as the connection type.
+4. Choose the volume you created (e.g., `dsjob-vol`) and save.
+
+### Step 2: Add the Connection in the Pipeline Flow (Bash Node)
+
+Once the storage volume is created and its connection is added to your project, wire it into your Pipeline's Bash Script node:
+
+1. Open your Pipeline flow.
+2. Add or select your **Run Bash script** node.
+3. In the properties panel on the right, scroll down to the **Environment Variables (optional)** section.
+4. Add a new variable to employ the volume:
+   - **Name:** Choose a parameter name (e.g., `dsjob`).
+   - **Value / Type:** Click the folder icon and select the Storage Volume connection pointing to your created volume asset (e.g., `ad_test/dsjob-vol`).
+
+   ![alt text](StorageVolumeConnection.png)
+
+
+## Scenario 2: Without a Storage Volume Mount (Alternative)
+
+Use this approach if you are unable to configure a storage volume or cannot access the mount. Use the path `/home/cpdctl` instead of `/mnts/<volume-name>` in the script.
+
+- Replace `/mnts/<volume-name>` with `/home/cpdctl` in your script.
+- Since this path is scoped to the script level, any cache or key files written here are available only for that specific run's script execution.
+
+> **Note:** Skip Way 1 Steps 1 and 2 if you are using this approach.
+
+
+## Sample Working Bash Node Script
+
+You can write your script inside the **Script code** section of the bash node to employ cache and run `dsjob` commands.
+
+> **Note:** You can use this exact same script to switch seamlessly between the **Optimized Pipeline Runner** and the **Watson Pipeline Runner**. When running under the Watson Pipeline Runner, the script detects the Tekton environment (`TEKTON_PIPELINE_RUN`) and configures your shared storage/paths. When running under the Optimized Pipeline Runner, it bypasses the conditional block and automatically falls back to utilizing the default paths.
+
+> **Note:** If you are not using a shared storage volume, replace `vol_name="/mnts/<volume-name>"` with `vol_name="/home/cpdctl"` in the script below.
+
+```bash
+export CPDCTL_ENABLE_DSJOB=1
+export ENABLE_CPDCTL=1
+export DSJobCache=true
+
+if [[ -n "${TEKTON_PIPELINE_RUN:-}" ]]; then
+    vol_name="/mnts/<volume-name>"  # Replace with your storage volume mount path, e.g., "/mnts/VolPipeLine"
+    
+    # Create the key file in the storage volume
+    cat << EOF > "$vol_name/<key-name>"
+dsjob-key
+EOF
+
+    export CPDCTL_CACHE_PATH="$vol_name"
+    export DSJOB_ENCRYPTION_KEY_PATH="$vol_name/<key-name>"
+fi
+
+cpdctl dsjob populate-cache -p <project-name>
+
+# Write your actual cpdctl dsjob commands here
+# ... your script commands ...
+```
+Example script:
+
+![alt text](BashScriptHybrid.png)
