@@ -1,0 +1,95 @@
+# ------------------------------------------------------------
+# Required
+# ------------------------------------------------------------
+
+name: ""
+namespace: ""
+apiKey: ""
+projectId: ""
+storageClass: ""
+licenseAccept: false
+isOpenShiftCluster: false
+
+# ------------------------------------------------------------
+# Environment / data center
+# ------------------------------------------------------------
+
+# IBM Cloud: dallas, frankfurt, sydney, toronto, london
+# AWS: awsprod-apsouth, awsprod-useast, awsgovprod
+# CP4D: leave empty, set zenUrl instead
+dataCenter: ""
+
+# Auto-derived from dataCenter. Override only if needed.
+# IBM Cloud => "cloud", AWS => "aws", CP4D => "icp4d"
+remoteControlplaneEnv: ""
+
+# Auto-derived from dataCenter. Override only if needed.
+gateway: ""
+
+# Required for AWS deployments only
+mcspAccountId: ""
+
+# CP4D zen URL - setting this switches to CP4D mode
+zenUrl: ""
+
+# CP4D service account username (CP4D only)
+serviceId: ""
+
+# ------------------------------------------------------------
+# Sizing
+# ------------------------------------------------------------
+
+size: "small"
+storageSize: "10"
+
+# ------------------------------------------------------------
+# Image digests
+# ------------------------------------------------------------
+
+operatorDigest: ""
+pxRuntimeDigest: ""
+pxComputeDigest: ""
+flightDigest: ""
+
+operatorRegistry: "icr.io/datastage"
+dockerRegistryPrefix: "icr.io/datastage"
+
+# Custom registry (image mirroring)
+customDockerRegistry: ""
+operatorRegistrySuffix: ""
+dockerRegistrySuffix: ""
+
+# ------------------------------------------------------------
+# Optional features
+# ------------------------------------------------------------
+
+# Disable WLM scaling (also removes pods/exec from role)
+disableWlmScaling: false
+
+# Image pull registry credentials
+username: ""
+password: ""
+
+# Comma-separated IAM IDs for additional engine admins
+additionalUsers: ""
+
+# Proxy
+proxyUrl: ""
+# Path to CA cert for proxy (file contents, not path)
+caCert: ""
+
+# Kerberos
+krb5ConfFile: ""
+krb5ConfDir: ""
+
+# DB2Z license (file contents, not path)
+db2zLicense: ""
+
+# Flight Service
+enableFlightService: ""
+enableSharedFlightService: ""
+
+# NFS provisioner (EKS only)
+nfsServer: ""
+nfsPath: "/"
+provisionerNamespace: ""
