@@ -1,0 +1,26 @@
+{{- if .Values.krb5ConfFile }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: {{ .Values.name }}
+    meta.helm.sh/release-namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+  name: krb5-config-files
+  namespace: {{ .Values.namespace }}
+data:
+  krb5.conf: |
+    {{ .Values.krb5ConfFile | nindent 4 }}
+{{- end }}
+{{- if .Values.krb5ConfDir }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: krb5-config-dir
+  namespace: {{ .Values.namespace }}
+data:
+  krb5-conf-dir: |
+    {{ .Values.krb5ConfDir | nindent 4 }}
+{{- end }}
