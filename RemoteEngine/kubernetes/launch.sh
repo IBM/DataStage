@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.20
+TOOL_VERSION=1.0.21
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -808,10 +808,15 @@ create_instance() {
   #   remove_previous_resources
   #   has_previous_pxruntime_cr="true"
   # fi
+  projectId=$(echo "$projectId" | sed -E 's/[[:space:]]*//g; s/'\''/"/g; s/([^",]+)/"&"/g; s/"{2,}/"/g')
+  additional_vars="${https_proxy:+"{\"name\": \"https_proxy\", \"value\": \"$https_proxy\"},"}${no_proxy:+"{\"name\": \"no_proxy\", \"value\": \"$no_proxy\"},"}"
+  if [[ ! -z "$additional_vars" ]]; then
+    additional_vars="${additional_vars::-1}"
+  fi
   $kubernetesCLI -n $namespace get pxremoteengine $name
   if [ $? -eq 0 ]; then
     echo "PXRemoteEngine $name already exists; updating its image digests."
-    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"docker_registry_prefix\":\"${DOCKER_REGISTRY_PREFIX}\", \"api_key_secret\":\"${DS_API_KEY_SECRET}\", \"project_id\": \"${projectId}\", \"remote_controlplane_env\":\"${remote_controlplane_env}\", \"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}, \"additional_users\":\"${additional_users}\"}}" --type=merge
+    $kubernetesCLI -n $namespace patch pxremoteengine $name -p "{\"spec\":{\"docker_registry_prefix\":\"${DOCKER_REGISTRY_PREFIX}\", \"api_key_secret\":\"${DS_API_KEY_SECRET}\", \"project_id\": [${projectId}], \"remote_controlplane_env\":\"${remote_controlplane_env}\", \"image_digests\":{\"pxcompute\": \"${px_compute_digest}\", \"pxruntime\": \"${px_runtime_digest}\"}, \"additional_users\":\"${additional_users}\"${additional_vars:+, \"additional_env_vars\": [${additional_vars}]}}}" --type=merge
   else
     cat <<EOF | $kubernetesCLI apply -f -
 apiVersion: ds.cpd.ibm.com/v1
@@ -832,6 +837,7 @@ spec:
   api_key_secret: $DS_API_KEY_SECRET
   remote_controlplane_env: $remote_controlplane_env
   additional_users: $additional_users
+  ${additional_vars:+additional_env_vars: [$additional_vars]}
   GATEWAY: $DS_GATEWAY
   image_digests:
     pxcompute: $px_compute_digest
@@ -948,6 +954,8 @@ handle_create_instance_usage() {
   echo "--data-center: the data center where your DataStage instance is provisioned on IBM cloud (ignored for cp4d): dallas(default), frankfurt, sydney, toronto, london, awsprod-apsouth, awsprod-useast, or awsgovprod"
   echo "--license-accept: set the to true to indicate that you have accepted the license for IBM DataStage as a Service Anywhere - https://www.ibm.com/support/customer/csol/terms/?ref=i126-9243-06-11-2023-zz-en"
   echo "--additional-users: comma separated list of ids (IAM IDs for cloud, check https://cloud.ibm.com/docs/account?topic=account-identity-overview for details; uids/usernames for cp4d) that can also control remote engine besides the owner"
+  echo "--https-proxy: set the HTTPS proxy configuration"
+  echo "--no-proxy: Addresses that should bypass the proxy (comma-separated)"
   echo "--registry: Custom container registry to pull images from if you are image mirroring using a private registry. If using this option, you must set --digests as well for IBM Cloud."
   echo "--operator-registry-suffix: Custom operator registry suffix to use for the remote engine to pull ds-operator images from if using a custom container registry. Defaults to 'cpopen'."
   echo "--docker-registry-suffix: Custom docker registry suffix to use for the remote engine to pull ds-px-runtime and ds-px-compute images from if using a custom container registry. Defaults to 'cp/cpd'."
@@ -1431,6 +1439,14 @@ do
         --additional-users)
             shift
             additional_users="${1}"
+            ;;
+        --https-proxy)
+            shift
+            https_proxy="${1}"
+            ;;
+        --no-proxy)
+            shift
+            no_proxy="${1}"
             ;;
         --zen-url)
             shift
