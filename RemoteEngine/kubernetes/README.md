@@ -75,7 +75,7 @@ To deploy the DataStage operator on cluster without global pull secret configure
 
 # create the remote instance - add '--gateway api.dataplatform.cloud.ibm.com' if the instance needs to registers with prod env
 
-./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project_id1,project_id2,project_id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto|london|awsprod-apsouth|awsprod-useast|awsgovprod (if you are specifically deploying a remote engine for IBM Cloud)] [--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--disable-wlm-scaling <true/false>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)] --license-accept true
+./launch.sh create-instance --namespace <namespace> --name <name> --project-id <project_id1,project_id2,project_id3,...> --storage-class <storage-class> [--storage-size <storage-size>] [--size <size>] [--data-center dallas|frankfurt|sydney|toronto|london|awsprod-apsouth|awsprod-useast|awsgovprod (if you are specifically deploying a remote engine for IBM Cloud)] [--additional-users <IBMid-1000000000,IBMid-2000000000,IBMid-3000000000,...>] [--https-proxy <https-proxy>] [--no-proxy <localhost,127.0.0.1,kubernetes.default.svc,svc,.cluster.local,<internal-domain>,<pod-cidr>,<service-cidr>,...>] [--registry <docker-registry>] [--operator-registry-suffix <operator-suffix>] [--docker-registry-suffix <docker-suffix>] [--digests <ds-operator-digest>,<ds-px-runtime-digest>,<ds-px-compute-digest>] [--disable-wlm-scaling <true/false>] [--zen-url <zen-url> (if you are specifically deploying a remote engine for CP4D)] --license-accept true
 ```
 For documentation on how to create IBM Cloud API keys, see https://cloud.ibm.com/docs/account?topic=account-manapikey.
 To generate a CP4D API Key, go to "Profile and settings" when logged in to the CP4D Cluster to get your api key for the connection.
@@ -149,6 +149,14 @@ zen_url=<zen-url>
 
 # Specify the proxy url (eg. http://<username>:<password>@<proxy_ip>:<port>).
 # proxy_url=<proxy-url>
+
+# Set the HTTPS proxy configuration
+# https_proxy=<https-proxy>
+
+# Addresses that should bypass the proxy (comma-separated)
+# Must include internal Kubernetes addresses: localhost,127.0.0.1,kubernetes.default.svc,svc,.cluster.local
+# Add your internal domain and pod/service CIDR ranges
+# no_proxy=localhost,127.0.0.1,kubernetes.default.svc,svc,.cluster.local,<internal-domain>,<pod-cidr>,<service-cidr>
 
 # Specify the absolute location of the custom CA store for the specified proxy - if it is using a self signed certificate.
 # cacert_location=<cacert-location>
