@@ -1,0 +1,20 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    meta.helm.sh/release-name: {{ .Values.name }}
+    meta.helm.sh/release-namespace: {{ .Values.namespace }}
+  name: ibm-cpd-datastage-remote-operator-role-binding
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/instance: ibm-cpd-datastage-remote-operator-role-binding
+    app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+    app.kubernetes.io/name: ibm-cpd-datastage-remote-operator-role-binding
+subjects:
+  - kind: ServiceAccount
+    name: ibm-cpd-datastage-remote-operator-serviceaccount
+    namespace: {{ .Values.namespace }}
+roleRef:
+  kind: Role
+  name: ibm-cpd-datastage-remote-operator-role
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,63 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: pxremoteengines.ds.cpd.ibm.com
+spec:
+  group: ds.cpd.ibm.com
+  names:
+    kind: PXRemoteEngine
+    listKind: PXRemoteEngineList
+    plural: pxremoteengines
+    singular: pxremoteengine
+    shortNames:
+      - pxre
+      - pxres
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - description: The desired version of PXRemoteEngine
+          jsonPath: .spec.version
+          name: Version
+          type: string
+        - description: The actual version PXRemoteEngine
+          jsonPath: .status.dsVersion
+          name: Reconciled
+          type: string
+        - description: The status of PXRemoteEngine
+          jsonPath: .status.dsStatus
+          name: Status
+          type: string
+        - description: The age of PXRemoteEngine
+          jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      schema:
+        openAPIV3Schema:
+          description: DataStage is the Schema for the datastages API
+          type: object
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: Spec defines the desired state of DataStage
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+            status:
+              description: Status defines the observed state of DataStage
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

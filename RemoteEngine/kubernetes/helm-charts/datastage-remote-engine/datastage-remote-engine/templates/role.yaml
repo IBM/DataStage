@@ -1,0 +1,61 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    meta.helm.sh/release-name: {{ .Values.name }}
+    meta.helm.sh/release-namespace: {{ .Values.namespace }}
+  name: ibm-cpd-datastage-remote-operator-role
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/instance: ibm-cpd-datastage-remote-operator-cluster-role
+    app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+    app.kubernetes.io/name: ibm-cpd-datastage-remote-operator-cluster-role
+rules:
+  - apiGroups: [""]
+    resources:
+      - configmaps
+      - persistentvolumeclaims
+      - pods
+      - secrets
+      - serviceaccounts
+      - services
+    verbs: [create, delete, get, list, patch, update, watch]
+  {{- if not .Values.disableWlmScaling }}
+  - apiGroups: [""]
+    resources:
+      - pods/exec
+    verbs: [create, get]
+  {{- end }}
+  - apiGroups: [apps]
+    resources: [deployments, replicasets, statefulsets]
+    verbs: [create, delete, get, list, patch, update, watch]
+  - apiGroups: [apps]
+    resources: [deployments/scale, statefulsets/scale]
+    verbs: [get, patch, update]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [create, delete, get, list, patch, update, watch]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [create, delete, get, list, patch, update, watch]
+  - apiGroups: [batch]
+    resources: [jobs/status]
+    verbs: [get, list, watch]
+  - apiGroups: [ds.cpd.ibm.com]
+    resources: [pxremoteengines]
+    verbs: [create, delete, get, list, patch, update, watch]
+  - apiGroups: [ds.cpd.ibm.com]
+    resources: [pxremoteengines/finalizers]
+    verbs: [patch, update]
+  - apiGroups: [ds.cpd.ibm.com]
+    resources: [pxremoteengines/status]
+    verbs: [get, list, patch, update]
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    verbs: [create, delete, get, list, patch, update, watch]
+  - apiGroups: [policy]
+    resources: [poddisruptionbudgets]
+    verbs: [create, delete, get, list, patch, update, watch]
+  - apiGroups: [rbac.authorization.k8s.io]
+    resources: [rolebindings, roles]
+    verbs: [create, delete, get, list, patch, update, watch]

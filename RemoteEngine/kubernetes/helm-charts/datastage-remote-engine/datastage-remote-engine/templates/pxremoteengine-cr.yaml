@@ -1,0 +1,40 @@
+apiVersion: ds.cpd.ibm.com/v1
+kind: PXRemoteEngine
+metadata:
+  annotations:
+    meta.helm.sh/release-name: {{ .Values.name }}
+    meta.helm.sh/release-namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+  name: {{ .Values.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  license:
+    accept: {{ .Values.licenseAccept }}
+  storageClass: {{ .Values.storageClass }}
+  storageSize: {{ .Values.storageSize | quote }}
+  scaleConfig: {{ .Values.size }}
+  remote_engine: true
+  project_id: [{{ .Values.projectId }}]
+  docker_registry_prefix: {{ include "datastage.dockerRegistryPrefix" . }}
+  api_key_secret: {{ include "datastage.apiKeySecret" . }}
+  remote_controlplane_env: {{ include "datastage.controlplaneEnv" . }}
+  GATEWAY: {{ include "datastage.gateway" . | quote }}
+  {{- if .Values.enableFlight }}
+  enableFlightService: {{ .Values.enableFlight }}
+  {{- end }}
+  {{- if .Values.enableSharedFlight }}
+  enableSharedFlightService: {{ .Values.enableSharedFlight }}
+  {{- end }}
+  {{- if .Values.additionalUsers }}
+  additional_users: {{ .Values.additionalUsers }}
+  {{- end }}
+  {{- if .Values.disableWlmScaling }}
+  enableWLMScaling: false
+  {{- end }}
+  image_digests:
+    pxruntime: {{ .Values.pxRuntimeDigest }}
+    pxcompute: {{ .Values.pxComputeDigest }}
+  {{- if .Values.flightDigest }}
+    flight: {{ .Values.flightDigest }}
+  {{- end }}
