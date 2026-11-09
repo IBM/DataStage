@@ -61,6 +61,9 @@ To deploy the DataStage operator on cluster without global pull secret configure
 # create the krb5 configmaps if Kerberos Authentication is used
 # ./launch.sh create-krb5-configmaps --namespace <namespace> --krb5-conf <krb5_conf_location> [--krb5-conf-dir <krb5_config_dir_location>]
 
+# create the Oracle wallet secret if using Oracle TCPS connections
+# ./launch.sh create-oracle-wallet-secret --namespace <namespace> --oracle-wallet-dir <wallet_directory>
+
 # create the credential store secrets if properties file is provided
 # ./launch.sh create-credential-store-secrets --namespace <namespace> --credential-store-config <config_file_location>
 
@@ -172,6 +175,11 @@ zen_url=<zen-url>
 
 # Specify the location of the DB2Z license to import
 # DB2Z_LICENSE=<db2z_license_location>
+
+# Specify the directory containing the Oracle wallet files (e.g. cwallet.sso, tnsnames.ora, sqlnet.ora) if using Oracle TCPS connections.
+# All files in the directory are stored in a Kubernetes Secret (datastage-oracle-wallet).
+# The operator mounts the secret at /etc/oracle-config-files and sets TNS_ADMIN to that path inside the container.
+# ORACLE_WALLET_DIR=<oracle_wallet_directory>
 
 # Specify your custom container registry to pull images from if you are image mirroring using a private registry. If using this option, you must set USE_DIGESTS as well for IBM Cloud.
 # CUSTOM_DOCKER_REGISTRY=<docker-registry>

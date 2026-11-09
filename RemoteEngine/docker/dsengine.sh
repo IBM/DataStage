@@ -69,6 +69,7 @@ FORCE_RENEW='false'
 RESTART_STOPPED_CONTAINER='false'
 PROXY_CACERT_LOCATION="/px-storage/proxy.pem"
 KRB5_CONF_FILE="/etc/krb5-config-files/krb5.conf"
+ORACLE_CONFIG_FILES="/etc/oracle-config-files"
 DS_STORAGE_PATH="/ds-storage:/px-storage"
 
 supported_versions="5.1.0 5.1.1 5.1.2 5.1.3 5.2.0 5.2.1 5.2.2 5.3.0 5.3.1 5.4.0"
@@ -103,6 +104,7 @@ STR_PROXY='  --proxy                     Specify the proxy url (eg. http://<user
 STR_PROXY_CACERT='  --proxy-cacert              Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.'
 STR_KRB5_CONF='  --krb5-conf                 Specify the location of the Kerberos config file if using Kerberos Authentication.'
 STR_KRB5_CONF_DIR='  --krb5-conf-dir             Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include "includedir /etc/krb5-config-files/krb5-config-dir" line)'
+STR_ORACLE_WALLET_DIR='  --oracle-wallet-dir         Specify the directory containing the Oracle wallet files (eg. cwallet.sso, tnsnames.ora, sqlnet.ora) if using Oracle TCPS connections. The directory is mounted to /etc/oracle-config-files and TNS_ADMIN is set to that path.'
 STR_IMPORT_DB2Z_LICENSE='  --import-db2z-license       Specify the location of the DB2Z license to import.'
 STR_FORCE_RENEW='  --force-renew               Removes the existing engine container (if found) and starts a new engine container.'
 STR_HELP='  help, --help                Print usage information'
@@ -175,9 +177,9 @@ print_usage() {
     help_header
 
     if [[ "${ACTION}" == 'start' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--volume-dir] [--mount-dir] [--relabel-selinux-mounts] [--host-network] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--mcsp-account-id]\n                         [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} start [-n | --remote-engine-name] [-a | --apikey] [-p | --prod-apikey] [-e | --encryption-key] \n                         [-i | --ivspec] [-d | --project-id] [--home] [--memory] [--cpus] [--pids-limit] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--oracle-wallet-dir] [--import-db2z-license] [--volume-dir] [--mount-dir] [--relabel-selinux-mounts] [--host-network] [--add-host]\n                         [--select-version] [--force-renew] [--security-opt] [--cap-drop] [--set-user] [--set-group] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                         [--zen-url] [--cp4d-user] [--cp4d-apikey]\n                         [--mcsp-account-id]\n                         [--help]"
     elif [[ "${ACTION}" == 'update' ]]; then
-        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--import-db2z-license] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                          [--help]"
+        echo -e "${bold}usage:${normal} ${script_name} update [-n | --remote-engine-name] [-p | --prod-apikey] [--select-version] [--proxy] [--proxy-cacert] [--krb5-conf] [--krb5-conf-dir] [--oracle-wallet-dir] [--import-db2z-license] [--security-opt] [--cap-drop] [--additional-users] [--registry] [-u | --user] [--digest] [--image-tag] [--skip-docker-login] [--env-vars] \n                          [--help]"
     elif [[ "${ACTION}" == 'stop' ]]; then
         echo "${bold}usage:${normal} ${script_name} stop [-n | --remote-engine-name]"
     elif [[ "${ACTION}" == 'cleanup' ]]; then
@@ -239,6 +241,7 @@ print_usage() {
         echo "${STR_PROXY_CACERT}"
         echo "${STR_KRB5_CONF}"
         echo "${STR_KRB5_CONF_DIR}"
+        echo "${STR_ORACLE_WALLET_DIR}"
         echo "${STR_IMPORT_DB2Z_LICENSE}"
         echo "${STR_SELECT_PX_VERSION}"
         echo "${STR_ADDITIONAL_USERS}"
@@ -483,6 +486,10 @@ function start() {
             shift
             KRB5_CONF_DIR="$1"
             ;;
+        --oracle-wallet-dir)
+            shift
+            ORACLE_WALLET_DIR="$1"
+            ;;
         --import-db2z-license)
             shift
             DB2Z_LICENSE_PATH="$1"
@@ -586,6 +593,10 @@ function update() {
         --krb5-conf-dir)
             shift
             KRB5_CONF_DIR="$1"
+            ;;
+        --oracle-wallet-dir)
+            shift
+            ORACLE_WALLET_DIR="$1"
             ;;
         --import-db2z-license)
             shift
@@ -1178,6 +1189,13 @@ run_px_runtime_docker() {
         fi
     fi
 
+    if [[ ! -z $ORACLE_WALLET_DIR ]]; then
+        runtime_docker_opts+=(
+            --env ORACLE_WALLET_DIR="${ORACLE_WALLET_DIR}"
+            --env TNS_ADMIN="${ORACLE_CONFIG_FILES}"
+        )
+    fi
+
     if [[ "${RELABEL_SELINUX_MOUNTS}" == 'true' ]]; then
         echo "Using :z option to modify the SELinux label of the bind mounts"
         runtime_docker_opts+=(
@@ -1251,6 +1269,7 @@ run_px_runtime_docker() {
         -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2"${RELABEL_SELINUX_MOUNTS:+:z}"
         -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files"${RELABEL_SELINUX_MOUNTS:+:z}"
         -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir"${RELABEL_SELINUX_MOUNTS:+:z}"
+        -v "${ORACLE_CONFIG_FILES_DIR}":/etc/oracle-config-files"${RELABEL_SELINUX_MOUNTS:+:z}"
         --env DS_STORAGE_PATH="${DS_STORAGE_PATH}"
         --env QSM_RULESET_ROOT_DIR=/ds-storage/rule-set
         --env DS_PX_INSTANCE_ID="${REMOTE_ENGINE_NAME}"
@@ -1299,6 +1318,11 @@ run_px_runtime_docker() {
 
     # once the container is up, reset permissions on the volumes dir
     set_permissions "${DOCKER_VOLUMES_DIR}"
+    # set_permissions uses 775 which would make wallet files world-readable.
+    # Re-apply restrictive permissions on the wallet directory after that call.
+    if [[ ! -z $ORACLE_WALLET_DIR ]]; then
+        chmod -R u=rwX,g=rX,o= "${ORACLE_CONFIG_FILES_DIR}"
+    fi
 
     # wait until docker is in a running state - doesn't mean server has started
     until [[ $( $DOCKER_CMD ps -a | grep $PXRUNTIME_CONTAINER_NAME | wc -l ) -gt 0 ]]; do
@@ -1395,7 +1419,13 @@ run_px_compute() {
         -v "${JDBC_JAR_DIR}":/user-home/_global_/dbdrivers-v2"${RELABEL_SELINUX_MOUNTS:+:z}"
         -v "${KRB5_CONFIG_FILES_DIR}":/etc/krb5-config-files"${RELABEL_SELINUX_MOUNTS:+:z}"
         -v "${KRB5_CONFIG_DIR_DIR}":/etc/krb5-config-files/krb5-config-dir"${RELABEL_SELINUX_MOUNTS:+:z}"
+        -v "${ORACLE_CONFIG_FILES_DIR}":/etc/oracle-config-files"${RELABEL_SELINUX_MOUNTS:+:z}"
     )
+    if [[ ! -z $ORACLE_WALLET_DIR ]]; then
+        compute_docker_opts+=(
+            --env TNS_ADMIN="${ORACLE_CONFIG_FILES}"
+        )
+    fi
     $DOCKER_CMD run "${compute_docker_opts[@]}"  $PXCOMPUTE_DOCKER_IMAGE
     status=$?
     if [ $status -ne 0 ]; then
@@ -2015,6 +2045,7 @@ setup_docker_volumes() {
     JDBC_JAR_DIR="${DOCKER_VOLUMES_DIR}/user-home/_global_/dbdrivers-v2"
     KRB5_CONFIG_FILES_DIR="${DOCKER_VOLUMES_DIR}/krb5-config-files"
     KRB5_CONFIG_DIR_DIR="${DOCKER_VOLUMES_DIR}/krb5-config-files/krb5-config-dir"
+    ORACLE_CONFIG_FILES_DIR="${DOCKER_VOLUMES_DIR}/oracle-config-files"
 
     if [[ "${ACTION}" == 'start' ]]; then
 
@@ -2027,6 +2058,7 @@ setup_docker_volumes() {
         create_dir_if_not_exist "${JDBC_JAR_DIR}"
         create_dir_if_not_exist "${KRB5_CONFIG_FILES_DIR}"
         create_dir_if_not_exist "${KRB5_CONFIG_DIR_DIR}"
+        create_dir_if_not_exist "${ORACLE_CONFIG_FILES_DIR}"
         set_permissions "${DOCKER_VOLUMES_DIR}"
 
         # Mount an empty file for running computes since they aren't supported locally
@@ -2044,6 +2076,7 @@ setup_docker_volumes() {
         generate_import_license_script
         copy_proxy_cacert
         copy_krb5_conf
+        copy_oracle_wallet
         copy_DB2Z_license
     fi
 }
@@ -2072,6 +2105,18 @@ copy_krb5_conf() {
         fi
     elif [[ ! -z $KRB5_CONF_DIR ]]; then
         echo_error_and_exit "The option --krb5-conf-dir is only supported when --krb5-conf is specified."
+    fi
+}
+
+copy_oracle_wallet() {
+    if [[ ! -z $ORACLE_WALLET_DIR ]]; then
+        if [[ ! -d $ORACLE_WALLET_DIR ]]; then
+            echo_error_and_exit "The specified Oracle wallet directory $ORACLE_WALLET_DIR is not found."
+        fi
+        \cp -RLf "${ORACLE_WALLET_DIR}"/. "${ORACLE_CONFIG_FILES_DIR}/"
+        # Restrict wallet file permissions: owner and group can read, others cannot.
+        # Wallet files contain private keys and should not be world-readable.
+        chmod -R u=rwX,g=rX,o= "${ORACLE_CONFIG_FILES_DIR}"
     fi
 }
 
@@ -2728,6 +2773,7 @@ elif [[ ${ACTION} == "update" ]]; then
     JDBC_JAR_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/user-home/_global_/dbdrivers-v2") | .Source')
     KRB5_CONFIG_FILES_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/etc/krb5-config-files") | .Source')
     KRB5_CONFIG_DIR_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/etc/krb5-config-files/krb5-config-dir") | .Source')
+    ORACLE_CONFIG_FILES_DIR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination == "/etc/oracle-config-files") | .Source')
     HOST_NETWORK=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^HOST_NETWORK= | cut -d'=' -f2-)
     MOUNT_DIRS_STR=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^MOUNT_DIRS= | cut -d'=' -f2-)
     if [[ ! -z "$MOUNT_DIRS_STR" ]]; then
@@ -2737,7 +2783,7 @@ elif [[ ${ACTION} == "update" ]]; then
     SAVEIFS=$IFS
     IFS=$'\n'
     if [[ ! -v MOUNT_DIRS ]]; then
-      MOUNT_DIRS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | select(.Destination != "/etc/krb5-config-files") | select(.Destination != "/etc/krb5-config-files/krb5-config-dir") | "\(.Source):\(.Destination)"' | while read object; do echo "$object"; done)
+      MOUNT_DIRS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].Mounts | .[] | select(.Destination != "/ds-storage") | select(.Destination != "/px-storage") | select(.Destination != "/opt/ibm/PXService/Server/scratch") | select(.Destination != "/user-home/_global_/dbdrivers-v2") | select(.Destination != "/etc/krb5-config-files") | select(.Destination != "/etc/krb5-config-files/krb5-config-dir") | select(.Destination != "/etc/oracle-config-files") | "\(.Source):\(.Destination)"' | while read object; do echo "$object"; done)
       MOUNT_DIRS=($MOUNT_DIRS_STR)
     fi
     ADD_HOSTS_STR=$($DOCKER_CMD inspect "${PXRUNTIME_CONTAINER_NAME}" | jq -r '.[].HostConfig.ExtraHosts | .[]')
@@ -2763,6 +2809,9 @@ elif [[ ${ACTION} == "update" ]]; then
     fi
     if [[ ! -v KRB5_CONF_DIR ]]; then
         KRB5_CONF_DIR=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^KRB5_CONF_DIR= | cut -d'=' -f2-)
+    fi
+    if [[ ! -v ORACLE_WALLET_DIR ]]; then
+        ORACLE_WALLET_DIR=$($DOCKER_CMD exec "${PXRUNTIME_CONTAINER_NAME}" env | grep ^ORACLE_WALLET_DIR= | cut -d'=' -f2-)
     fi
     if [[ ! -v CONTAINER_SECURITY_OPT ]]; then
         CONTAINER_SECURITY_OPT=$($DOCKER_CMD inspect --format='{{.HostConfig.SecurityOpt}}' "${PXRUNTIME_CONTAINER_NAME}" | tr -d '[]' | tr ' ' ',' | tr -s ',' | sed 's/^,//' | sed 's/,$//')
@@ -2860,6 +2909,8 @@ elif [[ ${ACTION} == "update" ]]; then
     echo "PROXY_CACERT = ${PROXY_CACERT}"
     echo "KRB5_CONF = ${KRB5_CONF}"
     echo "KRB5_CONF_DIR = ${KRB5_CONF_DIR}"
+    echo "ORACLE_CONFIG_FILES_DIR = ${ORACLE_CONFIG_FILES_DIR}"
+    echo "ORACLE_WALLET_DIR = ${ORACLE_WALLET_DIR}"
     echo "HOST_NETWORK = ${HOST_NETWORK}"
     echo "CONTAINER_SECURITY_OPT = ${CONTAINER_SECURITY_OPT}"
     echo "CONTAINER_CAP_DROP = ${CONTAINER_CAP_DROP}"
