@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.21
+TOOL_VERSION=1.0.22
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
