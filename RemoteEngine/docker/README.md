@@ -124,6 +124,8 @@ While starting a remote engine, following optional flags can be used in addition
 1. `--proxy-cacert <cacert location>`: Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.
 1. `--krb5-conf <krb5.conf location>`: Specify the location of the Kerberos config file if using Kerberos Authentication.
 1. `--krb5-conf-dir <krb5-config-dir location>`: Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include "includedir /etc/krb5-config-files/krb5-config-dir" line).
+1. `--oracle-wallet-dir <wallet directory>`: Specify the directory containing the Oracle wallet files (e.g. `cwallet.sso`, `tnsnames.ora`, `sqlnet.ora`) if using Oracle TCPS connections. The contents of the directory are copied into the engine's volume directory and mounted into the container at `/etc/oracle-config-files`. The environment variable `TNS_ADMIN` is set to `/etc/oracle-config-files` inside the container.
+    * **Note**: To change the wallet files after `start`, edit the files directly in `<volume-dir>/oracle-config-files` on the host, or run `start` again with the new directory.
 1. `--import-db2z-license <DB2Z license location>`: Specify the location of the DB2Z license to import.
 1. `--force-renew`: Set to true if you want to remove the existing remote engine container. By default, this flag is set to false and if a stopped existing container is found, it is restarted or if a running existing container is found, the script is aborted.
 1. `--zen-url`: CP4D zen url of the cluster (required if --home is used with "cp4d").
@@ -250,6 +252,7 @@ While updating a remote engine, following optional flags can be used in addition
 1. `--proxy-cacert <cacert location>`: Specify the location of the custom CA store for the specified proxy - if it is using a self signed certificate.
 1. `--krb5-conf <krb5.conf location>`: Specify the location of the Kerberos config file if using Kerberos Authentication.
 1. `--krb5-conf-dir <krb5-config-dir location>`: Specify the directory of multiple Kerberos config files if using Kerberos Authentication. (Only supported with --krb5-conf, the krb5.conf file needs to include "includedir /etc/krb5-config-files/krb5-config-dir" line).
+1. `--oracle-wallet-dir <wallet directory>`: Specify the directory containing the Oracle wallet files if using Oracle TCPS connections. The wallet files in this directory are copied into `<volume-dir>/oracle-config-files` and the container is restarted with the updated mount. `TNS_ADMIN` is set to `/etc/oracle-config-files` inside the container.
 1. `--import-db2z-license <DB2Z license location>`: Specify the location of the DB2Z license to import.
 1. `--registry`: Custom container registry to pull images from. Must also set -u and -p options to login to the registry as well as either --digest or --image-tag for IBM Cloud.
 1. `-u | --user`: User to login to a custom container registry (required if --registry is set).

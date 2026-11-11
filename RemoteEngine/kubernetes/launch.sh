@@ -4,7 +4,7 @@
 # This script is a utility to install DataStage Remote Engine
 
 # tool version
-TOOL_VERSION=1.0.21
+TOOL_VERSION=1.0.22
 TOOL_NAME='IBM DataStage Remote Engine'
 
 kubernetesCLI="oc"
@@ -767,6 +767,18 @@ create_db2z_license_secret() {
   fi
 }
 
+create_oracle_wallet_secret() {
+  $kubernetesCLI -n ${namespace} delete secret oracle-optimized-ldap-tcps --ignore-not-found=true ${dryRun}
+  if [[ ! -z $ORACLE_WALLET_DIR ]]; then
+    if [[ ! -d $ORACLE_WALLET_DIR ]]; then
+      echo_error_and_exit "The specified Oracle wallet directory $ORACLE_WALLET_DIR is not found."
+    fi
+    # Using a Secret (not a ConfigMap) because wallet files contain private key material.
+    # --from-file=<dir> loads every file in the directory as a separate key.
+    $kubernetesCLI -n ${namespace} create secret generic oracle-optimized-ldap-tcps --from-file="${ORACLE_WALLET_DIR}"
+  fi
+}
+
 remove_previous_resources() {
   $kubernetesCLI -n ${namespace} delete deploy ${name}-ibm-datastage-px-runtime --ignore-not-found=true
   $kubernetesCLI -n ${namespace} delete sts ${name}-ibm-datastage-px-compute --ignore-not-found=true
@@ -859,7 +871,7 @@ EOF
 
 handle_badusage() {
   echo ""
-  echo "Usage: $0 create-pull-secret|create-proxy-secrets|create-krb5-configmaps|create-apikey-secret|install|create-instance|create-nfs-provisioner --help"
+  echo "Usage: $0 create-pull-secret|create-proxy-secrets|create-krb5-configmaps|create-oracle-wallet-secret|create-apikey-secret|install|create-instance|create-nfs-provisioner --help"
   echo ""
   exit 3
 }
@@ -917,6 +929,15 @@ handle_credential_store_secret_usage() {
   echo "Usage: $0 create-credential-store-secret --namespace <namespace> --credential-store-config <config_file_location>"
   echo "--namespace: the namespace to install the DataStage operator"
   echo "--credential-store-config: Specify the location of the credential store configuration file (properties format)"
+  exit 0
+}
+
+handle_oracle_wallet_usage() {
+  echo ""
+  echo "Description: create a secret containing Oracle wallet files for TCPS connections"
+  echo "Usage: $0 create-oracle-wallet-secret --namespace <namespace> --oracle-wallet-dir <wallet_directory>"
+  echo "--namespace: the namespace to create the secret"
+  echo "--oracle-wallet-dir: Specify the directory containing the Oracle wallet files (e.g. cwallet.sso, tnsnames.ora, sqlnet.ora). All files in the directory are stored in a Kubernetes Secret. The operator mounts the secret at /etc/oracle-config-files and sets TNS_ADMIN to that path."
   exit 0
 }
 
@@ -1376,6 +1397,10 @@ do
             shift
             DB2Z_LICENSE="${1}"
             ;;
+        --oracle-wallet-dir)
+            shift
+            ORACLE_WALLET_DIR="${1}"
+            ;;
         --project-id)
             shift
             projectId="${1}"
@@ -1482,6 +1507,9 @@ do
         create-db2z-license-secret)
             action="create-db2z-license-secret"
              ;;
+        create-oracle-wallet-secret)
+            action="create-oracle-wallet-secret"
+             ;;
         create-apikey-secret)
             action="create-apikey-secret"
              ;;
@@ -1549,6 +1577,9 @@ if [[ ! -z $dsdisplayHelp ]]; then
     create-db2z-license-secret)
       handle_import_db2z_license_usage
       ;;
+    create-oracle-wallet-secret)
+      handle_oracle_wallet_usage
+      ;;
     create-apikey-secret)
       handle_apikey_usage
       ;;
@@ -1596,6 +1627,9 @@ create-credential-store-secret)
 create-db2z-license-secret)
   create_db2z_license_secret
   ;;
+create-oracle-wallet-secret)
+  create_oracle_wallet_secret
+  ;;
 create-apikey-secret)
   create_apikey_secret
   ;;
@@ -1627,6 +1661,7 @@ if [ ! -z $inputFile ]; then
   create_pull_secret
   create_proxy_secrets
   create_krb5_configmaps
+  create_oracle_wallet_secret
   create_credential_store_secret
   create_db2z_license_secret
   create_apikey_secret
