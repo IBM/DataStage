@@ -63,7 +63,7 @@ For CPDaaS:
 #!/bin/bash
 export DSJOB_URL=https://dataplatform.cloud.ibm.com
 export CPDCTL_ENABLE_DSJOB=true
-DSJOB_APIKEY=<YOUR APIKEY>
+DSJOB_APIKEY=<YOUR KEY>
 cpdctl config profile set ibmcloud-profile --url $DSJOB_URL --apikey $DSJOB_APIKEY --watson-studio-url https://api.dataplatform.cloud.ibm.com
 ```
 
@@ -175,17 +175,19 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all jobs in the specified project:
 
 ```
-cpdctl dsjob list-jobs {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time | --sort-by-lastrun] [--with-id] [--last-run] [--sched-info]
+cpdctl dsjob list-jobs {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time | --sort-by-lastrun] [--with-id] [--last-run] [--sched-info]
 ```
 
 - `project` is the name of the project that contains the jobs to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of jobs sorted in alphabetical order. This field is optional.
 - `with-id` when specified prints the job id along with the name of the job.
 - `sort-by-time` when specified sorts the list by last update time.
 - `sort-by-lastrun` when specified sorts the list by last run timestamp. One of `sort`, `sort-by-time` or `sort-by-lastrun` can be specified.
 - `sched-info` shows schedule information for jobs that are configured to run on a schedule.
 - `last-run` shows the last time when the job ran. This field is empty if the job was never run before.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -219,16 +221,19 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax fetches a job by name from the specified project:
 
 ```
-cpdctl dsjob get-job {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata] 
+cpdctl dsjob get-job {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata]
+
 ```
 
 - `project` is the name of the project that contains the job.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the queried job.
 - `id` is the id of the job. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `with-metadata` when specified adds metadata to the output.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -252,11 +257,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all jobs in the specified project and the status of their last run if present.
 
 ```
-cpdctl dsjob list-job-status {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--sort | --sort-by-time | --sort-by-state | --sort-by-duration] [--start <YYYY-MM-DD:HH:MM:SS>] [--end <YYYY-MM-DD:HH:MM:SS>] [--with-past-runs]
+cpdctl dsjob list-job-status {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name name | --id ID} [--sort | --sort-by-time | --sort-by-state | --sort-by-duration] [--start <YYYY-MM-DD:HH:MM:SS>] [--end <YYYY-MM-DD:HH:MM:SS>] [--with-past-runs]
 ```
 
 - `project` is the name of the project that contains the jobs to list.
-- `project-id` is the id of the project. One of project or project-id must be specified.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of jobs sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified returns the list of jobs sorted in chronological order. This field is optional.
 - `sort-by-duration` when specified returns the list of jobs sorted in chronological order. This field is optional.
@@ -264,6 +269,8 @@ cpdctl dsjob list-job-status {--project PROJECT | --project-id PROJID} {--name n
 - `start` when specified, only jobs that started after this time are processed.
 - `end` when specified, only jobs that are started before this time are processed.
 - `with-past-runs` when true will process all the runs of the job if runs other than the last run of the job are processed.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -272,11 +279,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax updates a job by name from the specified project:
 
 ```
-cpdctl dsjob update-job {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--to-name RENAME] [--run-name RUNNAME] [--param PARAM] [--param-file FILENAME] [--env ENV] [--paramset NAME] [--jobrun-retention-days DAYS_NUM | --jobrun-retention-runs RUNS_NUM]
+cpdctl dsjob update-job {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--job NAME | --name NAME | --job-id ID | --id ID} [--to-name RENAME] [--run-name RUNNAME] [--param PARAM] [--param-file FILENAME] [--env ENV] [--paramset NAME] [--jobrun-retention-days DAYS_NUM | --jobrun-retention-runs RUNS_NUM]
 ```
 
 - `project` is the name of the project that contains the job.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `job` or `name` is the name of the job.
 - `job-id` or `id` is the id of the job. One of `job` or `job-id` must be specified.
 - `run-name` is the name given to the job run.
@@ -287,6 +294,8 @@ cpdctl dsjob update-job {--project PROJECT | --project-id PROJID} {--job NAME | 
 - `jobrun-retention-days` the number of days the job has been running is retained.
 - `jobrun-retention-runs` the number of job runs that are retained.
 - `to-name` specifies the new name to which the job will be renamed.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -295,11 +304,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax schedules a job to run at a specific time or repeatedly in the specified project:
 
 ```
-cpdctl dsjob schedule-job {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--schedule-start yyyy-mm-dd:hh:mm] [--schedule-end yyyy-mm-dd:hh:mm] [--repeat every/hourly/daily/monthly --minutes (0-59) --hours (0-23) --day-of-week (0-6) --day-of-month (1-31)] [--remove-schedule]
+cpdctl dsjob schedule-job {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--job NAME | --name NAME | --job-id ID | --id ID} [--schedule-start yyyy-mm-dd:hh:mm] [--schedule-end yyyy-mm-dd:hh:mm] [--repeat every/hourly/daily/monthly --minutes (0-59) --hours (0-23) --day-of-week (0-6) --day-of-month (1-31)] [--remove-schedule]
 ```
 
 - `project` is the name of the project that the job is scheduled for.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the job to be scheduled.
 - `id` is the id of the job to be scheduled.
 - `repeat` indicates frequency of job run. Permitted values are `every`, `hourly`, `daily`, `weekly`, and `monthly`. The default value is `none`.
@@ -309,6 +318,8 @@ cpdctl dsjob schedule-job {--project PROJECT | --project-id PROJID} {--job NAME 
 - `schedule-start` is the starting time for scheduling a job.
 - `schedule-end` is the ending time for scheduling a job.
 - `remove-schedule` allows use to remove a schedule information and turn off scheduled runs.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -317,15 +328,17 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all jobs that are configured to run on schedule in the specified project:
 
 ```
-cpdctl dsjob list-scheduled-jobs {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time | --sort-by-scheduled-time] [--with-id] [--all-spaces]
+cpdctl dsjob list-scheduled-jobs {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time | --sort-by-scheduled-time] [--with-id] [--all-spaces]
 ```
 
 - `project` is the name of the project that contains the jobs to list.
-- `project-id` is the id of the project. Both `project` or `project-id` are optional and if not specified the command fetches scheduled jobs from all project in the cluster.
+- `project-id` is the id of the project.
 - `with-id` when specified prints the job id along with the name of the job.
 - `sort` when specified returns the list of jobs sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified sorts the list by last update time. One of `sort` or `sort-by-time` can be specified.
 - `sort-by-scheduled-time` when true, it sorts list of job chronologically in ascending order of next scheduled run.
+- `space` is the name of the space.
+- `space-id` is the id of the space. All of `project`, `project-id`, `space`, and `space-id` are optional; if not specified the command fetches scheduled jobs from all projects in the cluster.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -429,11 +442,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax is used to wait for an anticipated job run and obtain status of the job.
 
 ```
-cpdctl dsjob waitforjob {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID] --wait SEC [--logs] [--since n[s|m]] [--after TIMESTAMP]
+cpdctl dsjob waitforjob {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID] --wait SEC [--logs] [--since n[s|m]] [--after TIMESTAMP]
 ```
 
 - `project` is the name of the project that contains the job.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the job.
 - `id` is the id of the job. One of `job` or `job-id` must be specified.
 - `run-id` is the id of a particular job run.
@@ -441,6 +454,8 @@ cpdctl dsjob waitforjob {--project PROJECT | --project-id PROJID} {--job NAME | 
 - `logs` will show logs of a running job while waiting to finish.
 - `since` only wait for job that has started in the last specified amount of time. The value should be number of seconds or minutes.
 - `after` only wait for job that has started after the timestamp specified.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -465,17 +480,19 @@ cpdctl dsjob remove-job-invocationid {--project PROJECT | --project-id PROJID}  
 The following syntax displays the specified entry in a job log file:
 
 ```
-cpdctl dsjob logdetail {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID] [--eventrange EVENTRANGE] [--compatible] --follow
+cpdctl dsjob logdetail {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID] [--eventrange EVENTRANGE] [--compatible] --follow
 ```
 
 - `project` is the name of the project that contains the job with the specified log entry.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `job` or `name` is the name of the job.
 - `job-id` or `id` is the id of the job. One of `job` or `job-id` must be specified.
 - `runid` processes the log entry for a specific `runid`. If `runid` is not specified, the latest run is used by default. This field is optional.
 - `eventrange` is the range of event numbers that is assigned to the entry that is printed to the output. The first entry in the file is 0. If `eventrange` is not specified, the full log is processed. For example, if you specify `eventrange 2-4`, the third, fourth, and fifth entries from the log are printed.
 - `compatible` will output logs in the format previously used by DataStage components. This field is optional.
 - `follow` when specified enables log tailing.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -484,25 +501,27 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following command retrieves the complete job log for a running or completed job, especially when the log contains a large number of entries.
 
 ```
-cpdctl dsjob get-joblog {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID]
+cpdctl dsjob get-joblog {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID]
 ```
 
 - `project` specifies the name of the project that contains the job.
-- `project-id` specifies the ID of the project. One of `project` or `project-id` must be provided.
+- `project-id` specifies the ID of the project.
 - `name` or `job` specifies the name of the job.
 - `id` or `job-id` specifies the ID of the job. One of `job`/`name` or `job-id`/`id` must be provided.
 - `run-id` specifies the ID of a specific job run.
+- `space` specifies the name of the space.
+- `space-id` specifies the ID of the space. One of `project` or `project-id` or `space` or `space-id` must be provided.
 
 ### Displaying a short log entry
 
 The following syntax displays a summary of entries in a job log file:
 
 ```
-cpdctl dsjob logsum {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID] [--type TYPE] [--max MAX] [--compatible]
+cpdctl dsjob logsum {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID] [--type TYPE] [--max MAX] [--compatible]
 ```
 
 - `project` is the name of the project that contains the job with the log entries that are being retrieved.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `job` or `name` is the name of the job.
 - `job-id` or `id` is the id of the job. One of `job` or `job-id` must be specified.
 - `runid` processes the log entry for a specific runid. If `runid` is not specified, the latest run is used by default. This field is optional.
@@ -517,6 +536,8 @@ cpdctl dsjob logsum {--project PROJECT | --project-id PROJID} {--job NAME | --na
   - ANY: All entries of any type. This option is the default if `type` is not specified.
 - `compatible` will output logs in the format previously used by DataStage components. This field is optional.
 - `max n` limits the number of entries that are retrieved to `n`.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -525,11 +546,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays the ID of the newest log entry of the specified type:
 
 ```
-cpdctl dsjob lognewest {--project PROJECT | --project-id PROJID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID] [--type TYPE]
+cpdctl dsjob lognewest {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--job NAME | --name NAME | --job-id ID | --id ID} [--run-id RUNID] [--type TYPE]
 ```
 
 - `project` is the name of the project that contains the job with the log entry that is being retrieved.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `job` or `name` is the name of the job.
 - `job-id` or `id` is the id of the job. One of `job` or `job-id` must be specified.
 - `type` can be one of the following options:
@@ -540,6 +561,8 @@ cpdctl dsjob lognewest {--project PROJECT | --project-id PROJID} {--job NAME | -
   - STARTED: All control logs
   - RESET: Job reset
   - BATCH: Batch control
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -550,16 +573,18 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax gets job run statistics for a particular job run in a project:
 
 ```
-cpdctl dsjob jobrunstat {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--run-id RUNID] [--all] [--with-metadata]
+cpdctl dsjob jobrunstat {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--run-id RUNID] [--all] [--with-metadata]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the job.
 - `id` is the id of the job. One of `name` or `id` must be specified.
 - `run-id` is the run id of the particular job run. This field is optional, if omitted the last job run statistics are displayed.
 - `all` causes the statistics for all runs for the job to be displayed. When using this flag `run-id` is ignored.
 - `with-metadata` when specified adds metadata to the output.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -568,17 +593,19 @@ A status code is printed to the output. A status code of 0 indicates successful 
 Prune commands can be used to delete the job runs based on age or number of runs. The following syntax can be used to prune job runs in a project:
 
 ```
-cpdctl dsjob prune {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--keep-runs NUMRUNS] [--keep-days NUMDAYS] [--threads n] [--dry-run]
+cpdctl dsjob prune {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--keep-runs NUMRUNS] [--keep-days NUMDAYS] [--threads n] [--dry-run]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the job.
 - `id` is the id of the job. One of `name` or `id` must be specified.
 - `keep-runs` specifies the number of latest runs to keep and deletes rest of the job runs clearing up space.
 - `keep-days` specifies a number of days and deletes all job runs older than that number.
 - `threads` specifies the number of parallel concurrent cleanup routines to run with one per job. The value should be in the range 5-20, default value is 5. This field is optional.
 - `dry-run` does a mock run without deleting the job runs.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project`, `project-id`, `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -587,11 +614,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 It is possible to have job runs that never complete and remain stale. These jobs are stuck in a starting or running state. The following syntax cleans up job runs in a project:
 
 ```
-cpdctl dsjob jobrunclean {--project PROJECT | --project-id PROJID} [--name NAME | --id ID] [--run-id RUNID] [--dry-run] [--threads n] [--all-spaces] [--before YYYY-MM-DD:hh:mm:ss] [--states JOBRUNSTATES]
+cpdctl dsjob jobrunclean {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--name NAME | --id ID] [--run-id RUNID] [--dry-run] [--threads n] [--all-spaces] [--before YYYY-MM-DD:hh:mm:ss] [--states JOBRUNSTATES]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the job.
 - `id` is the id of the job. One of `name` or `id` must be specified.
 - `run-id` is the run id of the particular job run to clean up. This field is optional.
@@ -601,6 +628,8 @@ cpdctl dsjob jobrunclean {--project PROJECT | --project-id PROJID} [--name NAME 
 - `states` should be one of the valid states for cleanup.
 - `states` specifies a comma-separated list of active states to process (e.g., `--states Running,Queued,Canceling,Paused,Resuming,Starting`).
 - `threads` specifies the number of concurrent tasks to perform; the valid range is 5–20 (default is 5).
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project`, `project-id`, `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -609,11 +638,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax lists job runs for the specified job:
 
 ```
-cpdctl dsjob list-jobruns {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--start <YYYY-MM-DD:HH:MM:SS>] [--end <YYYY-MM-DD:HH:MM:SS>] [--state <STATE>] [--sort-by-time | --sort-by-runname | --sort-by-duration] [--detail] [--output file|json] [--file-name FILENAME] [--params]
+cpdctl dsjob list-jobruns {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--start <YYYY-MM-DD:HH:MM:SS>] [--end <YYYY-MM-DD:HH:MM:SS>] [--state <STATE>] [--sort-by-time | --sort-by-runname | --sort-by-duration] [--detail] [--output file|json] [--file-name FILENAME] [--params]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the job.
 - `id` is the id of the job. One of `name` or `id` must be specified.
 - `sort-by-time` when specified sorts the list by create or update time.
@@ -625,6 +654,8 @@ cpdctl dsjob list-jobruns {--project PROJECT | --project-id PROJID} {--name NAME
 - `params` when specified, list of all job params for each job run are displayed.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project`, `project-id`, `space` or `space-id` must be specified.
 
 **Note**:
 List of valid job states: Completed, Failed, Canceled, Starting, Running, Queued, Canceling, Paused, Resuming, CompletedWithErrors, CompletedWithWarnings.
@@ -636,11 +667,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax gets job run details from the specified job:
 
 ```
-cpdctl dsjob get-jobrun {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--run-id RUNID] [--output json|file] [--file-name FILENAME] [--with-metadata] [--compatible] [--run-name] [--skip-metrics]
+cpdctl dsjob get-jobrun {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--run-id RUNID] [--output json|file] [--file-name FILENAME] [--with-metadata] [--compatible] [--run-name] [--skip-metrics]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the job.
 - `id` is the id of the job. One of `name` or `id` must be specified.
 - `run-id` is the id of the job run.
@@ -649,6 +680,8 @@ cpdctl dsjob get-jobrun {--project PROJECT | --project-id PROJID} {--name NAME |
 - `with-metadata` when specified adds metadata to the output.
 - `run-name` when specified only job runs that are with this name are processed.
 - `skip-metrics` when true, it returns job run details skipping metrics. Default is false.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project`, `project-id`, `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -684,11 +717,11 @@ It helps determine if a job is running the most recent compiled version, identif
 The syntax for using the command is provided below.
 
 ```
-cpdctl dsjob list-ds-runs {--project PROJECT | --project-id PROJID} {--name name | --id ID}  [--sort-by-jobfolder-name | --sort-by-compiled | --sort-by-assetname] [--show-by-runname] [--output file|json] [--file-name FILENAME --format csv/json] [--detail] [--show-only  [no-runs,not-compiled,out-of-date]]
+cpdctl dsjob list-ds-runs {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name name | --id ID} [--sort-by-jobfolder-name | --sort-by-compiled | --sort-by-assetname] [--show-by-runname] [--output file|json] [--file-name FILENAME --format csv/json] [--detail] [--show-only [no-runs,not-compiled,out-of-date]]
 ```
 
 - `project` is the name of the project that contains the job.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the job.
 - `id` is the id of the job. Only one of `job` or `job-id` can be specified. This field is optional. If not specified, all jobs in the project are processed.
 - `detail` if true additional details will also be included. A normal run captures `Job name`, `Run name`, `Run id`, `Run status`, `Start time`, `End time`, `Duration`, `Asset name`, `Compiled` and `Last compiled` With `details` set to True, more information is added, `Job id`, `Job folder`, `Job description`, `Asset id`, `Asset folder` and `Asset description`.
@@ -707,6 +740,8 @@ cpdctl dsjob list-ds-runs {--project PROJECT | --project-id PROJID} {--name name
   - `out-of-date` - jobs that have changed and are now out-of-date.
   - `last-run` - jobs that have at least one recorded run.
 - `show-by-runname` when true, shows job runs of the job for each unique job run name. Default is false.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project`, `project-id`, `space` or `space-id` must be specified.
 
 ### Generating Job Report with Run Data
 
@@ -809,13 +844,15 @@ cpdctl dsjob clear-cache {--project PROJECT | --project-id PROJID} [--skip-jobs]
 The following syntax lists all stages in a flow:
 
 ```
-cpdctl dsjob list-stages {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}
+cpdctl dsjob list-stages {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID}
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the flow.
 - `id` is the id of the flow. One of `name` or `id` must be specified.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -824,14 +861,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax lists all links associated with a stage in a flow:
 
 ```
-cpdctl dsjob list-links {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} --stage STAGE
+cpdctl dsjob list-links {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} --stage STAGE
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the flow.
 - `id` is the id of the flow. One of `name` or `id` must be specified.
 - `stage` is the name of a stage in the flow.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -858,16 +897,18 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax generates a report for a job run:
 
 ```
-get-jobrun-report {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--run-id RUNID] [--output json|file] [--file-name FILENAME]
+cpdctl dsjob get-jobrun-report {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--run-id RUNID] [--output json|file] [--file-name FILENAME]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the job.
 - `id` is the id of the job. One of `name` or `id` must be specified.
 - `run-id` is the id of the job run, this field is optional. When not specified, the latest job run is used.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -968,16 +1009,18 @@ cpdctl dsjob replace-stp {--project PROJECT | --project-id PROJID} [--name FLOWN
 The following syntax displays a list of all flows in the specified project:
 
 ```
-cpdctl dsjob list-flows {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time | --sort-by-compiled] [--with-id] [--with-compiled]
+cpdctl dsjob list-flows {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time | --sort-by-compiled] [--with-id] [--with-compiled]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of flows sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified sorts the list by create or update time. One of `sort` or `sort-by-time` can be specified.
 - `sort-by-compiled` if true, list will be sorted by most recent compile time.
 - `with-id` when specified prints the flow id along with the name of the flow.
 - `with-compiled` if true, displays compile status, last compile time, and whether flow needs compilation.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project`,  `project-id`, `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1003,16 +1046,18 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax fetches a flow by name from the specified project:
 
 ```
-cpdctl dsjob get-flow {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata]
+cpdctl dsjob get-flow {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--output json|file] [--file-name FILENAME] [--with-metadata]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the queried flow.
 - `id` is the id of the flow. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `with-metadata` when specified adds metadata to the output.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1074,16 +1119,18 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax fetches a flow/pipeline parameters for a given flow/pipeline from the specified project:
 
 ```
-cpdctl dsjob list-params {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--output file|json] [--file-name FILENAME] [--detail]
+cpdctl dsjob list-params {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name name | --id ID} [--output file|json] [--file-name FILENAME] [--detail]
 ```
 
 - `project` is the name of the project that contains the pipeline.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the flow or a pipeline.
 - `id` is the id of the flow or a pipeline. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `detail` when specified all the pipeline parameter sets are expanded to show their fields definitions.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1092,14 +1139,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all pipelines in the specified project:
 
 ```
-cpdctl dsjob list-pipelines {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
+cpdctl dsjob list-pipelines {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project that contains the pipelines to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the pipelines in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of pipelines sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified the list of pipelines will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the pipeline id along with the name of the pipeline.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the pipelines in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1112,11 +1161,13 @@ cpdctl dsjob get-pipeline {--project PROJECT | --project-id PROJID} {--name name
 ```
 
 - `project` is the name of the project that contains the pipeline.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the pipeline.
 - `id` is the id of the pipeline. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1175,17 +1226,19 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all pipeline versions in the specified project:
 
 ```
-cpdctl dsjob list-pipeline-versions {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--sort-by-time] [--output file] [--file-name ]
+cpdctl dsjob list-pipeline-versions {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name name | --id ID} [--sort-by-time] [--output file] [--file-name ]
 ```
 
 - `project` is the name of the project that contains the pipeline.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the pipeline versions in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `name` is the name of the pipeline.
 - `id` is the id of the pipeline. One of `name` or `id` must be specified.
 - `sort` when specified returns the list of pipeline versions sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified the list of pipeline versions will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the pipeline versions in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1194,7 +1247,7 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all pipeline runs in the specified project:
 
 ```
-cpdctl dsjob list-pipeline-runs {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--sort | --sort-by-time] [--detail] [--params]
+cpdctl dsjob list-pipeline-runs {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name name | --id ID} [--sort | --sort-by-time] [--detail] [--params]
 ```
 
 - `project` is the name of the project that contains the pipeline.
@@ -1205,6 +1258,8 @@ cpdctl dsjob list-pipeline-runs {--project PROJECT | --project-id PROJID} {--nam
 - `sort-by-time` when specified the list of pipeline runs will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `detail` when specified prints the pipeline run details.
 - `params` when specified, list of all job params for each job run are displayed.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the pipeline runs in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1300,10 +1355,12 @@ cpdctl dsjob get-pipeline-logs {--project PROJECT | --project-id PROJID} {--name
 ```
 
 - `project` is the name of the project that contains the pipeline.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the pipeline.
 - `id` is the id of the pipeline. One of `name` or `id` must be specified.
 - `run-id` if specified, the logs for that run id is printed. If not specified, the logs from the latest run are printed.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1312,11 +1369,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax allows you to compile pipelines into DataStage sequence runner
 
 ```
-cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID} {--name PIPELINE | --id PIPELINEID} [--code] [--threads <n>] [--enable-inline] [--enable-cache] [--recursive] [--enable-versioning] [--job-suffix] [--unified] [--enable-debug]
+cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name PIPELINE | --id PIPELINEID} [--code] [--threads <n>] [--enable-inline] [--enable-cache] [--recursive] [--enable-versioning] [--job-suffix] [--unified]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the pipeline.
 - `id` is the id of the pipeline. One of `name` or `id` can be specified. Multiple values can be specified for `name` and `id` to compile multiple items, in the format `--name NAME1 --name NAME2...`. The name can be a valid regular expression, ex: `Pipeline.*, ^.*THIS.*` If name or id are NOT present, all the pipelines in the project are compiled.
 - `code` the output will display compiled code output. This field is optional.
@@ -1328,6 +1385,8 @@ cpdctl dsjob compile-pipeline {--project PROJECT | --project-id PROJID} {--name 
 - `recursive` when true, it compiles all nested pipelines.
 - `unified` when true, it compiles pipelines to an unified pipeline. It does not create job by default.
 - `enable-debug` when true, it logs extra debug information in the run logs. Default value is false.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1349,14 +1408,16 @@ cpdctl dsjob get-dspipeline-info {--project PROJECT | --project-id PROJID} {--na
 The following syntax allows you to reset cacher for pipelines run as DataStage sequence runner.
 
 ```
-cpdctl dsjob reset-pipeline-cache {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--recursive]
+cpdctl dsjob reset-pipeline-cache {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--recursive]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the pipeline.
 - `id` is the id of the pipeline. One of `name` or `id` can be specified.
 - `recursive` when true, cache is being reset for all nested pipelines.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1381,12 +1442,14 @@ cpdctl dsjob unify-pipeline {--project PROJECT | --project-id PROJID} {--name NA
 This command retrieves Unified Pipeline settings for a project.
 
 ```
-cpdctl dsjob get-pipeline-settings {--project PROJECT | --project-id PROJID} [--output json|file|table] [--file-name FILENAME]
+cpdctl dsjob get-pipeline-settings {--project PROJECT | --project-id PROJID} [--output json|file|table] [--file-name FILENAME]cpdctl dsjob get-pipeline-settings {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--output json|file|table] [--file-name FILENAME]
 ```
 
 - `project` specifies the name of the project.
-- `project-id` specifies the ID of the project. One of `project` or `project-id` must be provided.
+- `project-id` specifies the ID of the project.
 - `file-name` specifies the name of the file to which the output is written; this field is optional.
+- `space` specifies the name of the space.
+- `space-id` specifies the ID of the space. One of `project` or `project-id` or `space` or `space-id` must be provided.
 
 #### Set Unified Pipeline Settings
 
@@ -1570,11 +1633,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax imports DataStage flows from a .zip file into a specified project:
 
 ```
-cpdctl dsjob import-zip {--project PROJECT | --project-id PROJID} [--on-failure ONFAILURE] [--conflict-resolution CONFLICT-RESOLUTION] [--skip-on-replace LIST] [--hard-replace] [--asset-type LIST] [--no-compile] [--include-compile-errors] [--enable-notification] [--include-binaries] [--run-job-by-name] --file-name FILE-NAME [--wait secs] [--enc-key ENCODING-KEY] [--override-datasets-filesets] [--output FORMAT] [--include-python-binaries] [--include-common-binaries] [--update-job-details]
+cpdctl dsjob import-zip {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--on-failure ONFAILURE] [--conflict-resolution CONFLICT-RESOLUTION] [--skip-on-replace LIST] [--hard-replace] [--asset-type LIST] [--no-compile] [--include-compile-errors] [--enable-notification] [--include-binaries] [--run-job-by-name] --file-name FILE-NAME [--wait secs] [--enc-key ENCODING-KEY] [--override-datasets-filesets] [--output FORMAT] [--include-python-binaries] [--include-common-binaries] [--update-job-details]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `on-failure` indicates what action to take if the import fails. This field is optional. The default option is continue, the other option is stop.
 - `conflict-resolution` specifies the resolution when the data flow to be imported has the same name as an existing data flow in the project or catalog. This field is optional. The default option is skip, the others are rename and replace.
 - `skip-on-replace` specifies a list of object types to skip. The following values are valid for object types: `connection, data_intg_subflow, data_definition, parameter_set, data_asset, ds_message_handler, data_intg_build_stage, data_intg_custom_stage, data_intg_wrapped_stage, standardization_rule, ds_xml_schema_library, custom_stage_library, function_library, ds_routine, ds_match_specification, data_intg_parallel_function, data_intg_java_library, data_quality_rule, data_quality_definition`.
@@ -1591,6 +1654,8 @@ cpdctl dsjob import-zip {--project PROJECT | --project-id PROJID} [--on-failure 
 - `include-common-binaries` includes compiled optimized pipeline common libraries; the default value is true.
 - `include-python-binaries` when set to true, compiled optimized pipeline Python binaries are included.
 - `update-job-details` when set to true, job details are fully updated, including parameters, environment variables, retention policy, and more.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output.
 
@@ -1623,17 +1688,17 @@ The following syntax exports a DataStage flow and dependent DataStage components
 from a specified project:
 
 ```
-cpdctl dsjob export-zip {--project PROJECT | --project-id PROJID} {--name FLOW | --id ID | --pipeline SEQFLOWNAME | --pipeline-id SEQFLOWID | --testcase TESTCASENAME | --testcase-id TESTCASEID | --subflow SUBFLOWNAME | --subflow-id SUBFLOWID} --file-name FILENAME [--no-secrets] [--no-deps] [--include-data-assets] [--exclude-datasets-filesets] [--include-binaries] [--enc-key ENCODING-KEY] [--include-compile-metadata] [--include-python-binaries] [--include-common-binaries]
+cpdctl dsjob export-zip {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name FLOW | --id ID | --pipeline SEQFLOWNAME | --pipeline-id SEQFLOWID | --testcase TESTCASENAME | --testcase-id TESTCASEID | --subflow SUBFLOWNAME | --subflow-id SUBFLOWID} --file-name FILENAME [--no-secrets] [--no-deps] [--include-data-assets] [--exclude-datasets-filesets] [--include-binaries] [--enc-key ENCODING-KEY] [--include-compile-metadata] [--include-python-binaries] [--include-common-binaries]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of project or project-id must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the flow.
-- `id` is the id of the flow. One of name or id must be specified.
+- `id` is the id of the flow. One of `name` or `id` must be specified.
 - `pipeline` is the name of the pipeline.
-- `pipeline-id` is the id of the pipeline. One of name or id must be specified.
+- `pipeline-id` is the id of the pipeline. One of `name` or `id` must be specified.
 - `testcase` is the name of the testcase.
-- `testcase-id` is the id of the testcase. One of name or id must be specified.
+- `testcase-id` is the id of the testcase. One of `name` or `id` must be specified.
 - `no-deps` specifies that flow dependencies will not be exported. This field is optional. The default option is false.
 - `no-secrets` specifies that secrets will not be exported. This field is optional. The default option is false.
 - `file-name` specifies the name of the .zip file to which the flow is exported.
@@ -1647,6 +1712,8 @@ cpdctl dsjob export-zip {--project PROJECT | --project-id PROJID} {--name FLOW |
 - `no-secrets` when set to true, secrets are removed.
 - `include-common-binaries` includes compiled optimized pipeline common libraries; the default value is true.
 - `include-python-binaries` when set to true, compiled optimized pipeline Python binaries are included.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1655,11 +1722,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax will export all DataStage components in a specified project to a .zip file:
 
 ```
-cpdctl dsjob export-datastage-assets {--project PROJECT | --project-id PROJID}  --file-name FILENAME [--no-secrets] [--include-data-assets] [--exclude-datasets-filesets] [--include-binaries] [--enc-key ENCODING-KEY] [--include-compile-metadata] [--include-python-binaries] [--include-common-binaries]
+cpdctl dsjob export-datastage-assets {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} --file-name FILENAME [--no-secrets] [--include-data-assets] [--exclude-datasets-filesets] [--include-binaries] [--enc-key ENCODING-KEY] [--include-compile-metadata] [--include-python-binaries] [--include-common-binaries]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `file-name` specifies the name of the .zip file to which the assets are exported.
 - `include-data-assets` includes the project data assets as part of the export.
 - `include-binaries` when true, runtime and compile time artifacts are included in the exported zip file.
@@ -1669,6 +1736,8 @@ cpdctl dsjob export-datastage-assets {--project PROJECT | --project-id PROJID}  
 - `no-secrets` when set to true, secrets are removed.
 - `include-common-binaries` includes compiled optimized pipeline common libraries; the default value is true.
 - `include-python-binaries` when set to true, compiled optimized pipeline Python binaries are included.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 This call is synchronous and prints out the status of the export progress, as well as a summary of independent components written to the output file.
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
@@ -1680,14 +1749,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all connections in the specified project:
 
 ```
-cpdctl dsjob list-connections {--project PROJECT | --project-id PROJID} [--sort|--sort-by-time] [--with-id]
+cpdctl dsjob list-connections {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort|--sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project that contains the connections to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the DataStage connections in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of connections sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified sorts the list by create or update time. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the connection id along with the name of the connection.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the DataStage connections in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1788,16 +1859,18 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all hardware specifications in the specified project:
 
 ```
-cpdctl dsjob list-hardware-specs {--project PROJECT | --project-id PROJID} [--full] [--all] [--sort | --sort-by-time] [--with-id]
+cpdctl dsjob list-hardware-specs {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--full] [--all] [--sort | --sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the DataStage Hardware Specifications in the project are displayed, one per line.
+- `project-id` is the id of the project.
 - `all` displays list of all hardware specifications in the project for the specified type, ex: DataStage, Spark, and Nodes.
 - `full` provides full configuration details of each hardware specification. This field is optional.
 - `sort` when specified returns the list of hardware specifications sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified sorts the list by create or update time. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the hardware specification id along with the name of the hardware specification.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the DataStage Hardware Specifications in the project are displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1842,15 +1915,17 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all Environments in the specified project:
 
 ```
-cpdctl dsjob list-envs {--project PROJECT | --project-id PROJID} [--types TYPE] [--full] [--sort] [--with-id]
+cpdctl dsjob list-envs {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--types TYPE] [--full] [--sort] [--with-id]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the DataStage Environments in the project are displayed, one per line.
+- `project-id` is the id of the project.
 - `type` displays list of all environments in the project specified by the type. The value should be one of `notebook`, `wml_flow`, `rstudio`, `default_spark`, `remote_spark`, `jupyterlab`, `remote_yarn`, `datastage`, `profiling`, `modeler`, or `data_privacy`. This field is optional.
 - `full` provides full configuration details of each environment. This field is optional.
 - `sort` when specified returns the list of environments sorted in alphabetical order. This field is optional.
 - `with-id` when specified prints the environment id along with the name of the environment.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the DataStage Environments in the project are displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1897,14 +1972,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all subflows in the specified project:
 
 ```
-cpdctl dsjob list-subflows {--project PROJECT | --project-id PROJID} [--sort|--sort-by-time] [--with-id]
+cpdctl dsjob list-subflows {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort|--sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project that contains the subflows to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the subflows in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of subflows sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified sorts the list by create or update time. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the subflow id along with the name of the subflow.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the subflows in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -1981,16 +2058,18 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all parameter sets in the specified project:
 
 ```
-cpdctl dsjob list-paramsets {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--output json] [--with-id]
+cpdctl dsjob list-paramsets {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time] [--output json] [--with-id]
 
 ```
 
 - `project` is the name of the project that contains the parameter sets to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the parameter sets in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of parameter sets sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified sorts the list by create or update time. One of `sort` or `sort-by-time` can be specified.
 - `output` specifies the format of the output. This field is optional.
 - `with-id` when specified prints the parameter set id along with the name of the parameter set.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the parameter sets in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2049,16 +2128,18 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax fetches a parameter set by name from the specified project:
 
 ```
-cpdctl dsjob get-paramset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--output file|json] [--file-name FILENAME] [--with-metadata]
+cpdctl dsjob get-paramset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--output file|json] [--file-name FILENAME] [--with-metadata]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the parameter set.
 - `id` is the id of the parameter set. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `with-metadata` when specified adds metadata to the output.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2146,13 +2227,15 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all value sets in the specified parameter set:
 
 ```
-cpdctl dsjob list-paramset-valuesets {--project PROJECT | --project-id PROJID} {--paramset PARAMSET | --paramset-id PARAMSETID}
+cpdctl dsjob list-paramset-valuesets {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--paramset PARAMSET | --paramset-id PARAMSETID}
 ```
 
 - `project` is the name of the project that contains the parameter set.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the value sets in the parameter set is displayed, one per line.
+- `project-id` is the id of the project.
 - `paramset` is the name of the parameter set.
 - `paramset-id` is the id of the parameter set. One of `paramset` or `paramset-id` must be specified.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the value sets in the parameter set is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2262,14 +2345,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all TableDefinitions in the specified project:
 
 ```
-cpdctl dsjob list-tabledefs {--project PROJECT | --project-id PROJID} [--sort|--sort-by-time] [--with-id]
+cpdctl dsjob list-tabledefs {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort|--sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the TableDefinitions in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of TableDefinitions sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified sorts the list by create or update time. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the table definition id along with the name of the table definition.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the TableDefinitions in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2383,14 +2468,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all XML libraries in the specified project:
 
 ```
-cpdctl dsjob list-libraries {--project PROJECT | --project-id PROJID} [--sort|--sort-by-time] [--with-id]
+cpdctl dsjob list-libraries {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort|--sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the XML libraries in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of XML libraries sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified sorts the list by create or update time. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the XML library id along with the name of the XML library.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the XML libraries in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2519,15 +2606,17 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax lists all environment variables defined in a specified project environment:
 
 ```
-cpdctl dsjob list-env-vars {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--type TYPE] [--sort]
+cpdctl dsjob list-env-vars {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--type TYPE] [--sort]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the environment.
 - `id` is the id of the environment. One of `name` or `id` must be specified.
 - `type` is the type of the environment.
 - `sort` when set, sorts the environment variables alphabetically.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2572,16 +2661,18 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax provides a description of the dataset schema definition in a given project.
 
 ```
-cpdctl dsjob describe-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  [--location DATASETLOCATION] [--output json|file] [--file-name FILENAME]
+cpdctl dsjob describe-dataset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--location DATASETLOCATION] [--output json|file] [--file-name FILENAME]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the dataset.
 - `id` is the asset id of the dataset. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `location` specifies path to the physical location of the dataset. It is used when duplicate names are allowed.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2590,11 +2681,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax provides the metadata and sample data of a dataset in the given project.
 
 ```
-cpdctl dsjob view-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location DATASETLOCATION] [--output json|file --file-name FILENAME --delim CHAR --dump --threads <N> --offset <NUM> --limit <NUM> --prefetch <NUM>]
+cpdctl dsjob view-dataset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--location DATASETLOCATION] [--output json|file --file-name FILENAME --delim CHAR --dump --threads <N> --offset <NUM> --limit <NUM> --prefetch <NUM>]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the dataset.
 - `id` is the asset id of the dataset. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
@@ -2607,6 +2698,8 @@ cpdctl dsjob view-dataset {--project PROJECT | --project-id PROJID} {--name NAME
 - `limit` reads number of records specified in each read.
 - `prefetch` specifies the number of records to cache when the `dump` option is used to optimize fetch operations.
 - `thread` specifies the number of concurrent reads to perform; it is only used with the `dump` option (default is 1).
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2648,17 +2741,19 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax is used to fetch the asset definition for a dataset.
 
 ```
-cpdctl dsjob get-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location DATASETLOCATION] [--output json|file] [--file-name FILENAME] [--with-metadata]
+cpdctl dsjob get-dataset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--location DATASETLOCATION] [--output json|file] [--file-name FILENAME] [--with-metadata]
 ```
 
 - `project` is the name of the project that contains the dataset.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the dataset.
 - `id` is the id of the dataset. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `with-metadata` when specified adds metadata to the output.
-- `location` is a path to the physical location of the dataset. It is used when duplicate names are allowed
+- `location` is a path to the physical location of the dataset. It is used when duplicate names are allowed.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 ### Exporting dataset
 
@@ -2714,14 +2809,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax truncates data from a dataset in the specified project.
 
 ```
-cpdctl dsjob truncate-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  [--location DATASETLOCATION]
+cpdctl dsjob truncate-dataset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--location DATASETLOCATION]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the dataset.
 - `id` is the asset id of the dataset. One of `name` or `id` must be specified.
 - `location` is a path to the physical location of the dataset. It is used when duplicate names are allowed.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2730,17 +2827,19 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax renames a dataset in the specified project.
 
 ```
-cpdctl dsjob rename-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location DATASETLOCATION] --to-name NEWNAME [--override] [--deep]
+cpdctl dsjob rename-dataset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--location DATASETLOCATION] --to-name NEWNAME [--override] [--deep]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the dataset.
 - `id` is the asset id of the dataset. One of `name` or `id` must be specified.
 - `to-name` is the new name to which the dataset is renamed.
 - `deep` this option is deprecated, it does not affect the operation being perfomed.
 - `location` is a path to the physical location of the dataset. It is used when duplicate names are allowed.
 - `override` when set to true, it overwrites the file if it already exists.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2749,16 +2848,18 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following commands allows copy of a dataset to a new name while keeping the original dataset.
 
 ```
-cpdctl dsjob copy-dataset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  [--location DATASETLOCATION] --to-name NEWNAME [--override]
+cpdctl dsjob copy-dataset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--location DATASETLOCATION] --to-name NEWNAME [--override]
 ```
 
 - `project`  is the name of the project.
-- `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
+- `project-id`  is the id of the project.
 - `name`  is the name of the dataset.
 - `id`  is the asset id of the dataset. One of  `name`  or  `id`  must be specified.
 - `to-name`  is the new name to which the dataset is copied.
 - `location` is a path to the physical location of the dataset. It is used when duplicate names are allowed.
 - `override` when set to true, it overwrites the file if it already exists.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2767,14 +2868,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax provides a description of the fileset schema definition in a given project.
 
 ```
-cpdctl dsjob describe-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location FILESETLOCATION]
+cpdctl dsjob describe-fileset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--location FILESETLOCATION]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the fileset.
 - `id` is the asset id of the fileset. One of `name` or `id` must be specified.
 - `location` is a path to the physical location of the fileset. It is used when duplicate names are allowed.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2783,11 +2886,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax provides the metadata and sample data of a fileset in the given project.
 
 ```
-cpdctl dsjob view-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location FILESETLOCATION] [--output json|file --file-name FILENAME --delim CHAR]
+cpdctl dsjob view-fileset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--location FILESETLOCATION] [--output json|file --file-name FILENAME --delim CHAR]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the fileset.
 - `id` is the asset id of the fileset. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
@@ -2798,6 +2901,8 @@ cpdctl dsjob view-fileset {--project PROJECT | --project-id PROJID} {--name NAME
 - `dump` when set to true, it outputs all records in the fileset.
 - `offset` reads data from the offset provided, default is 0.
 - `limit` reads number of records specified in each read.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2839,17 +2944,19 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax is used to fetch the asset definition for a fileset.
 
 ```
-cpdctl dsjob get-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--location FILESETLOCATION] [--output json|file] [--file-name FILENAME] [--with-metadata]
+cpdctl dsjob get-fileset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--location FILESETLOCATION] [--output json|file] [--file-name FILENAME] [--with-metadata]
 ```
 
 - `project` is the name of the project that contains the fileset.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the fileset.
 - `id` is the id of the fileset. One of `name` or `id` must be specified.
 - `output` specifies the format of the output. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `with-metadata` when specified adds metadata to the output.
 - `location` is a path to the physical location of the fileset. It is used when duplicate names are allowed.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2908,14 +3015,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax truncates data from a fileset in the specified project.
 
 ```
-cpdctl dsjob truncate-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}
+cpdctl dsjob truncate-fileset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID}
 
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the fileset.
 - `id` is the asset id of the fileset. One of `name` or `id` must be specified.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2924,15 +3033,17 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax renames a fileset in the specified project.
 
 ```
-cpdctl dsjob rename-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} --to-name NEWNAME --deep
+cpdctl dsjob rename-fileset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} --to-name NEWNAME --deep
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the fileset.
 - `id` is the asset id of the fileset. One of `name` or `id` must be specified.
 - `to-name` is the new name to which the fileset is renamed.
 - `deep` if set to true, it renames also the underlying fileset files on disk, default value is false.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2941,16 +3052,18 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following commands allows copy of a fileset to a new name while keeping the original fileset. 
 
 ```
-cpdctl dsjob copy-fileset {--project PROJECT | --project-id PROJID} {--name NAME | --id ID}  [--location FILESETLOCATION] --to-name NEWNAME [--override]
+cpdctl dsjob copy-fileset {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--location FILESETLOCATION] --to-name NEWNAME [--override]
 ```
 
 - `project`  is the name of the project.
-- `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
+- `project-id`  is the id of the project.
 - `name`  is the name of the fileset.
 - `id`  is the asset id of the fileset. One of  `name`  or  `id`  must be specified.
 - `to-name`  is the new name to which the fileset is copied.
 - `location` is a path to the physical location of the fileset. It is used when duplicate names are allowed.
 - `override` when set to true, it overwrites the file if it already exists.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -2996,14 +3109,16 @@ cpdctl dsjob version
 The following syntax displays a list of all build stages in the specified project:
 
 ```
-cpdctl dsjob list-build-stages {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
+cpdctl dsjob list-build-stages {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project that contains the build stages to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the build stages in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of build stages sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified the list of build stages will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the build stage id along with the name of the build stage.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the build stages in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -3114,10 +3229,12 @@ cpdctl dsjob list-custom-stages {--project PROJECT | --project-id PROJID} [--sor
 ```
 
 - `project` is the name of the project that contains the custom stages to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the custom stages in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of custom stages sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified the list of custom stages will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the custom stage id along with the name of the custom stage.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the custom stages in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -3192,14 +3309,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all wrapped stages in the specified project:
 
 ```
-cpdctl dsjob list-wrapped-stages {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
+cpdctl dsjob list-wrapped-stages {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project that contains the wrapped stages to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the wrapped stages in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of wrapped stages sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified the list of wrapped stages will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the wrapped stage id along with the name of the wrapped stage.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the wrapped stages in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -3291,15 +3410,17 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all assets in the specified project:
 
 ```
-cpdctl dsjob list-assets {--project PROJECT | --project-id PROJID} [-asset-type ASSETTYPE] [--sort | --sort-by-time] [--with-id]
+cpdctl dsjob list-assets {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [-asset-type ASSETTYPE] [--sort | --sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project that contains the assets to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the assets in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `asset-type` is the type of asset to list. If not specified, all assets are listed.
 - `sort` when specified returns the list of assets sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified the list of assets will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the asset id along with the name of the asset.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the assets in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -3361,14 +3482,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all match specifications in the specified project:
 
 ```
-cpdctl dsjob list-match-specs {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
+cpdctl dsjob list-match-specs {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project that contains the match specifications to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the match specifications in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of match specifications sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified the list of match specifications will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the match specification id along with the name of the match specification.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the match specifications in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -3445,14 +3568,16 @@ Function ibraries provide a means to execute user-defined C++ functions, deliver
 The following syntax displays a list of all function libraries in the specified project:
 
 ```
-cpdctl dsjob list-function-libs {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
+cpdctl dsjob list-function-libs {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project that contains the function libraries to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the function libraries in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of function libraries sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified sorts the list of function libraries by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the function library id along with the name of the function library.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the function libraries in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -3550,15 +3675,17 @@ Java libraries provide a means to execute user-defined java libraries when runni
 The following syntax displays a list of all java libraries in the specified project:
 
 ```
-cpdctl dsjob list-java-libraries {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
+cpdctl dsjob list-java-libraries {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time] [--with-id]
 
 ```
 
 - `project` is the name of the project that contains the java libraries to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the java libraries in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of java libraries sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified, the list of java libraries will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the java library id along with the name of the java library.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the java libraries in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -3637,14 +3764,16 @@ Message handlers define rules about how to handle messages generated when a para
 The following syntax displays a list of all message handlers in the specified project:
 
 ```
-cpdctl dsjob list-message-handlers {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
+cpdctl dsjob list-message-handlers {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project that contains the message handlers to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the message handlers in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of message handlers sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified, the list of message handlers will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the message handler id along with the name of the message handler.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the message handlers in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -3760,11 +3889,11 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax is used to set the DataStage settings in the specified project:
 
 ```
-cpdctl dsjob update-ds-settings {--project PROJECT | --project-id PROJID} [--priority Low|Medium|High] [{--env ENVNAME | --env-id ENVID}] [--msg-handler MESSAGEHANDLER] [--separator , or .] [--keep-runs n] [--keep-days n] [--warn-limit] [--time-format hh:nn:ss] [-date-format YYYY-MM-DD] [--timestamp-format YYYY-MM-DD hh:mm:ss] [--nls-format NLSFORMAT] [--nls-collate LANGUAGE] [--enable-remote-engine] [--datastage-job-suffix] [-pipeline-job-suffix] [--pipeline-optimized-suffix]
+cpdctl dsjob update-ds-settings {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--priority Low|Medium|High] [{--env ENVNAME | --env-id ENVID}] [--msg-handler MESSAGEHANDLER] [--separator , or .] [--keep-runs n] [--keep-days n] [--warn-limit] [--time-format hh:nn:ss] [-date-format YYYY-MM-DD] [--timestamp-format YYYY-MM-DD hh:mm:ss] [--nls-format NLSFORMAT] [--nls-collate LANGUAGE] [--enable-remote-engine] [--datastage-job-suffix] [-pipeline-job-suffix] [--pipeline-optimized-suffix]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `priority` sets the priority on the DataStage job. Valid values are Low, Medium and High. This field is optional.
 - `env` sets the default environment for the project by name. This field is optional.
 - `env-id` sets the default environment for the project by id. This field is optional.
@@ -3781,6 +3910,8 @@ cpdctl dsjob update-ds-settings {--project PROJECT | --project-id PROJID} [--pri
 - `pipeline-job-suffix` suffix to use when creating Pipeline jobs.
 - `pipeline-optimized-suffix` suffix to use when creating Optimized Pipeline runner jobs.
 - `warn-limit` specifies the number of warnings and after that a job is terminated. A value of 0 means no limit.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -3791,12 +3922,14 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all standardization rules in the specified project:
 
 ```
-cpdctl dsjob list-rules {--project PROJECT | --project-id PROJID} [--custom-only]
+cpdctl dsjob list-rules {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--custom-only]
 ```
 
 - `project` is the name of the project that contains the standardization rules to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the standardization rules in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `custom-only` if true, shows only custom rules.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the standardization rules in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -3888,14 +4021,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all quality rules in the specified project.
 
 ```
-cpdctl dsjob list-quality-rules {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
+cpdctl dsjob list-quality-rules {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project that contains the quality rules.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the quality rules in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of quality rules sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified sorts the list by create or update time. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the rule id and name.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the quality rules in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -3971,14 +4106,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all quality rule definitions in the specified project.
 
 ```
-cpdctl dsjob list-quality-definitions {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
+cpdctl dsjob list-quality-definitions {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project that contains the quality rule definitions.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the quality rule definitions in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of quality rule definitions sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified sorts the list by create or update time. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the rule id and name.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the quality rule definitions in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -4138,33 +4275,37 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of all dependencies between DataStage components:
 
 ```
-cpdctl dsjob list-dependencies {--project PROJECT | --project-id PROJID} [--file-name FILENAME] [--deep] [--usedby] [--sort | --sort-by-time] [--output json|file]
+cpdctl dsjob list-dependencies {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--file-name FILENAME] [--deep] [--usedby] [--sort | --sort-by-time] [--output json|file]
 ```
 
 - `project` is the name of the project that contains the pipelines to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified the list will be sorted by time of creation with latest at the top of the list. One of `sort`or `sort-by-time` can be specified.
 - `usedby` when specified prints the dependency using the used by relationship, for examples `job uses flow` vs `flow used by job`. This field is optional.
 - `deep` will traverse the dependency tree exhaustively and print the dependencies tree fully. This field is optional.
 - `file-name` specifies the name of the file to which the output is written. This field is optional.
 - `output` specifies the format of the output. This field is optional.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 ### Listing usages
 
 The following syntax displays a list of all usages for a given list of DataStage components:
 
 ```
-cpdctl dsjob list-usage {--project PROJECT | --project-id PROJID} {--name ASSETNAME | --id ASSETID}... [--deep] [--usedby] [--output json|file]
+cpdctl dsjob list-usage {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name ASSETNAME | --id ASSETID}... [--deep] [--usedby] [--output json|file]
 ```
 
 - `project` is the name of the project that contains the pipelines to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `asset-name` is the name of the asset. This field must be specified and repeatable.
 - `asset-id` is the id of the asset. One of `asset-name` or `asset-id` must be specified.
 - `usedby` when specified prints the dependency using the used by relationship, for examples `job uses flow` vs `flow used by job`. This field is optional.
 - `deep` when specified traverses the dependency tree exhaustively and print the dependencies tree fully. This field is optional.
 - `output` specifies the format of the output. This field is optional.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 ## DSParams
 
@@ -4190,7 +4331,7 @@ Note: If the PROJDEF does not exist it will be created and every entry in the En
 The following syntax validates pipelines in a specified project to verify that the pipeline references DataStage correctly:
 
 ```
-cpdctl dsjob validate-pipeline {--project PROJECT | --project-id PROJID} {--name name | --id ID} [--detail] [--threads <n>]
+cpdctl dsjob validate-pipeline {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name name | --id ID} [--detail] [--threads <n>]
 ```
 
 - `project` is the name of the project that contains the pipeline.
@@ -4199,6 +4340,8 @@ cpdctl dsjob validate-pipeline {--project PROJECT | --project-id PROJID} {--name
 - `id` is the id of the pipeline. One of `name` or `id` can be specified. If neither is specified, all pipelines in the project are validated.
 - `detail` when specified produces a detailed output. This field is optional.
 - `threads` specifies the number of concurrent validations to run, this value can be between 5-20. Default values is 5.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -4225,14 +4368,16 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax validates a flow and checks if all the flow's references to connections, parameter sets and subflows are valid.
 
 ```
-cpdctl dsjob validate-flow {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--threads <n>]
+cpdctl dsjob validate-flow {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--threads <n>]
 ```
 
 - `project` is the name of the project that contains the flow.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the flow.
 - `id` is the id of the flow. One of of `name` or `id` must be specified.
 - `threads` specifies the number of concurrent validations to run, this value can be between 5-20. Default values is 5.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 If name or id of the flow is not specified, the command will validate all flows in a given project.
 
@@ -4241,14 +4386,16 @@ If name or id of the flow is not specified, the command will validate all flows 
 The following syntax validates a subflow and checks if all the subflow's references to connections, parameter sets and subflows are valid.
 
 ```
-cpdctl dsjob validate-subflow {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--threads <n>]
+cpdctl dsjob validate-subflow {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--threads <n>]
 ```
 
 - `project` is the name of the project that contains the subflow.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the subflow.
 - `id` is the id of the flow. One of of `name` or `id` must be specified.
 - `threads` specifies the number of concurrent validations to run, this value can be between 5-20. Default values is 5.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 If name or id of the subflow is not specified, the command will validate all subflows in a given project.
 
@@ -4257,15 +4404,17 @@ If name or id of the subflow is not specified, the command will validate all sub
 The following syntax validates a job.
 
 ```
-cpdctl dsjob validate-job {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--threads <n>] [--remove-param-overrides]
+cpdctl dsjob validate-job {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--threads <n>] [--remove-param-overrides]
 ```
 
 - `project` is the name of the project.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified.
+- `project-id` is the id of the project.
 - `name` is the name of the job.
 - `id` is the id of the job. One of of `name` or `id` must be specified.
 - `threads` specifies the number of concurrent validations to run, this value can be between 5-20. Default values is 5.
 - `remove-param-overrides` when true, will replace the job parameters with flow runtime parameters if they are different.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified.
 
 If name or id of the job is not specified, the command will validate all jobs in a given project.
 
@@ -4276,14 +4425,16 @@ If name or id of the job is not specified, the command will validate all jobs in
 The following syntax displays a list of all CFF Schemas in the specified project:
 
 ```
-cpdctl dsjob list-cff-schemas {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id]
+cpdctl dsjob list-cff-schemas {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time] [--with-id]
 ```
 
 - `project` is the name of the project that contains the CFF Schemas to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the CFF Schemas in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of CFF Schemas sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified, the list of CFF Schemas will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the CFF Schema id along with the name of the CFF Schema.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the CFF Schemas in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -4362,15 +4513,17 @@ The following commands can be used to work with folders.
 The following syntax displays a list of all folders in the specified project:
 
 ```
-cpdctl dsjob list-folders {--project PROJECT | --project-id PROJID} [--sort | --sort-by-time] [--with-id] [--output json]
+cpdctl dsjob list-folders {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} [--sort | --sort-by-time] [--with-id] [--output json]
 ```
 
 - `project` is the name of the project that contains the folders to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the folders in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `sort` when specified returns the list of folders sorted in alphabetical order. This field is optional.
 - `sort-by-time` when specified, the list of folders will be sorted by time of creation with latest at the top of the list. One of `sort` or `sort-by-time` can be specified.
 - `with-id` when specified prints the folder id along with the name of the folder.
 - `output` when specified, the `json` value is accepted as a valid value. When used, the command output results in `json`.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the folders in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -4379,15 +4532,17 @@ A status code is printed to the output. A status code of 0 indicates successful 
 The following syntax displays a list of the contents of a folder in the specified project:
 
 ```
-cpdctl dsjob list-folder {--project PROJECT | --project-id PROJID} {--name NAME | --id ID} [--deep]
+cpdctl dsjob list-folder {--project PROJECT | --project-id PROJID | --space SPACE | --space-id SPACEID} {--name NAME | --id ID} [--deep]
 
 ```
 
 - `project` is the name of the project that contains the folders to list.
-- `project-id` is the id of the project. One of `project` or `project-id` must be specified. A list of all the folders in the project is displayed, one per line.
+- `project-id` is the id of the project.
 - `name` is the name of the folder.
 - `id` is the id of the folder. One of `name` or `id` must be specified.
 - `deep` will travel through folders and its subfolders until leaf nodes are reached.
+- `space` is the name of the space.
+- `space-id` is the id of the space. One of `project` or `project-id` or `space` or `space-id` must be specified. A list of all the folders in the project is displayed, one per line.
 
 A status code is printed to the output. A status code of 0 indicates successful completion of the command.
 
@@ -4945,7 +5100,7 @@ cpdctl dsjob create-vault-secret  --name NAME [--description DESCRIPTION] --secr
 - `description` description of the secret to be created.
 - `vault-urn` URN of the vault.
 - `secret-type` should be a valid value for the secret type, ex: generic, credentials, certificate or token (default: credentials).
-- `value` list of name-value pairs, ex: `--value password=<password>`, `--value username=<user>` when secret-type is 'credentials'.
+- `value` list of name-value pairs, ex: `--value pword=<pword>`, `--value username=<user>` when secret-type is 'credentials'.
 
 ### Get a Vault Secret
 The following command is used to get details of a secret in the vault.
