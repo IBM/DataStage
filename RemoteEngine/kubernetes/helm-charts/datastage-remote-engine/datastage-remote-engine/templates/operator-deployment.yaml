@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ibm-cpd-datastage-remote-operator
+  namespace: {{ .Values.namespace }}
+  annotations:
+    productID: ff566289767a4a7f822ab01ebaa16cf4
+    productMetric: FREE
+    productName: IBM DataStage as a Service Anywhere
+    productVersion: 4.8.0
+  labels:
+    app.kubernetes.io/instance: ibm-cpd-datastage-remote-operator
+    app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+    app.kubernetes.io/name: ibm-cpd-datastage-remote-operator
+    intent: projected
+    icpdsupport/addOnId: datastage
+    icpdsupport/app: operator
+    name: ibm-cpd-datastage-remote-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: ibm-cpd-datastage-remote-operator
+  template:
+    metadata:
+      annotations:
+        productID: ff566289767a4a7f822ab01ebaa16cf4
+        productMetric: FREE
+        productName: IBM DataStage as a Service Anywhere
+        productVersion: 4.8.0
+      labels:
+        app.kubernetes.io/instance: ibm-cpd-datastage-remote-operator
+        app.kubernetes.io/managed-by: ibm-cpd-datastage-remote-operator
+        app.kubernetes.io/name: ibm-cpd-datastage-remote-operator
+        intent: projected
+        icpdsupport/addOnId: datastage
+        icpdsupport/app: operator
+        name: ibm-cpd-datastage-remote-operator
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - amd64
+      serviceAccount: ibm-cpd-datastage-remote-operator-serviceaccount
+      serviceAccountName: ibm-cpd-datastage-remote-operator-serviceaccount
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: manager
+          image: {{ include "datastage.operatorRegistry" . }}/ds-operator@{{ .Values.operatorDigest }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--zap-log-level"
+            - "error"
+            - "--max-concurrent-reconciles"
+            - "6"
+            - "--watches-file"
+            - "./px_remote_engine_watches.yaml"
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: OPERATOR_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+{{- if not .Values.isOpenShiftCluster }}
+            - name: KUBERNETES
+              value: "True"
+{{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 6789
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 6789
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            privileged: false
+            runAsNonRoot: true
+{{- if not .Values.isOpenShiftCluster }}
+            runAsUser: 1001
+{{- end }}
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+              ephemeral-storage: 250Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+              ephemeral-storage: 900Mi
