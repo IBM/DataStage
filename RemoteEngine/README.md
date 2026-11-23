@@ -4,6 +4,21 @@
 
 The setup can be done locally on Linux or Mac machines as a Docker instance, or as a service on a Kubernetes cluster. See the README.md in the respective folder for setup.
 
+## Architecture Support
+
+### Supported Platforms
+- **x86_64 (amd64)**
+- **s390x**: IBM Z and LinuxONE systems (Docker and CP4D)
+
+### Cross-Platform Capabilities
+The remote engine supports cross-platform deployment scenarios:
+- **x86_64 CP4D clusters can register s390x remote engines** running in Docker containers or CP4D Clusters
+- Jobs submitted from x86_64 environments can execute on s390x hardware
+- Enables workload distribution across heterogeneous architectures
+- Leverages s390x-specific capabilities 
+
+See platform-specific instructions in the docker/ and kubernetes/ folders.
+
 # Copying DataStage Remote Engine Images to a Private Registry
 
 ## Prerequisites
