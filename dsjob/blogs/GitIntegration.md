@@ -2,12 +2,12 @@
 
 Git Integration is a mechanism to write your project contents to a Git repository and maintain version control and integrate with your CI/CD pipelines.
 
-DataStage customers would like to use Git as means for version control their project assets in CloudPak Projects. It will also help them promote their Development work into higher environments by integrating Git into their CI/CD process.
+DataStage customers would like to use Git as means for version control their project assets in Cloud Pak Projects. It will also help them promote their Development work into higher environments by integrating Git into their CI/CD process.
 
-DataStage implements Git Integration as part of ds-migration service. Currently ds-migration service hosts all export and import functionality for the projects. New Api are added to the ds-migration service to allow users to commit and pull their work from git using the existing export and import functionalities.
+DataStage implements Git Integration as part of ds-migration service. Currently ds-migration service hosts all export and import functionality for the projects. New APIs are added to the ds-migration service to allow users to commit and pull their work from git using the existing export and import functionalities.
 
-Before invoking the API, project needs to be Git enabled. This will setup initial configuration for the project and can be overridden by individual operations to Git.
-This functionality will allow you to update incremental changes from your project where you collaborate and build functionality and sync to Git repo. It is then possible to promote your tested projects to higher environments such as QA and eventually to Production.
+Before invoking the API, projects need to be Git enabled. This will setup initial configuration for the project and can be overridden by individual operations to Git.
+This functionality will allow you to update incremental changes from your project where you collaborate and build functionality and sync to your Git repo. It is then possible to promote your tested projects to higher environments such as QA and eventually to Production.
 
 Git Integration provides three commands:
 - `git-commit`: Allow CPD Project resources to push and commit to Git repository
@@ -16,16 +16,38 @@ Git Integration provides three commands:
 
 A bit of background...
 - Git Integration is also available before 5.x releases and was implemented as a CLI side functionality. It did not require user to configure the projects with Git Integration.
-- CLI tooling has limitations and other scalability issues. We now have Git Integration  implemented into DataStage Migration service. This now require additional steps to configure.
+- CLI tooling has limitations and other scalability issues. We now have Git Integration implemented into the DataStage Migration service. This now requires additional steps to configure.
 - Git repositories used before 5.x releases are still backward compatible
 
+#### Setting Up GitHub 
+1. Go to GitHub.com
+2. Login to GitHub
+b. If you do not have an account, Sign Up and create an account to get
+started
+3. Go to the Git Repository you want to connect to your DataStage project
+c. If you do not have a Git Repository you want to use, create a new
+repository by clicking “New”
+d. Enter a name, select private or public
+e. For other options, fill at your discretion
+4. Once you have a repository, go to the Repository. Ensure you have a branch that
+you want to use. Every repository will have a default branch called “main”
+f. NOTE: make sure to keep this URL handy as this will be used in DataStage
+to establish the connection. Make sure you grab the URL without the
+branch addition at the end of the URL and make sure “.git” is also
+appended.
+5. In the top right corner of GitHub, click your profile name and go to settings > Developer settings > Personal access tokens > Fine-grained tokens OR Tokens (Classic) 
+a. Either Classic or Fine-grained tokens will work to establish the connection to GitHub. 
+6. Click Generate New Token 
+a. Fill in the required fields and configure the optional fields. 
+7. Copy your token details and make sure to save it. You will not be able to view the token again after you leave the page. 
+
 #### Setting up Git Integration for the project
-For allowing project to be aware of Git Integration we need to enable them to track changes internally of all the resources in a project. This requires iusers to explicitly configure the project for Git Integration using the following command.
+To allow your project to be aware of Git Inegration, we need to setup and enable change tracking of all resources in the project. This requires users to explicitly configure the project for Git Integration using the following command.
 ```
 cpdctl dsjob git-configure {--project PROJECT | --project-id PROJID} [--git-enable] [--git-url URL] [--git-owner OWNER] [--git-token TOKEN] [--git-org ORG] [--git-email EMAIL] [--git-provider GITPROVIDER]  [--git-branch GITBRANCH]  [--git-folder GITFOLDER]
 ``` 
--   `project`  is the name of the project.
--   `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
+-  `project`  is the name of the project.
+-  `project-id`  is the id of the project. One of  `project`  or  `project-id`  must be specified.
 -  `git-enable` allows project to be git enabled and starts tracking resource changes
 -  `git-url`  git repo url. ex: `https://github.company.com/username/git-dsjob.git`
 -  `git-owner`  owner of the git repository ex: `username`. This field is optional.
@@ -36,9 +58,9 @@ cpdctl dsjob git-configure {--project PROJECT | --project-id PROJID} [--git-enab
 -  `git-folder` Folder to which this project will be committed or fetched from. This is optional
 
 Git URL is the destination of your organizations git URL. Git owner is the user who commits to Git and the Git token is the user’s token used for auth. Fields `git-owner`, `git-org` are deducible to the URL and can be removed from the command eventually. 
-Currently git is configurable with Auth Token but will support SSL certs in the futurei. Also we only support https enabled repositories in this release.
+Currently git is configurable with Auth Token but will support SSL certs in the future. Also we only support https enabled repositories in this release.
 
-Git can also be configured from UI
+Git can also be configured from the UI.
 
 ![GitConfiguration](gitconfiguration.png)
 
